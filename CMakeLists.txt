@@ -73,6 +73,10 @@ add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtur
 # and between teams of anything Gen 3 has, legal or not.
 add_test(NAME replay_targeted COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-16.trace --complete)
 add_test(NAME replay_random COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace --complete)
+# Two games of 262 turns in which neither Pokémon leaves (tests/teams/long):
+# a count of turns on the field kept in eight bits starts again at 256, and
+# Speed Boost then does nothing for a turn.
+add_test(NAME replay_long COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/long-2.trace --complete)
 
 # The same checker built so that every event verifies the masks it is about
 # to trust (ADV_CHECK_MASKS): a mask kept on a Pokémon or on the battle that

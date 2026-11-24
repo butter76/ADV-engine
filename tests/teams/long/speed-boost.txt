@@ -1,0 +1,8 @@
+=== [gen3ou] out for 256 turns ===
+
+Ninjask @ Leftovers
+Ability: Speed Boost
+- String Shot
+- Cotton Spore
+- Growl
+- Defense Curl

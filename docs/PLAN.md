@@ -147,6 +147,7 @@ that differs does.
 | `export` | 50 teams in Showdown's export text read as Showdown packs them (`tools/teams_ref.cjs`) |
 | `replay_targeted` | 16 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`) |
 | `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not |
+| `replay_long` | 2 games of 262 turns in which neither Pokémon leaves the field (`tests/teams/long`): turns on the field are counted past 255 |
 | `masks_targeted`, `masks_random`, `masks_regressions` | the same games on the build that checks every kept mask before it is used |
 | `data` | the tables state the same 2,254 facts as Showdown, Metronome's list in its order among them (`tools/tables_ref.cjs`, written apart from the generator) |
 

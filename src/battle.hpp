@@ -202,10 +202,14 @@ struct Pokemon {
   };
   std::array<AttackedBy, TEAM_SIZE> attacked_by{};
   uint32_t attacks = 0;
-  uint8_t active_turns = 0, previously_switched_in = 0;
+  // Showdown's are numbers with no end. A battle has a thousand turns, and a
+  // Pokémon can be out for all of them: in eight bits each of these started
+  // again at 256, and for a turn Speed Boost did nothing, a trap its user
+  // held let go, and Fake Out worked as on a first turn out.
+  uint16_t active_turns = 0, previously_switched_in = 0;
   Move last_move = Move::None, move_this_turn = Move::None;
   uint16_t last_damage = 0;
-  uint8_t active_move_actions = 0;
+  uint16_t active_move_actions = 0;
 };
 
 // What a side has chosen so far (Side.choice, side.ts). In singles a side
