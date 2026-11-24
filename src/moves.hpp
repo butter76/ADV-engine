@@ -15,6 +15,7 @@
 namespace adv {
 
 inline bool resolve_faints(Ctx& c); // engine.hpp
+inline bool resolve_faints(Ctx& c, bool win_check);
 inline bool check_win(Ctx& c);
 
 namespace events {
@@ -59,16 +60,16 @@ inline const char* unsupported(Move move) {
   if (m.type == Type::Unknown && m.category != Category::Status) return "a typeless move that does damage";
   if (m.target != Target::Normal && m.target != Target::Any && m.target != Target::AllAdjacent &&
       m.target != Target::AllAdjacentFoes && m.target != Target::Self && m.target != Target::All &&
-      m.target != Target::FoeSide && m.target != Target::AllySide && m.target != Target::AllyTeam) {
+      m.target != Target::FoeSide && m.target != Target::AllySide && m.target != Target::AllyTeam &&
+      m.target != Target::Scripted) {
     return "a move on a team or a random target";
   }
-  if (m.multihit[1]) return "a move that hits more than once";
   if (m.ohko) return "a one-hit KO move";
   if (m.selfdestruct == SelfDestruct::IfHit) return "a move that faints its user if it hits";
-  if (m.self_switch != SelfSwitch::None) return "a move that switches its user out";
-  if (m.sleep_usable || m.calls_move || m.has_crash_damage || m.multiaccuracy) return "a move of a special kind";
+  if (m.multiaccuracy) return "a move that checks its accuracy for each hit";
+  if (m.sleep_usable || m.calls_move || m.has_crash_damage) return "a move of a special kind";
   if (m.self_volatile_status != Condition::None) return "a move that gives its user a volatile";
-  if (move == Move::BatonPass || move == Move::TriAttack) return "a move with a handler in its secondary";
+  if (move == Move::TriAttack) return "a move with a handler in its secondary";
   return nullptr;
 }
 
@@ -251,7 +252,7 @@ inline HitData hit_data(const Battle::ActiveMove& active, HitEffect effect_) {
   case HitEffect::Move:
     // Rapid Spin's `self` is a handler alone.
     return {sparse(m.boosts), m.status, active.volatile_status, m.heal,
-            !(active.self_boosts == Boosts{}) || active.id == Move::RapidSpin};
+            !(active.self_boosts == Boosts{}) || active.id == Move::RapidSpin || active.id == Move::BatonPass};
   case HitEffect::Secondary:
     return {sparse(m.secondary.boosts), m.secondary.status, m.secondary.volatile_status, {},
             !(m.secondary.self_boosts == Boosts{})};
@@ -295,7 +296,9 @@ inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   Battle::ActiveMove& move = b.active_move;
   const Effect me = effect(move.id);
   if (!run_immunity(c, target, true)) return relay::no;
-  if (has(me, Callback::damageCallback)) unported("a move with a damageCallback");
+  if (has(me, Callback::damageCallback)) {
+    return call(c, {me, Callback::damageCallback}, relay::undefined, on(source), target, me);
+  }
   if (data(move.id).damage_level) return relay::number(b.at(source).level);
   if (data(move.id).damage) return relay::number(data(move.id).damage);
   double base_power = move.base_power;
@@ -333,6 +336,45 @@ inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   const double level = attacker.level;
   const double base_damage = trunc(trunc(trunc(trunc(2 * level / 5 + 2) * base_power * attack) / defense) / 50);
   return relay::number(modify_damage(c, base_damage, source, target));
+}
+
+// What a confused Pokémon does to itself: getDamage(pokemon, pokemon, 40), a
+// typeless physical hit of 40 power that cannot be a critical hit, and then
+// damage from the made-up move `confused`. The events are run with that hit
+// in place of the move the Pokémon was about to use.
+inline void confusion_damage(Ctx& c, Ref r) {
+  Battle& b = c.b;
+  const Battle::ActiveMove attempted = b.active_move;
+  b.active_move = {.id = Move::None, .type = Type::Unknown, .category = Category::Physical, .base_power = 40, .crit_ratio = 1};
+  const Effect me = effect(Special::Confused);
+  const Pokemon& p = b.at(r);
+  run_event(c, events::MODIFY_CRIT_RATIO, on(r), r, me, relay::number(1));
+  const Relay power = run_event(c, events::BASE_POWER, on(r), r, me, relay::number(40), true);
+  double amount = 0;
+  if (power.truthy()) {
+    const double base_power = std::max(std::floor(power.number), 1.0);
+    double attack = calculate_stat(c, r, p.stored_stats.atk, p.boosts.atk);
+    double defense = calculate_stat(c, r, p.stored_stats.def, p.boosts.def);
+    attack = run_event(c, events::MODIFY_ATK, on(r), r, me, relay::number(attack)).number;
+    defense = run_event(c, events::MODIFY_DEF, on(r), r, me, relay::number(defense)).number;
+    const double base_damage = trunc(trunc(trunc(trunc(2 * double(p.level) / 5 + 2) * base_power * attack) / defense) / 50);
+    amount = modify_damage(c, base_damage, r, r);
+  }
+  b.active_move = attempted;
+  // Battle.damage(damage, pokemon, pokemon, confused): spreadDamage with a
+  // move for an effect.
+  Pokemon& hurt = b.at(r);
+  if (!hurt.hp || !hurt.is_active) return;
+  if (amount != 0) amount = std::max(std::floor(amount), 1.0);
+  const Relay after = run_event(c, DAMAGE, on(r), r, me, relay::number(amount), true);
+  if (after.kind != Relay::Kind::Number) return;
+  amount = after.number;
+  if (amount != 0) amount = std::max(std::floor(amount), 1.0);
+  const uint16_t dealt = uint16_t(std::min<double>(amount, hurt.hp));
+  hurt.hp = uint16_t(hurt.hp - dealt);
+  if (!hurt.hp) faint(c, r, r, me);
+  hurt.last_damage = dealt;
+  add(c, {part::text("-damage"), part::pokemon(b, r), part::health(b, r), part::from(me)});
 }
 
 // Battle.spreadDamage (battle.ts) for a move's damage on its one target.
@@ -448,6 +490,12 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
         }
         if (!is_self && !is_secondary) run_event(c, events::HIT, on(target), source, me);
       }
+      // A move that switches its user out does something if a switch is
+      // possible.
+      if (which == HitEffect::Move && data(id).self_switch != SelfSwitch::None) {
+        if (can_switch(b, source.side)) did_something = relay::yes;
+        else did_something = combine_results(did_something, relay::no);
+      }
       if (did_something.undefined()) did_something = relay::yes;
       damage = combine_results(damage, did_something.kind == Relay::Kind::Null ? relay::no : did_something);
       did_anything = combine_results(did_anything, did_something);
@@ -458,6 +506,10 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
       add(c, {part::text("-fail"), part::pokemon(b, source)});
       attr_last_move(c, "[still]");
     }
+  } else if (which == HitEffect::Move && data(id).self_switch != SelfSwitch::None && b.at(source).hp && can_switch(b, source.side)) {
+    // The user is flagged to switch, by this move.
+    b.at(source).switch_flag = true;
+    b.at(source).switch_flag_move = id;
   }
   return damage;
 }
@@ -520,7 +572,9 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
   // selfDrops: what the effect does to the user. A move's own stat changes
   // are drawn for, though they have no chance to miss.
   if (d.has_self && hit) {
-    if (which == HitEffect::Move && id == Move::RapidSpin) {
+    if (which == HitEffect::Move && id == Move::BatonPass) {
+      b.at(source).skip_pursuit = true; // its `self.onHit`
+    } else if (which == HitEffect::Move && id == Move::RapidSpin) {
       // moveHit(source, source, move, move.self, false, true): its onHit.
       const auto parent = c.event;
       c.event = {"Hit", on(source), source, me, 1};
@@ -667,8 +721,36 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
 
   move.total_damage = 0;
   b.at(source).last_damage = 0;
-  const Relay damage = move_hit(c, target, source);
-  move.total_damage = damage.kind == Relay::Kind::Number ? uint16_t(damage.number) : 0;
+  Relay damage;
+  if (const std::array<uint8_t, 2> multihit = data(move.id).multihit; multihit[1]) {
+    // Two to five hits are drawn from eight, with two and three hits three
+    // times as likely as four or five.
+    int hits = multihit[0];
+    if (multihit[0] == 2 && multihit[1] == 5) {
+      static constexpr int HITS[] = {2, 2, 2, 3, 3, 3, 4, 5};
+      hits = HITS[random(b, c.out, 8)];
+    } else if (multihit[0] != multihit[1]) {
+      hits = int(random(b, c.out, multihit[0], uint32_t(multihit[1]) + 1));
+    }
+    bool null_damage = true;
+    int i = 0;
+    damage = relay::number(0);
+    for (; i < hits && b.at(target).hp && b.at(source).hp; i++) {
+      if (b.at(source).status == Condition::Slp) break; // no multi-hit move can be used asleep
+      const Relay one = move_hit(c, target, source);
+      if (one == relay::no) break;
+      if (one.truthy() || one.kind == Relay::Kind::Number || one.undefined()) null_damage = false;
+      damage = relay::number(one.kind == Relay::Kind::Number ? one.number : 0);
+      move.total_damage = uint16_t(move.total_damage + damage.number);
+      each_event(c, events::UPDATE_AFTER_HIT);
+    }
+    if (i == 0) return relay::no;
+    if (null_damage) damage = relay::no;
+    add(c, {part::text("-hitcount"), part::pokemon(b, target), part::number(i)});
+  } else {
+    damage = move_hit(c, target, source);
+    move.total_damage = damage.kind == Relay::Kind::Number ? uint16_t(damage.number) : 0;
+  }
   if (move.total_damage) apply_recoil_damage(c, move.total_damage, source);
   // gotAttacked records the hit for Counter and its kind, which are not
   // ported.
@@ -681,7 +763,10 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
 }
 
 // Gen 3's BattleActions.useMoveInner (data/mods/gen3/scripts.ts:108).
-inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
+// `from` is the move that had this one used (Showdown's sourceEffect, when
+// it is a move): it is named on the line, and Pressure applies as it would
+// to that move.
+inline bool use_move(Ctx& c, Move id, Ref user, Ref target, Move from = Move::None) {
   Battle& b = c.b;
   const MoveData& m = data(id);
   b.active_move = {.id = id, .type = m.type, .category = m.category, .base_power = m.base_power,
@@ -704,7 +789,11 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
   if (b.active_move.target != m.target) target = self_targeted() ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (p.fainted) return false;
   c.out.last_move_line = int32_t(c.out.log.size());
-  add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target)});
+  if (from != Move::None) {
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::from_move(from)});
+  } else {
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target)});
+  }
 
   // Pokemon.getMoveTargets (pokemon.ts) in singles: the target, unless it
   // has fainted (a move on one target) or has no HP (a move on all adjacent).
@@ -730,7 +819,7 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
   } else if (has_target) {
     pressure(target);
   }
-  if (extra_pp > 0) deduct_pp(p, id, extra_pp);
+  if (extra_pp > 0) deduct_pp(p, from != Move::None ? from : id, extra_pp);
   if (!move_event(c, events::ON_TRY_MOVE, user, target).truthy() ||
       !run_event(c, events::TRY_MOVE, on(user), target, me).truthy()) {
     return false;

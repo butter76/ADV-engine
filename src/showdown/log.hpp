@@ -47,6 +47,7 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
     return side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Ability: return std::string(ABILITY_NAMES[p.id].name);
   case Part::Kind::Move: return std::string(MOVE_NAMES[p.id].name);
+  case Part::Kind::FromMove: return "[from] " + std::string(MOVE_NAMES[p.id].name);
   case Part::Kind::Item: return std::string(ITEM_NAMES[p.id].name);
   case Part::Kind::Wisher: return "[wisher] " + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::From:
@@ -56,7 +57,8 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
     case EffectKind::Item: return "[from] item: " + std::string(ITEM_NAMES[p.id].name);
     case EffectKind::Move: return "[from] move: " + std::string(MOVE_NAMES[p.id].name);
     case EffectKind::Condition: return "[from] " + std::string(CONDITION_NAMES[Condition(p.id) == Condition::Tox ? uint16_t(Condition::Psn) : p.id].name);
-    case EffectKind::Special: return Special(p.id) == Special::Recoil ? "[from] Recoil" : "[from] drain";
+    case EffectKind::Special:
+      return Special(p.id) == Special::Recoil ? "[from] Recoil" : Special(p.id) == Special::Drain ? "[from] drain" : "[from] confusion";
     case EffectKind::Rule: break;
     }
     return "[from] ?";

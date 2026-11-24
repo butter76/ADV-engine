@@ -253,7 +253,10 @@ ADV_HANDLER(oblivious_onUpdate) {
 }
 ADV_HANDLER(owntempo_onUpdate) {
   ADV_UNUSED;
-  if (volatile_of(c.b.at(t.pokemon), Condition::Confusion)) unported("ability owntempo ending confusion");
+  if (volatile_of(c.b.at(t.pokemon), Condition::Confusion)) {
+    add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("ability: Own Tempo")});
+    remove_volatile(c, t.pokemon, Condition::Confusion);
+  }
   return relay::undefined;
 }
 // onSetStatus(status, target, source, effect): the status is refused, with a
@@ -318,21 +321,22 @@ ADV_HANDLER(vitalspirit_onTryAddVolatile) {
 // Items (data/items.ts, data/mods/gen3/items.ts). The berries eat themselves
 // on the status they cure.
 // ---------------------------------------------------------------------------
-// Eating a berry is not ported.
+// The berries eaten as soon as their Pokémon has the status they cure.
 #define ADV_BERRY_ON_UPDATE(name, cures, what)                          \
   ADV_HANDLER(name) {                                                   \
     ADV_UNUSED;                                                         \
+    (void)what;                                                         \
     const Condition status = c.b.at(t.pokemon).status;                  \
-    if (cures) unported(what " eaten");                                 \
+    if (cures) eat_item(c, t.pokemon);                                  \
     return relay::undefined;                                            \
   }
 ADV_BERRY_ON_UPDATE(aspearberry_onUpdate, status == Condition::Frz, "item aspearberry")
 ADV_BERRY_ON_UPDATE(cheriberry_onUpdate, status == Condition::Par, "item cheriberry")
 ADV_BERRY_ON_UPDATE(chestoberry_onUpdate, status == Condition::Slp, "item chestoberry")
-ADV_BERRY_ON_UPDATE(lumberry_onUpdate, status != Condition::None, "item lumberry")
+ADV_BERRY_ON_UPDATE(lumberry_onUpdate, status != Condition::None || volatile_of(c.b.at(t.pokemon), Condition::Confusion), "item lumberry")
 ADV_BERRY_ON_UPDATE(pechaberry_onUpdate, status == Condition::Psn || status == Condition::Tox, "item pechaberry")
 ADV_BERRY_ON_UPDATE(rawstberry_onUpdate, status == Condition::Brn, "item rawstberry")
-ADV_BERRY_ON_UPDATE(persimberry_onUpdate, (void(status), false), "item persimberry")
+ADV_BERRY_ON_UPDATE(persimberry_onUpdate, (void(status), volatile_of(c.b.at(t.pokemon), Condition::Confusion) != nullptr), "item persimberry")
 ADV_BERRY_ON_UPDATE(mentalherb_onUpdate, (void(status), false), "item mentalherb")
 ADV_HANDLER(leftovers_onResidual) {
   ADV_UNUSED;
@@ -354,7 +358,8 @@ ADV_HANDLER(focusband_onDamage) {
   ADV_HANDLER(name) {                                                               \
     ADV_UNUSED;                                                                     \
     const Pokemon& p = c.b.at(t.pokemon);                                           \
-    if (double(p.hp) <= double(p.maxhp) / divisor) unported(what " eaten");         \
+    (void)what;                                                                     \
+    if (double(p.hp) <= double(p.maxhp) / divisor) eat_item(c, t.pokemon);          \
     return relay::undefined;                                                        \
   }
 ADV_PINCH_BERRY(aguavberry_onResidual, 2, "item aguavberry")
@@ -372,12 +377,221 @@ ADV_PINCH_BERRY(petayaberry_onResidual, 4, "item petayaberry")
 ADV_PINCH_BERRY(salacberry_onResidual, 4, "item salacberry")
 ADV_PINCH_BERRY(starfberry_onResidual, 4, "item starfberry")
 #undef ADV_PINCH_BERRY
+// What eating a berry does (onEat), and for the healing ones whether it can
+// be eaten (onTryEatItem asks TryHeal, which nothing in Gen 3 refuses a
+// berry).
+#define ADV_TRY_EAT(name)                                              \
+  ADV_HANDLER(name) {                                                  \
+    ADV_UNUSED;                                                        \
+    return run_event(c, TRY_HEAL, on(t.pokemon), {}, c.effect, relay::number(1)).truthy() ? relay::undefined : relay::no; \
+  }
+ADV_TRY_EAT(aguavberry_onTryEatItem)
+ADV_TRY_EAT(figyberry_onTryEatItem)
+ADV_TRY_EAT(iapapaberry_onTryEatItem)
+ADV_TRY_EAT(magoberry_onTryEatItem)
+ADV_TRY_EAT(wikiberry_onTryEatItem)
+ADV_TRY_EAT(oranberry_onTryEatItem)
+ADV_TRY_EAT(sitrusberry_onTryEatItem)
+#undef ADV_TRY_EAT
+ADV_HANDLER(aguavberry_onEat) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  const NatureData& nature = data(c.b.at(t.pokemon).set.nature);
+  if (nature.plus != nature.minus && nature.minus == Stat::Spd) add_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(figyberry_onEat) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  const NatureData& nature = data(c.b.at(t.pokemon).set.nature);
+  if (nature.plus != nature.minus && nature.minus == Stat::Atk) add_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(iapapaberry_onEat) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  const NatureData& nature = data(c.b.at(t.pokemon).set.nature);
+  if (nature.plus != nature.minus && nature.minus == Stat::Def) add_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(magoberry_onEat) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  const NatureData& nature = data(c.b.at(t.pokemon).set.nature);
+  if (nature.plus != nature.minus && nature.minus == Stat::Spe) add_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(wikiberry_onEat) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  const NatureData& nature = data(c.b.at(t.pokemon).set.nature);
+  if (nature.plus != nature.minus && nature.minus == Stat::Spa) add_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(oranberry_onEat) {
+  ADV_UNUSED;
+  heal(c, 10);
+  return relay::undefined;
+}
+ADV_HANDLER(sitrusberry_onEat) {
+  ADV_UNUSED;
+  heal(c, 30);
+  return relay::undefined;
+}
+ADV_HANDLER(apicotberry_onEat) {
+  ADV_UNUSED;
+  SparseBoosts up;
+  up.set(3, 1);
+  boost(c, up, t.pokemon, c.event.source);
+  return relay::undefined;
+}
+ADV_HANDLER(ganlonberry_onEat) {
+  ADV_UNUSED;
+  SparseBoosts up;
+  up.set(1, 1);
+  boost(c, up, t.pokemon, c.event.source);
+  return relay::undefined;
+}
+ADV_HANDLER(liechiberry_onEat) {
+  ADV_UNUSED;
+  SparseBoosts up;
+  up.set(0, 1);
+  boost(c, up, t.pokemon, c.event.source);
+  return relay::undefined;
+}
+ADV_HANDLER(petayaberry_onEat) {
+  ADV_UNUSED;
+  SparseBoosts up;
+  up.set(2, 1);
+  boost(c, up, t.pokemon, c.event.source);
+  return relay::undefined;
+}
+ADV_HANDLER(salacberry_onEat) {
+  ADV_UNUSED;
+  SparseBoosts up;
+  up.set(4, 1);
+  boost(c, up, t.pokemon, c.event.source);
+  return relay::undefined;
+}
+ADV_HANDLER(starfberry_onEat) {
+  ADV_UNUSED;
+  // One of the five stats that can still rise, drawn, by two stages.
+  const int8_t* stage = &c.b.at(t.pokemon).boosts.atk;
+  std::array<int, 5> stats{};
+  uint32_t n = 0;
+  for (int stat = 0; stat < 5; stat++) {
+    if (stage[stat] < 6) stats[n++] = stat;
+  }
+  if (n) {
+    SparseBoosts up;
+    up.set(stats[random(c.b, c.out, n)], 2);
+    boost(c, up, t.pokemon, c.event.source);
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(aspearberry_onEat) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::Frz) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(cheriberry_onEat) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::Par) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(chestoberry_onEat) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::Slp) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(pechaberry_onEat) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::Psn || status == Condition::Tox) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(rawstberry_onEat) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::Brn) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(lumberry_onEat) {
+  ADV_UNUSED;
+  cure_status(c, t.pokemon);
+  remove_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(lumberry_onAfterSetStatus) {
+  ADV_UNUSED;
+  eat_item(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(persimberry_onEat) {
+  ADV_UNUSED;
+  remove_volatile(c, t.pokemon, Condition::Confusion);
+  return relay::undefined;
+}
+ADV_HANDLER(leppaberry_onEat) {
+  ADV_UNUSED;
+  Pokemon& p = c.b.at(t.pokemon);
+  MoveSlot* slot = nullptr;
+  for (int i = 0; !slot && i < p.moves; i++) {
+    if (p.move_slots[i].pp == 0) slot = &p.move_slots[i];
+  }
+  for (int i = 0; !slot && i < p.moves; i++) {
+    if (p.move_slots[i].pp < p.move_slots[i].maxpp) slot = &p.move_slots[i];
+  }
+  if (!slot) return relay::undefined;
+  slot->pp = uint8_t(std::min(slot->pp + 10, int(slot->maxpp)));
+  add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("item: Leppa Berry"), part::move(slot->id),
+          part::text("[consumed]")});
+  return relay::undefined;
+}
+
+// Confusion (data/conditions.ts).
+ADV_HANDLER(confusion_onStart) {
+  ADV_UNUSED;
+  if (source_effect == effect(Condition::Lockedmove)) {
+    add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("confusion"), part::text("[fatigue]")});
+  } else if (source_effect.kind == EffectKind::Ability && source_effect) {
+    add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("confusion"), part::from(source_effect), part::of(c.b, source)});
+  } else {
+    add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("confusion")});
+  }
+  c.effect_state->time = int8_t(random(c.b, c.out, 2, 6));
+  return relay::undefined;
+}
+ADV_HANDLER(confusion_onEnd) {
+  ADV_UNUSED;
+  add(c, {part::text("-end"), part::pokemon(c.b, t.pokemon), part::text("confusion")});
+  return relay::undefined;
+}
+ADV_HANDLER(confusion_onBeforeMove) {
+  ADV_UNUSED;
+  Volatile* v = volatile_of(c.b.at(t.pokemon), Condition::Confusion);
+  v->state.time--;
+  if (!v->state.time) {
+    remove_volatile(c, t.pokemon, Condition::Confusion);
+    return relay::undefined;
+  }
+  add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("confusion")});
+  if (random(c.b, c.out, 2) < 1) return relay::undefined; // randomChance(1, 2): it moves
+  confusion_damage(c, t.pokemon);
+  return relay::no;
+}
 ADV_HANDLER(leppaberry_onUpdate) {
   ADV_UNUSED;
   const Pokemon& p = c.b.at(t.pokemon);
   if (!p.hp) return relay::undefined;
   for (int i = 0; i < p.moves; i++) {
-    if (p.move_slots[i].pp == 0) unported("item leppaberry onUpdate with a move out of PP");
+    if (p.move_slots[i].pp == 0) {
+      eat_item(c, t.pokemon);
+      break;
+    }
   }
   return relay::undefined;
 }
@@ -713,6 +927,285 @@ ADV_HANDLER(haze_onHitField) {
   std::array<Ref, 2> actives;
   const int n = all_active(c.b, actives);
   for (int i = 0; i < n; i++) c.b.at(actives[i]).boosts = Boosts{};
+  return relay::undefined;
+}
+
+// Pursuit catches a foe as it switches out: the chaser gives up its queued
+// move and uses Pursuit then, at double power and without a miss.
+ADV_HANDLER(pursuit_beforeTurnCallback) {
+  ADV_UNUSED;
+  add_volatile(c, t.pokemon, Condition::Pursuit, t.pokemon, effect(Move::Pursuit));
+  return relay::undefined;
+}
+ADV_HANDLER(pursuit_basePowerCallback) {
+  ADV_UNUSED;
+  const Pokemon& target = c.b.at(source);
+  return relay::number(target.being_called_back || target.switch_flag ? 80 : 40);
+}
+ADV_HANDLER(pursuit_onModifyMove) {
+  ADV_UNUSED;
+  const Pokemon& target = c.b.at(source);
+  if (target.being_called_back || target.switch_flag) c.b.active_move.accuracy = 0;
+  return relay::undefined;
+}
+ADV_HANDLER(pursuit_condition_onFoeBeforeSwitchOut) {
+  ADV_UNUSED;
+  Battle& b = c.b;
+  const Ref chaser = c.effect_state->source;
+  Pokemon& user = b.at(chaser);
+  if (user.status == Condition::Frz || user.status == Condition::Slp) return relay::undefined;
+  if (user.ability == Ability::Truant) unported("Pursuit from a Pokémon with Truant");
+  if (!is_adjacent(b, chaser, t.pokemon) || !user.hp) return relay::undefined;
+  if (volatile_of(user, Condition::Encore)) unported("Pursuit from a Pokémon under Encore");
+  // queue.cancelMove: its queued move, if it still has one.
+  bool cancelled = false;
+  for (int i = 0; i < b.queue.size && !cancelled; i++) {
+    if (b.queue.list[i].choice != Choice::Move || b.queue.list[i].pokemon != chaser) continue;
+    for (int k = i + 1; k < b.queue.size; k++) b.queue.list[k - 1] = b.queue.list[k];
+    b.queue.size--;
+    cancelled = true;
+  }
+  if (!cancelled) return relay::undefined;
+  Pokemon& leaving = b.at(t.pokemon);
+  if (!leaving.pursuit_activated) {
+    add(c, {part::text("-activate"), part::pokemon(b, t.pokemon), part::text("move: Pursuit")});
+    leaving.pursuit_activated = true;
+  }
+  deduct_pp(user, Move::Pursuit);
+  user.last_move = user.move_this_turn = Move::Pursuit;
+  if (use_move(c, Move::Pursuit, chaser, t.pokemon, Move::Pursuit) && data(b.at(chaser).item).is_choice) {
+    add_volatile(c, chaser, Condition::Choicelock, chaser);
+  }
+  return relay::undefined;
+}
+// Counter and Mirror Coat answer the last hit of their kind with twice its
+// damage. Counter takes every Hidden Power for a physical move.
+#define ADV_COUNTER(id, condition_, answers)                                                         \
+  ADV_HANDLER(id##_beforeTurnCallback) {                                                             \
+    ADV_UNUSED;                                                                                      \
+    add_volatile(c, t.pokemon, Condition::condition_, t.pokemon);                                    \
+    return relay::undefined;                                                                         \
+  }                                                                                                  \
+  ADV_HANDLER(id##_onTry) {                                                                          \
+    ADV_UNUSED;                                                                                      \
+    const Volatile* v = volatile_of(c.b.at(t.pokemon), Condition::condition_);                       \
+    return v && v->state.has_slot ? relay::undefined : relay::no;                                    \
+  }                                                                                                  \
+  ADV_HANDLER(id##_damageCallback) {                                                                 \
+    ADV_UNUSED;                                                                                      \
+    const Volatile* v = volatile_of(c.b.at(t.pokemon), Condition::condition_);                       \
+    if (!v) return relay::number(0);                                                                 \
+    return relay::number(v->state.damage ? v->state.damage : 1);                                     \
+  }                                                                                                  \
+  ADV_HANDLER(id##_condition_onStart) {                                                              \
+    ADV_UNUSED;                                                                                      \
+    c.effect_state->has_slot = false;                                                                \
+    c.effect_state->damage = 0;                                                                      \
+    return relay::undefined;                                                                         \
+  }                                                                                                  \
+  ADV_HANDLER(id##_condition_onDamage) {                                                             \
+    ADV_UNUSED;                                                                                      \
+    const Battle::ActiveMove& move = c.b.active_move;                                                \
+    if (source_effect.kind == EffectKind::Move && source_effect && source && source.side != t.pokemon.side && (answers)) { \
+      c.effect_state->has_slot = true;                                                               \
+      c.effect_state->damage = uint16_t(2 * value.number);                                           \
+    }                                                                                                \
+    return relay::undefined;                                                                         \
+  }
+ADV_COUNTER(counter, Counter, move.category == Category::Physical || move.id == Move::HiddenPower)
+ADV_COUNTER(mirrorcoat, MirrorCoat, move.category == Category::Special && move.id != Move::HiddenPower)
+#undef ADV_COUNTER
+
+// Endeavor brings the target's HP down to its user's.
+ADV_HANDLER(endeavor_onTry) {
+  ADV_UNUSED;
+  if (c.b.at(t.pokemon).hp >= c.b.at(source).hp) {
+    add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon)});
+    return relay::null;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(endeavor_onTryImmunity) {
+  ADV_UNUSED;
+  return c.b.at(source).hp < c.b.at(t.pokemon).hp ? relay::yes : relay::no;
+}
+ADV_HANDLER(endeavor_damageCallback) {
+  ADV_UNUSED;
+  return relay::number(double(c.b.at(source).hp) - double(c.b.at(t.pokemon).hp));
+}
+// Perish Song: each active Pokémon it reaches is counted down from 3.
+ADV_HANDLER(perishsong_onHitField) {
+  ADV_UNUSED;
+  bool result = false, message = false;
+  std::array<Ref, 2> actives;
+  const int n = all_active(c.b, actives);
+  const Effect me = effect(Move::PerishSong);
+  for (int i = 0; i < n; i++) {
+    const Ref r = actives[i];
+    if (run_event(c, events::INVULNERABILITY, on(r), source, me) == relay::no) {
+      add(c, {part::text("-miss"), part::pokemon(c.b, source), part::pokemon(c.b, r)});
+      result = true;
+    } else if (run_event(c, events::TRY_HIT, on(r), source, me).kind == Relay::Kind::Null) {
+      result = true;
+    } else if (!volatile_of(c.b.at(r), Condition::PerishSong)) {
+      add_volatile(c, r, Condition::PerishSong);
+      add(c, {part::text("-start"), part::pokemon(c.b, r), part::text("perish3"), part::text("[silent]")});
+      result = true;
+      message = true;
+    }
+  }
+  if (!result) return relay::no;
+  if (message) add(c, {part::text("-fieldactivate"), part::text("move: Perish Song")});
+  return relay::undefined;
+}
+ADV_HANDLER(perishsong_condition_onResidual) {
+  ADV_UNUSED;
+  static constexpr std::string_view COUNT[] = {"perish0", "perish1", "perish2", "perish3", "perish4"};
+  add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text(COUNT[std::min<int>(c.effect_state->duration, 4)])});
+  return relay::undefined;
+}
+ADV_HANDLER(perishsong_condition_onEnd) {
+  ADV_UNUSED;
+  add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("perish0")});
+  faint(c, t.pokemon, {}, {});
+  return relay::undefined;
+}
+// Thief and Covet take the target's item for a user that holds none.
+inline void steal_item(Ctx& c, Ref target, Ref source, Move move) {
+  Battle& b = c.b;
+  if (b.at(source).item != Item::None) return;
+  Pokemon& from = b.at(target);
+  // Pokemon.takeItem(source).
+  if (from.item == Item::None) return;
+  const Item item = from.item;
+  if (!run_event(c, event("TakeItem"), on(target), source, {}, relay::yes).truthy()) return;
+  from.item = Item::None;
+  const EffectState old_state = from.item_state;
+  from.item_state = EffectState{};
+  EffectState ended = old_state;
+  single_event(c, callback("", "End"), effect(item), &ended, on(target));
+  // The item's own onTakeItem, then Pokemon.setItem on the user.
+  Pokemon& to = b.at(source);
+  if (has(effect(item), callback("", "TakeItem"))) unported("an item with an onTakeItem stolen");
+  if (!to.hp || !to.is_active) {
+    from.item = item;
+    return;
+  }
+  to.item = item;
+  to.item_state = init_effect_state(b, true, source);
+  single_event(c, ON_START, effect(item), &to.item_state, on(source), source, effect(move));
+  if (move == Move::Thief) {
+    add(c, {part::text("-enditem"), part::pokemon(b, target), part::item(item), part::text("[silent]"), part::from(effect(move)),
+            part::of(b, source)});
+  }
+  add(c, {part::text("-item"), part::pokemon(b, source), part::item(item), part::from(effect(move)), part::of(b, target)});
+}
+ADV_HANDLER(thief_onAfterHit) {
+  ADV_UNUSED;
+  steal_item(c, t.pokemon, source, Move::Thief);
+  return relay::undefined;
+}
+ADV_HANDLER(covet_onAfterHit) {
+  ADV_UNUSED;
+  steal_item(c, t.pokemon, source, Move::Covet);
+  return relay::undefined;
+}
+ADV_HANDLER(stickyhold_onTakeItem) {
+  ADV_UNUSED;
+  if ((source && source != t.pokemon) || c.b.active_move.id == Move::KnockOff) {
+    add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("ability: Sticky Hold")});
+    return relay::no;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(psychup_onHit) {
+  ADV_UNUSED;
+  c.b.at(source).boosts = c.b.at(t.pokemon).boosts;
+  add(c, {part::text("-copyboost"), part::pokemon(c.b, source), part::pokemon(c.b, t.pokemon), part::from(effect(Move::PsychUp))});
+  return relay::undefined;
+}
+// Cloud Nine and Air Lock stop the weather's effects while they are out.
+ADV_HANDLER(weatherlock_onStart) {
+  ADV_UNUSED;
+  c.b.at(t.pokemon).ability_state.ending = false;
+  return relay::undefined;
+}
+ADV_HANDLER(weatherlock_onEnd) {
+  ADV_UNUSED;
+  c.b.at(t.pokemon).ability_state.ending = true;
+  each_event(c, WEATHER_CHANGE, c.effect);
+  return relay::undefined;
+}
+// Trace takes the ability of a foe, drawn even when there is one.
+ADV_HANDLER(trace_onStart) {
+  ADV_UNUSED;
+  const Ref foe = foe_of(c.b, t.pokemon);
+  if (!foe) return relay::undefined;
+  random(c.b, c.out, 1); // side.randomFoe(): sample of the foes
+  if (c.b.at(foe).fainted) return relay::undefined;
+  // Pokemon.setAbility(ability, target). Nothing listens for SetAbility in
+  // Gen 3, and the new ability's onStart is not run.
+  Pokemon& p = c.b.at(t.pokemon);
+  const Ability old = p.ability, taken = c.b.at(foe).ability;
+  single_event(c, callback("", "End"), effect(old), &p.ability_state, on(t.pokemon), foe);
+  p.ability = taken;
+  p.ability_state = init_effect_state(c.b, taken != Ability::None, t.pokemon);
+  add(c, {part::text("-ability"), part::pokemon(c.b, t.pokemon), part::ability(taken), part::ability(old),
+          part::from(effect(Ability::Trace)), part::of(c.b, foe)});
+  return relay::undefined;
+}
+
+// Reversal and Flail hit harder the less HP their user has, in 48ths.
+ADV_HANDLER(lowhp_basePowerCallback) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  const int ratio = std::max(p.hp * 48 / p.maxhp, 1);
+  return relay::number(ratio < 2 ? 200 : ratio < 5 ? 150 : ratio < 10 ? 100 : ratio < 17 ? 80 : ratio < 33 ? 40 : 20);
+}
+// Eruption and Water Spout: the move's power by the user's share of its HP,
+// a fraction that getDamage floors.
+ADV_HANDLER(fullhp_basePowerCallback) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  return relay::number(double(c.b.active_move.base_power) * p.hp / p.maxhp);
+}
+ADV_HANDLER(lowkick_basePowerCallback) {
+  ADV_UNUSED;
+  const int weight = std::max<int>(data(c.b.at(source).species).weight_hg, 1); // nothing changes a weight in Gen 3
+  return relay::number(weight >= 2000 ? 120 : weight >= 1000 ? 100 : weight >= 500 ? 80 : weight >= 250 ? 60 : weight >= 100 ? 40 : 20);
+}
+ADV_HANDLER(facade_onBasePower) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status != Condition::None && status != Condition::Slp) chain_modify(c, 2);
+  return relay::undefined;
+}
+ADV_HANDLER(smellingsalts_basePowerCallback) {
+  ADV_UNUSED;
+  return relay::number(c.b.active_move.base_power * (c.b.at(source).status == Condition::Par ? 2 : 1));
+}
+ADV_HANDLER(smellingsalts_onHit) {
+  ADV_UNUSED;
+  if (c.b.at(t.pokemon).status == Condition::Par) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+// How long Disable, Encore, Uproar and a binding move last: drawn.
+ADV_HANDLER(two_to_five_durationCallback) {
+  ADV_UNUSED;
+  return relay::number(random(c.b, c.out, 2, 6));
+}
+ADV_HANDLER(three_to_six_durationCallback) {
+  ADV_UNUSED;
+  return relay::number(random(c.b, c.out, 3, 7));
+}
+
+ADV_HANDLER(batonpass_onHit) {
+  ADV_UNUSED;
+  if (!can_switch(c.b, t.pokemon.side)) {
+    attr_last_move(c, "[still]");
+    add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon)});
+    return relay::null; // NOT_FAIL
+  }
   return relay::undefined;
 }
 
@@ -1491,6 +1984,38 @@ inline constexpr Ported PORTED[] = {
     I(MentalHerb, onUpdate, mentalherb_onUpdate),
     I(LeppaBerry, onUpdate, leppaberry_onUpdate),
     I(MachoBrace, onModifySpe, machobrace_onModifySpe),
+    I(AguavBerry, onTryEatItem, aguavberry_onTryEatItem),
+    I(FigyBerry, onTryEatItem, figyberry_onTryEatItem),
+    I(IapapaBerry, onTryEatItem, iapapaberry_onTryEatItem),
+    I(MagoBerry, onTryEatItem, magoberry_onTryEatItem),
+    I(WikiBerry, onTryEatItem, wikiberry_onTryEatItem),
+    I(OranBerry, onTryEatItem, oranberry_onTryEatItem),
+    I(SitrusBerry, onTryEatItem, sitrusberry_onTryEatItem),
+    I(AguavBerry, onEat, aguavberry_onEat),
+    I(FigyBerry, onEat, figyberry_onEat),
+    I(IapapaBerry, onEat, iapapaberry_onEat),
+    I(MagoBerry, onEat, magoberry_onEat),
+    I(WikiBerry, onEat, wikiberry_onEat),
+    I(OranBerry, onEat, oranberry_onEat),
+    I(SitrusBerry, onEat, sitrusberry_onEat),
+    I(ApicotBerry, onEat, apicotberry_onEat),
+    I(GanlonBerry, onEat, ganlonberry_onEat),
+    I(LiechiBerry, onEat, liechiberry_onEat),
+    I(PetayaBerry, onEat, petayaberry_onEat),
+    I(SalacBerry, onEat, salacberry_onEat),
+    I(StarfBerry, onEat, starfberry_onEat),
+    I(AspearBerry, onEat, aspearberry_onEat),
+    I(CheriBerry, onEat, cheriberry_onEat),
+    I(ChestoBerry, onEat, chestoberry_onEat),
+    I(PechaBerry, onEat, pechaberry_onEat),
+    I(RawstBerry, onEat, rawstberry_onEat),
+    I(LumBerry, onEat, lumberry_onEat),
+    I(PersimBerry, onEat, persimberry_onEat),
+    I(LeppaBerry, onEat, leppaberry_onEat),
+    I(LumBerry, onAfterSetStatus, lumberry_onAfterSetStatus),
+    C(Confusion, onStart, confusion_onStart),
+    C(Confusion, onEnd, confusion_onEnd),
+    C(Confusion, onBeforeMove, confusion_onBeforeMove),
     I(Leftovers, onResidual, leftovers_onResidual),
     I(FocusBand, onDamage, focusband_onDamage),
     I(AguavBerry, onResidual, aguavberry_onResidual),
@@ -1629,6 +2154,50 @@ inline constexpr Ported PORTED[] = {
     {effect(Move::Aromatherapy), Callback::onHit, &aromatherapy_onHit},
     {effect(Move::HealBell), Callback::onHit, &healbell_onHit},
     {effect(Move::Haze), Callback::onHitField, &haze_onHitField},
+    {effect(Move::Pursuit), Callback::beforeTurnCallback, &pursuit_beforeTurnCallback},
+    {effect(Move::Pursuit), Callback::basePowerCallback, &pursuit_basePowerCallback},
+    {effect(Move::Pursuit), Callback::onModifyMove, &pursuit_onModifyMove},
+    C(Pursuit, onFoeBeforeSwitchOut, pursuit_condition_onFoeBeforeSwitchOut),
+    {effect(Move::Counter), Callback::beforeTurnCallback, &counter_beforeTurnCallback},
+    {effect(Move::Counter), Callback::onTry, &counter_onTry},
+    {effect(Move::Counter), Callback::damageCallback, &counter_damageCallback},
+    C(Counter, onStart, counter_condition_onStart),
+    C(Counter, onDamage, counter_condition_onDamage),
+    {effect(Move::MirrorCoat), Callback::beforeTurnCallback, &mirrorcoat_beforeTurnCallback},
+    {effect(Move::MirrorCoat), Callback::onTry, &mirrorcoat_onTry},
+    {effect(Move::MirrorCoat), Callback::damageCallback, &mirrorcoat_damageCallback},
+    C(MirrorCoat, onStart, mirrorcoat_condition_onStart),
+    C(MirrorCoat, onDamage, mirrorcoat_condition_onDamage),
+    {effect(Move::Endeavor), Callback::onTry, &endeavor_onTry},
+    {effect(Move::Endeavor), Callback::onTryImmunity, &endeavor_onTryImmunity},
+    {effect(Move::Endeavor), Callback::damageCallback, &endeavor_damageCallback},
+    {effect(Move::PerishSong), Callback::onHitField, &perishsong_onHitField},
+    C(PerishSong, onResidual, perishsong_condition_onResidual),
+    C(PerishSong, onEnd, perishsong_condition_onEnd),
+    {effect(Move::Thief), Callback::onAfterHit, &thief_onAfterHit},
+    {effect(Move::Covet), Callback::onAfterHit, &covet_onAfterHit},
+    A(StickyHold, onTakeItem, stickyhold_onTakeItem),
+    {effect(Move::PsychUp), Callback::onHit, &psychup_onHit},
+    A(CloudNine, onStart, weatherlock_onStart),
+    A(CloudNine, onAfterEntryHazard, weatherlock_onStart),
+    A(CloudNine, onEnd, weatherlock_onEnd),
+    A(AirLock, onStart, weatherlock_onStart),
+    A(AirLock, onAfterEntryHazard, weatherlock_onStart),
+    A(AirLock, onEnd, weatherlock_onEnd),
+    A(Trace, onStart, trace_onStart),
+    {effect(Move::Reversal), Callback::basePowerCallback, &lowhp_basePowerCallback},
+    {effect(Move::Flail), Callback::basePowerCallback, &lowhp_basePowerCallback},
+    {effect(Move::Eruption), Callback::basePowerCallback, &fullhp_basePowerCallback},
+    {effect(Move::WaterSpout), Callback::basePowerCallback, &fullhp_basePowerCallback},
+    {effect(Move::LowKick), Callback::basePowerCallback, &lowkick_basePowerCallback},
+    {effect(Move::Facade), Callback::onBasePower, &facade_onBasePower},
+    {effect(Move::SmellingSalts), Callback::basePowerCallback, &smellingsalts_basePowerCallback},
+    {effect(Move::SmellingSalts), Callback::onHit, &smellingsalts_onHit},
+    C(Disable, durationCallback, two_to_five_durationCallback),
+    C(Uproar, durationCallback, two_to_five_durationCallback),
+    C(Encore, durationCallback, three_to_six_durationCallback),
+    C(Partiallytrapped, durationCallback, three_to_six_durationCallback),
+    {effect(Move::BatonPass), Callback::onHit, &batonpass_onHit},
     {effect(Move::Substitute), Callback::onTryHit, &substitute_onTryHit},
     {effect(Move::Substitute), Callback::onHit, &substitute_onHit},
     C(Substitute, onStart, substitute_condition_onStart),

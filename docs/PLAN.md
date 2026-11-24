@@ -7,10 +7,10 @@ the same random draws in the same order and write the same log and the same
 requests, bugs included.
 
 Status (2026-11-23): steps 1 and 2 of "Order of work" are done and step 3,
-widening to every move, is well under way: most of what OU teams use works.
-Over 800 fresh recorded games of 40 turns with any choice at all, 394,610
-lines compare equal and none differ; 151 run all 40 turns and the rest stop
-at something not ported, most often Baton Pass, Pursuit or Counter.
+widening to every move, is most of the way for what OU teams use. Over 1,000
+fresh recorded games of up to 99 turns with any choice at all, 1,443,475
+lines compare equal and none differ; 671 run to their end or their 99th turn
+and the rest stop at something not ported, most often Sleep Talk or Beat Up.
 
 ## What was measured
 
@@ -134,6 +134,7 @@ What is tested today (`ctest`, no Node needed):
 | `replay_switches` | 30 games of 30 turns in which both players switch whenever they can; 9 run to the end and 21 stop at something unported, with no line different before |
 | `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches, line for line until each ends or stops |
 | `replay_any` | 60 games of 12 turns with any choice at all, line for line until each ends or stops |
+| `replay_regressions` | two whole games that once differed |
 | `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
@@ -178,12 +179,17 @@ What is tested today (`ctest`, no Node needed):
       Whirlwind, Focus Punch and the action it queues before the turn's
       moves, Leech Seed, Taunt, Wish, Knock Off, Aromatherapy, Heal Bell,
       Haze.~~ Done.
-   3. Next, by games stopped of 800: Baton Pass (106), Pursuit (102),
-      Counter (61), Sleep Talk (44), Perish Song (39), Trace (36), Endeavor
-      (33), Thief (29), Beat Up (25), Lum Berry and the other berries (48),
-      Cloud Nine (17), Psych Up (16), Solar Beam (11), Truant (11). They
-      need a switch in the middle of a turn, the record of who attacked
-      whom, moves that call moves, two-turn moves, and eating an item.
+   3. ~~Eating a berry (all of them), confusion, Baton Pass with the switch
+      it asks for in the middle of a turn, Pursuit catching a switch,
+      Counter and Mirror Coat, Endeavor, Perish Song, Thief, Covet, Psych
+      Up, Trace, Cloud Nine and Air Lock, multi-hit moves, Reversal, Flail,
+      Eruption, Low Kick, Facade, Smelling Salts.~~ Done.
+   4. Next, by games stopped of 1,000: Sleep Talk (117), Beat Up (74), Mean
+      Look (23), Encore (21), Solar Beam (16), Truant (20), Destiny Bond
+      (13), Curse from a Ghost (9), Mimic (7), Imprison (5), Struggle (5),
+      the statuses a contact ability gives (6). Then what OU teams rarely
+      carry: moves locked into, one-hit KOs, two-turn moves, Disable, Yawn,
+      Transform, Tri Attack, King's Rock, White Herb.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
 6. Olympus reads the engine's player stream (a separate change in olympus).
@@ -251,10 +257,8 @@ numbers are in `sim/` at the pinned commit.
 - **A test passes when no line differs**, however early its games stop. The
   count of games that run to the end is printed, not required; that has to
   change once moves are in.
-- **Unported and reached by the recorded games:** the moves listed under
-  step 3, Struggle, confusion, multi-hit and one-hit-KO moves, moves locked
-  into (Outrage, Hyper Beam's recharge), Trace, Cloud Nine, Truant, King's
-  Rock, eating a berry, anything past turn 100.
+- **Unported and reached by the recorded games:** what step 3 lists as
+  next, and anything past turn 100.
 - **Not modelled yet, and marked in the code:** the check that skips a
   handler whose effect was replaced after gathering (done for volatiles and
   side conditions only), and the record of who attacked whom (`attackedBy`,
@@ -263,8 +267,13 @@ numbers are in `sim/` at the pinned commit.
   in Showdown; the engine has one secondary a move, and the handler answers
   false for "only what has a `self` is kept".
 - **A handler in a move's secondary or `self` is not in the handler table.**
-  Three moves have one. Rapid Spin's is called by name from the pipeline;
-  Baton Pass and Tri Attack are refused.
+  Three moves have one. Rapid Spin's and Baton Pass's are called by name
+  from the pipeline; Tri Attack is refused.
+- **Two differences were found only by long games** (a fainted Pokémon's
+  status blocking Freeze Clause, and a Perish Song faint written after
+  `upkeep`), in 4 of 1,000 games of up to 99 turns. Both are fixed and kept
+  as `tests/fixtures/regressions.trace`. Short games would not have shown
+  them; the bar of millions of long games matters.
 - **No teams of its own.** The tools take `--teams DIR`; so far that has been
   hoenn's `teams/ou`. The random-legal and random-anything environments do
   not exist yet, and they are what will reach the 62% OU does not.

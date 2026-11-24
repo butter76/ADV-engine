@@ -147,7 +147,10 @@ inline void clear_volatile(Pokemon& p, bool include_switch_flags = true) {
   p.boosts = Boosts{};
   p.ability = p.base_ability;
   p.n_volatiles = 0;
-  if (include_switch_flags) p.switch_flag = p.force_switch_flag = false;
+  if (include_switch_flags) {
+    p.switch_flag = p.force_switch_flag = false;
+    p.switch_flag_move = Move::None;
+  }
   p.newly_switched = true;
   p.being_called_back = false;
   set_species(p, p.base_species);
@@ -174,12 +177,19 @@ inline bool check_win(Ctx& c) {
   return false;
 }
 
-// Battle.resolveFaints (battle.ts:2561), as runAction calls it: the queued
-// faints in order, and then whether the battle is over.
-inline bool resolve_faints(Ctx& c) {
+// Battle.resolveFaints (battle.ts:2561): the queued faints in order, and
+// then whether the battle is over. A Pokémon that Pursuit caught as it left
+// is resolved without that last look.
+inline bool resolve_faints(Ctx& c) { return resolve_faints(c, true); }
+inline bool resolve_faints(Ctx& c, bool win_check) {
   Battle& b = c.b;
   if (b.ended) return false;
-  if (!b.faints) return check_win(c);
+  // While a Pokémon is flagged to switch by a move, faints wait (unless the
+  // whole other side is down, which the engine does not look for yet).
+  for (const Side& side : b.sides) {
+    if (side.active != 0xFF && side.pokemon[side.active].switch_flag_move != Move::None) return false;
+  }
+  if (!b.faints) return win_check && check_win(c);
   while (b.faints) {
     const Battle::Faint f = b.faint_queue[0];
     for (int i = 1; i < b.faints; i++) b.faint_queue[i - 1] = b.faint_queue[i];
@@ -201,7 +211,7 @@ inline bool resolve_faints(Ctx& c) {
   std::array<Ref, 2> actives;
   const int n = all_active(b, actives);
   for (int i = 0; i < n; i++) cancel_action(b.queue, actives[i]);
-  return check_win(c);
+  return win_check && check_win(c);
   // Nothing listens for AfterFaint in Gen 3.
 }
 
@@ -268,11 +278,14 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
       const SideCondition* sc = side_condition_of(c.b.sides[h.side], Condition(he.id));
       if (!sc || &sc->state != h.state) continue;
     }
-    if (!h.callback) continue;
-    Callback name = e.on;
-    if (h.holder.kind == HolderKind::Side) name = e.side;
-    if (h.holder.kind == HolderKind::Field) name = e.field;
-    single_event(c, name, h.callback.effect, h.state, h.holder, {}, {}, relay::undefined, h.callback);
+    // An effect gathered for its duration alone has no handler to run, but
+    // faints are resolved after it all the same.
+    if (h.callback) {
+      Callback name = e.on;
+      if (h.holder.kind == HolderKind::Side) name = e.side;
+      if (h.holder.kind == HolderKind::Field) name = e.field;
+      single_event(c, name, h.callback.effect, h.state, h.holder, {}, {}, relay::undefined, h.callback);
+    }
     resolve_faints(c);
     if (c.b.ended) return;
   }
@@ -285,7 +298,17 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
 // BattleActions.runPursuitActivation (battle-actions.ts:62). No Pursuit can
 // be queued yet, so only its event runs.
 inline void run_pursuit_activation(Ctx& c, Ref r) {
+  Pokemon& p = c.b.at(r);
+  if (p.skip_pursuit) return;
   run_event(c, events::BEFORE_SWITCH_OUT, on(r));
+  c.b.has_active_move = false;
+  if (p.pursuit_activated) resolve_faints(c, false);
+  if (p.hp && !p.switch_flag) {
+    p.pursuit_activated = false;
+    p.skip_pursuit = false;
+  } else {
+    p.skip_pursuit = true; // not chased again
+  }
 }
 
 inline void run_switch(Ctx& c, Ref r);
@@ -293,7 +316,7 @@ inline void run_switch(Ctx& c, Ref r);
 // BattleActions.switchIn (battle-actions.ts:79): `r` comes in at position 0,
 // in place of whatever is there. A Pokémon dragged in is not chased by
 // Pursuit, is written as `drag`, and runs its switch-in at once.
-inline bool switch_in(Ctx& c, Ref r, bool is_drag = false) {
+inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Move::None) {
   Side& side = c.b.sides[r.side];
   Pokemon& p = c.b.at(r);
   if (p.is_active) unported("a switch to a Pokémon that is already in");
@@ -304,15 +327,39 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false) {
       old.being_called_back = true;
       if (!is_drag) run_pursuit_activation(c, old_ref);
       if (!run_event(c, events::SWITCH_OUT, on(old_ref)).truthy()) return false;
-      if (!old.hp) unported("a Pokémon fainting as it is called back");
+      if (!old.hp) {
+        add(c, {part::text("-hint"), part::text("Previously chosen switches continue in Gen 2-4 after a Pursuit target faints.")});
+      } else {
       single_event(c, events::ON_END, effect(old.ability), &old.ability_state, on(old_ref));
       single_event(c, events::ON_END, effect(old.item), &old.item_state, on(old_ref));
       cancel_action(c.b.queue, old_ref);
+      if (source_move != Move::None && data(source_move).self_switch == SelfSwitch::Copyvolatile) {
+        // Pokemon.copyVolatileFrom (pokemon.ts): the boosts, and every
+        // volatile that can be copied, in their order. A copy's effect
+        // order is 0, since the Pokémon it is made for is not active yet.
+        clear_volatile(p);
+        p.boosts = old.boosts;
+        for (int i = 0; i < old.n_volatiles; i++) {
+          const Volatile& v = old.volatiles[i];
+          if (v.id == Condition::None || data(v.id).no_copy) continue;
+          Volatile& copy = p.volatiles[p.n_volatiles++];
+          copy = v;
+          copy.state.effect_order = 0;
+          copy.state.target_pokemon = r;
+        }
+        clear_volatile(old);
+        for (int i = 0; i < p.n_volatiles; i++) {
+          if (has(effect(p.volatiles[i].id), callback("", "Copy"))) unported("a volatile's onCopy");
+        }
+      }
       clear_volatile(old);
+      }
     }
     old.is_active = false;
     old.is_started = false;
     old.stats_raised_this_turn = old.stats_lowered_this_turn = false;
+    old.skip_pursuit = false;
+    old.pursuit_activated = false;
     // The two trade places in side.pokemon. A fainted Pokémon's `fnt` status
     // is cleared.
     old.position = p.position;
@@ -328,7 +375,11 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false) {
   p.ability_state = init_effect_state(c.b, p.ability != Ability::None, r);
   p.item_state = init_effect_state(c.b, p.item != Item::None, r);
   run_event(c, events::BEFORE_SWITCH_IN, on(r));
-  add(c, {part::text(is_drag ? "drag" : "switch"), part::pokemon(c.b, r), part::details(c.b, r)});
+  if (source_move != Move::None) {
+    add(c, {part::text("switch"), part::pokemon(c.b, r), part::details(c.b, r), part::from_move(source_move)});
+  } else {
+    add(c, {part::text(is_drag ? "drag" : "switch"), part::pokemon(c.b, r), part::details(c.b, r)});
+  }
   p.previously_switched_in++;
   run_event(c, events::ENTRY_HAZARD, on(r));
   if (!p.hp) return false;
@@ -536,6 +587,9 @@ inline void check_fainted(Ctx& c) {
       queued |= (a.choice == Choice::Switch || a.choice == Choice::InstaSwitch) && a.pokemon == Ref{uint8_t(s), side.active};
     }
     if (queued) continue;
+    // Its status becomes `fnt`, whatever it was.
+    p.status = Condition::None;
+    p.status_state = EffectState{};
     p.status_fnt = true;
     p.switch_flag = true;
   }
@@ -567,7 +621,7 @@ inline bool run_action(Ctx& c, const Action& action) {
     // no handler in Gen 3.
     switch_in(c, action.target);
     break;
-  case Choice::InstaSwitch: switch_in(c, action.target); break;
+  case Choice::InstaSwitch: switch_in(c, action.target, false, action.move); break;
   case Choice::RunSwitch: run_switch(c, action.pokemon); break;
   case Choice::BeforeTurn: each_event(c, events::BEFORE_TURN); break;
   case Choice::BeforeTurnMove: {
@@ -629,9 +683,17 @@ inline bool run_action(Ctx& c, const Action& action) {
   for (int s = 0; s < 2; s++) {
     Side& side = b.sides[s];
     if (side.active == 0xFF || !side.pokemon[side.active].switch_flag) continue;
-    if (!can_switch(b, s)) side.pokemon[side.active].switch_flag = false;
-    else if (side.pokemon[side.active].hp) unported("a Pokémon with HP flagged to switch");
-    else switches = true;
+    if (!can_switch(b, s)) {
+      side.pokemon[side.active].switch_flag = false;
+      continue;
+    }
+    // A Pokémon that switches out by its own move can still be chased.
+    if (side.pokemon[side.active].hp) {
+      run_pursuit_activation(c, {uint8_t(s), side.active});
+      if (b.ended) return true;
+      if (side.pokemon[side.active].fainted) unported("a Pokémon fainting as its move switches it out");
+    }
+    switches = true;
   }
   if (switches) {
     make_request(c, RequestState::Switch);
@@ -679,10 +741,13 @@ inline void commit_choices(Ctx& c) {
     const ChoiceState choice = side.choice;
     if (choice.action == ChoiceState::Kind::Switch || choice.action == ChoiceState::Kind::InstaSwitch) {
       const Ref out{s, side.active};
-      // resolveAction: a switch clears the flag that asked for it.
+      // resolveAction: a switch clears the flag that asked for it, and
+      // carries the move that set it.
+      const Move by = b.at(out).switch_flag_move;
       b.at(out).switch_flag = false;
+      b.at(out).switch_flag_move = Move::None;
       add_choice(c, {.choice = choice.action == ChoiceState::Kind::Switch ? Choice::Switch : Choice::InstaSwitch,
-                     .pokemon = out, .target = {s, choice.target}});
+                     .pokemon = out, .target = {s, choice.target}, .move = by});
     } else if (choice.action == ChoiceState::Kind::Move) {
       add_choice(c, {.choice = Choice::Move, .pokemon = {s, side.active}, .move = choice.move});
     }

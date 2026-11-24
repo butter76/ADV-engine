@@ -30,6 +30,7 @@ struct Part {
     Item,     // an item's name
     Wisher,   // `[wisher] Name`
     From,     // `[from] ` and an effect's full name
+    FromMove, // `[from] ` and a move's bare name
     Of,       // `[of] p1a: Name`
   } kind = Kind::Text;
   std::string_view text;
@@ -67,6 +68,7 @@ constexpr Part item(adv::Item i) { return {.kind = Part::Kind::Item, .id = uint1
 constexpr Part wisher(Ref r) { return {.kind = Part::Kind::Wisher, .pokemon = r}; }
 constexpr Part from(Effect e) { return {.kind = Part::Kind::From, .id = e.id, .effect_kind = e.kind}; }
 constexpr Part from_ability(Ability a) { return from(effect(a)); }
+constexpr Part from_move(adv::Move m) { return {.kind = Part::Kind::FromMove, .id = uint16_t(m)}; }
 inline Part pokemon(const Battle& b, Ref r) {
   return {.kind = Part::Kind::Pokemon, .pokemon = r, .active = b.at(r).is_active};
 }

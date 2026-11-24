@@ -416,11 +416,11 @@ inline void compact_volatiles(Pokemon& p) {
 
 // Pokemon.addVolatile(status) from a handler: the source is the event's, or
 // the Pokémon itself, and the source effect the handler's own.
-inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}) {
+inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}, Effect source_effect = {}) {
   Pokemon& p = c.b.at(r);
   if (!p.hp && !data(id).affects_fainted) return false;
   if (!source) source = c.event.source;
-  const Effect source_effect = c.effect;
+  if (!source_effect) source_effect = c.effect;
   if (!source) source = r;
   if (Volatile* v = volatile_of(p, id)) {
     if (!has(effect(id), ON_RESTART)) return false;
@@ -437,7 +437,10 @@ inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}) {
   v.state.source = source;
   v.state.source_effect = source_effect;
   v.state.duration = data(id).duration;
-  if (has(effect(id), Callback::durationCallback)) unported("a volatile with a durationCallback");
+  if (has(effect(id), Callback::durationCallback)) {
+    // durationCallback(target, source, sourceEffect), which often draws.
+    v.state.duration = uint8_t(call(c, {effect(id), Callback::durationCallback}, relay::undefined, on(r), source, source_effect).number);
+  }
   if (!single_event(c, ON_START, effect(id), &v.state, on(r), source, source_effect).truthy()) {
     if (Volatile* added = volatile_of(p, id)) added->id = Condition::None;
     return false;
@@ -453,6 +456,30 @@ inline bool remove_volatile(Ctx& c, Ref r, Condition id) {
   if (!v) return false;
   single_event(c, ON_VOLATILE_END, effect(id), &v->state, on(r));
   if (Volatile* still = volatile_of(p, id)) still->id = Condition::None;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Items (pokemon.ts).
+// ---------------------------------------------------------------------------
+
+// Pokemon.eatItem() from a handler: the Pokémon eats the berry it holds.
+inline bool eat_item(Ctx& c, Ref r) {
+  Pokemon& p = c.b.at(r);
+  if (p.item == Item::None || !p.hp || !p.is_active) return false;
+  const Effect source_effect = c.effect;
+  const Ref source = c.event.target.kind == HolderKind::Pokemon ? c.event.target.pokemon : Ref{};
+  const Effect item = effect(p.item);
+  // An item's handler cannot make its Pokémon eat some other item.
+  if (source_effect.kind == EffectKind::Item && source_effect && source_effect != item && source == r) return false;
+  // Nothing listens for UseItem in Gen 3; TryEatItem asks the berry itself.
+  if (!run_event(c, event("TryEatItem"), on(r), {}, {}, relay::yes).truthy()) return false;
+  add(c, {part::text("-enditem"), part::pokemon(c.b, r), part::item(p.item), part::text("[eat]")});
+  single_event(c, callback("", "Eat"), item, &p.item_state, on(r), source, source_effect);
+  // Nothing listens for EatItem or AfterUseItem in Gen 3.
+  p.item = Item::None;
+  p.item_state = EffectState{};
+  p.used_item_this_turn = true;
   return true;
 }
 

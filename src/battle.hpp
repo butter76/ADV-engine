@@ -89,6 +89,9 @@ struct EffectState {
   uint16_t counter = 0;    // stall: one in this many that Protect works again
   uint16_t hp = 0;         // a Substitute's
   bool lost_focus = false; // Focus Punch: its user was hit
+  bool has_slot = false;   // Counter, Mirror Coat: something hit that can be answered
+  uint16_t damage = 0;     // and twice what it dealt
+  bool ending = false;     // Cloud Nine, Air Lock: the ability is on its way out
   uint8_t target_side = 0; // the target, when it is a side
 };
 
@@ -145,7 +148,13 @@ struct Pokemon {
   bool stats_raised_this_turn = false, stats_lowered_this_turn = false;
   bool known_type = true, newly_switched = false;
   bool switch_flag = false, force_switch_flag = false;
+  // The move that flagged the switch (Showdown's switchFlag as a string):
+  // Baton Pass.
+  Move switch_flag_move = Move::None;
+  bool skip_pursuit = false;
+  bool pursuit_activated = false;
   bool item_knocked_off = false;
+  bool used_item_this_turn = false;
   uint8_t active_turns = 0, previously_switched_in = 0;
   Move last_move = Move::None, move_this_turn = Move::None;
   uint16_t last_damage = 0;

@@ -47,6 +47,9 @@ add_test(NAME replay_switches COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/
 add_test(NAME replay_plain_moves COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/plain-20.trace)
 # 60 games of 12 turns with any choice at all; most stop at a move not ported yet.
 add_test(NAME replay_any COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/any-60.trace)
+# Whole games that once differed: a fainted Pokémon's status, and a faint
+# resolved after an effect that only counts down.
+add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/regressions.trace)
 
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)

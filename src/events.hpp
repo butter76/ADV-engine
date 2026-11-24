@@ -196,7 +196,7 @@ inline bool suppressing_weather(const Battle& b) {
   for (const Side& s : b.sides) {
     if (s.active == 0xFF) continue;
     const Pokemon& p = s.pokemon[s.active];
-    if (!p.fainted && data(p.ability).suppress_weather) return true;
+    if (!p.fainted && data(p.ability).suppress_weather && !p.ability_state.ending) return true;
   }
   return false;
 }

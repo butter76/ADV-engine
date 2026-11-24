@@ -73,7 +73,18 @@ void check(const Game& g, Tally& t) {
     for (; have < stream.lines.size(); have++, want++) {
       const std::string& mine = stream.lines[have];
       if (want >= g.lines.size()) return fail(g, t, want, "<the end>", mine), false;
-      if (g.lines[want] != mine) return fail(g, t, want, g.lines[want], mine), false;
+      if (g.lines[want] != mine) {
+        fail(g, t, want, g.lines[want], mine);
+        // With REPLAY_CONTEXT set, what each side has next.
+        if (std::getenv("REPLAY_CONTEXT")) {
+          for (size_t i = 0; i < 40 && (want + i < g.lines.size() || have + i < stream.lines.size()); i++) {
+            const std::string a = want + i < g.lines.size() ? g.lines[want + i].substr(0, 100) : "";
+            const std::string b = have + i < stream.lines.size() ? stream.lines[have + i].substr(0, 100) : "";
+            std::fprintf(stderr, "    %-100s | %s\n", a.c_str(), b.c_str());
+          }
+        }
+        return false;
+      }
       t.lines++;
       t.draws += mine[0] == 'd';
       t.choices += mine[0] == 'c';
