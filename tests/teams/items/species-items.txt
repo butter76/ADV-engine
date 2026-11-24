@@ -1,0 +1,88 @@
+=== [gen3ou] the species their items are for ===
+
+Ditto @ Metal Powder
+Ability: Limber
+- Transform
+- Tackle
+- Thunder Shock
+- Protect
+
+Pikachu @ Light Ball
+Ability: Static
+- Transform
+- Tackle
+- Thunder Shock
+- Recover
+
+Clamperl @ Deep Sea Tooth
+Ability: Shell Armor
+- Transform
+- Tackle
+- Thunder Shock
+- Recover
+
+Marowak @ Thick Club
+Ability: Rock Head
+- Transform
+- Tackle
+- Thunder Shock
+- Recover
+
+Chansey @ Lucky Punch
+Ability: Natural Cure
+- Transform
+- Tackle
+- Thunder Shock
+- Recover
+
+Farfetch'd @ Stick
+Ability: Keen Eye
+- Transform
+- Tackle
+- Thunder Shock
+- Recover
+
+=== [gen3ou] others holding them, who transform ===
+
+Mew @ Metal Powder
+Ability: Synchronize
+- Transform
+- Tackle
+- Water Gun
+- Recover
+
+Smeargle @ Light Ball
+Ability: Own Tempo
+- Transform
+- Tackle
+- Water Gun
+- Recover
+
+Latias @ Soul Dew
+Ability: Levitate
+- Transform
+- Tackle
+- Water Gun
+- Recover
+
+Mew @ Thick Club
+Ability: Synchronize
+- Transform
+- Tackle
+- Water Gun
+- Recover
+
+Smeargle @ Deep Sea Scale
+Ability: Own Tempo
+- Transform
+- Tackle
+- Water Gun
+- Recover
+
+Latios @ Soul Dew
+Ability: Levitate
+- Transform
+- Tackle
+- Water Gun
+- Recover
+

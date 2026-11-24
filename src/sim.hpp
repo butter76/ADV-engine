@@ -13,6 +13,7 @@ namespace adv {
 
 // Battle.add (battle.ts).
 inline void add(Ctx& c, std::initializer_list<Part> parts) {
+  if (parts.size() > size_t(LINE_PARTS)) unported("a line with more parts than a Line holds");
   Line& line = c.out.log.emplace_back();
   bool split = false;
   for (const Part& p : parts) {

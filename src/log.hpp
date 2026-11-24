@@ -75,8 +75,16 @@ struct Part {
 };
 static_assert(sizeof(Part) == 16);
 
+// A line's parts. The most Showdown writes is a `move` line that every
+// attribute was added to: the user, the move and its target, what it was
+// used from, `[still]`, a `[miss]` for each step of the hit that found it
+// had missed, and one more for each Future Sight that then misses before
+// another move is used (attrLastMove adds to whatever `move` line is the
+// last). More than this is refused, not written past the end.
+inline constexpr int LINE_PARTS = 12;
+
 struct Line {
-  std::array<Part, 7> parts{};
+  std::array<Part, LINE_PARTS> parts{};
   uint8_t n = 0;
   // addSplit(side, secret) with no shared line: this side is sent the line
   // and the others an empty one. -1: an ordinary line.

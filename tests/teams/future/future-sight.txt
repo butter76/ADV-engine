@@ -1,0 +1,88 @@
+=== [gen3ou] future A ===
+
+Xatu @ Bright Powder
+Ability: Synchronize
+- Future Sight
+- Rollout
+- Double Team
+- Petal Dance
+
+Jirachi @ Bright Powder
+Ability: Serene Grace
+- Future Sight
+- Outrage
+- Sand Attack
+- Ice Ball
+
+Gardevoir @ Bright Powder
+Ability: Trace
+- Future Sight
+- Thrash
+- Flash
+- Uproar
+
+Alakazam @ Bright Powder
+Ability: Synchronize
+- Future Sight
+- Petal Dance
+- Minimize
+- Rollout
+
+Girafarig @ Bright Powder
+Ability: Inner Focus
+- Future Sight
+- Ice Ball
+- Smokescreen
+- Outrage
+
+Claydol @ Bright Powder
+Ability: Levitate
+- Future Sight
+- Uproar
+- Kinesis
+- Thrash
+
+=== [gen3ou] future B ===
+
+Starmie @ Bright Powder
+Ability: Natural Cure
+- Future Sight
+- Outrage
+- Double Team
+- Ice Ball
+
+Slowking @ Bright Powder
+Ability: Own Tempo
+- Future Sight
+- Thrash
+- Sand Attack
+- Uproar
+
+Grumpig @ Bright Powder
+Ability: Thick Fat
+- Future Sight
+- Petal Dance
+- Flash
+- Rollout
+
+Exeggutor @ Bright Powder
+Ability: Chlorophyll
+- Future Sight
+- Ice Ball
+- Minimize
+- Outrage
+
+Medicham @ Bright Powder
+Ability: Pure Power
+- Future Sight
+- Uproar
+- Smokescreen
+- Thrash
+
+Lunatone @ Bright Powder
+Ability: Levitate
+- Future Sight
+- Rollout
+- Kinesis
+- Petal Dance
+

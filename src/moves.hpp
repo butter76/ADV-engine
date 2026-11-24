@@ -93,6 +93,7 @@ inline void attr_last_move(Ctx& c, std::string_view attribute) {
   } else if (attribute == "[still]") {
     line.parts[3] = part::text("");
   }
+  if (line.n == LINE_PARTS) unported("a move line with more attributes than a Line holds");
   line.parts[line.n++] = part::text(attribute);
 }
 // Battle.addMove (battle.ts): a line that later attributes are added to.

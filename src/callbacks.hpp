@@ -3568,8 +3568,9 @@ ADV_CHAIN(thickclub_onModifyAtk, c.b.at(t.pokemon).species == Species::Cubone ||
 inline bool lati(const Pokemon& p) { return p.base_species == Species::Latias || p.base_species == Species::Latios; }
 ADV_CHAIN(souldew_onModifySpA, lati(c.b.at(t.pokemon)), 1.5, 1)
 ADV_CHAIN(souldew_onModifySpD, lati(c.b.at(t.pokemon)), 1.5, 1)
-// Nothing transforms yet, so a Ditto is itself.
-ADV_CHAIN(metalpowder_onModifyDef, c.b.at(t.pokemon).species == Species::Ditto, 2, 1)
+// A Ditto that is itself: not one that has transformed, and not a Pokémon
+// that has transformed into one.
+ADV_CHAIN(metalpowder_onModifyDef, c.b.at(t.pokemon).species == Species::Ditto && !c.b.at(t.pokemon).transformed, 2, 1)
 // onModifyAccuracy(accuracy): a number is scaled, not chained.
 ADV_HANDLER(brightpowder_onModifyAccuracy) {
   ADV_UNUSED;

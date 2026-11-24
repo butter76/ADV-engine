@@ -143,7 +143,8 @@ that differs does.
 | `replay_switches` | 30 games of 30 turns in which both players switch whenever they can |
 | `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches |
 | `replay_any` | 60 OU games of 12 turns with any choice at all |
-| `replay_regressions` | nine whole games that once differed |
+| `replay_regressions` | 18 whole games that once differed |
+| `export` | 50 teams in Showdown's export text read as Showdown packs them (`tools/teams_ref.cjs`) |
 | `replay_targeted` | 16 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`) |
 | `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not |
 | `masks_targeted`, `masks_random`, `masks_regressions` | the same games on the build that checks every kept mask before it is used |
@@ -169,6 +170,35 @@ Larger runs go through a pipe and are not stored (`tools/soak.cjs`):
 | 200,000 | random | 119 differed and one stopped; all fixed since |
 | 200,000 | OU | 9 differed; all fixed since |
 | 1,000,000 | random, after those fixes | all match, 1,585,838,306 lines |
+| 300,000 | random, on the engine after the work on its speed | all match, 475,718,933 lines |
+| 1,000,000 | OU, on the engine before that work | all match, 2,587,217,193 lines |
+| 150,000 | random, after `Line` was given twelve parts | one differed (Metal Powder, below); fixed since |
+| 150,000 | OU, after `Line` was given twelve parts | all match, 390,181,837 lines |
+| 60,000 | `tests/teams/future`, after `Line` was given twelve parts | all match, 84,659,465 lines |
+| 150,000 | random, after both of the fixes below | all match, 238,051,573 lines |
+| 30,000 | `tests/teams/items`, after both | all match, 72,237,408 lines |
+
+The first six of these were run before olympus used the engine. A fault
+none of them reached was found afterwards from olympus, whose games are between other teams: a
+`move` line can be given more attributes than a `Line` had room for (the
+user, the move, its target, `[from] lockedmove`, and three `[miss]`, two of
+them from Future Sights missing at the turn's end, which `attrLastMove` adds
+to whatever `move` line is the last), and the eighth part was written past
+the line's end. A `Line` now holds twelve parts and refuses a thirteenth.
+30,000 games between teams made to do it (`tests/teams/future`) had the line
+in 34, each of which the engine before the fix got wrong and the engine
+after it plays to its end; two are in `regressions.trace`. Soaks do not find
+what their teams do not do: a new kind of team is worth a soak of its own.
+
+The soak of that fix found one more, in the 131,000th of its games between
+teams of anything: Metal Powder doubled the Defense of a Pokémon that had
+transformed into a Ditto. Its handler was written before Transform was
+ported and never had Showdown's `!pokemon.transformed`. 600 games between
+teams of the species such items are for and of others who hold them and
+transform (`tests/teams/items`) have 14,520 transformations: the engine
+before the fix differs in 31 games, the engine after it in none. A handler
+written while something it reads was not yet ported says so in a comment;
+those comments are searched for when the thing is ported.
 
 The million had one fault of its own: the fix for Sleep Talk calling Helping
 Hand had not been replayed on the game that showed it, and it crashed the
@@ -298,7 +328,25 @@ two), and Torment's `onEnd`, which nothing in Gen 3 brings about.
    profile-guided optimisation, which would ask the same of whatever builds
    the engine into olympus; keeping the handler's function with a gathered
    handler, in place of looking it up again to call it.
-6. Olympus reads the engine's player stream (a separate change in olympus).
+6. Olympus reads the engine's player stream (a separate change in olympus,
+   on its branch `adv-engine`). What it needed here:
+   - `src/view.hpp`: the log as one player is sent it, as Lines. A View
+     gives a Pokémon of the other side its number (the order the log first
+     named them) in place of its index in a team the player has not seen,
+     and that side's HP as the text would have it. `tests/replay.cpp` holds
+     each player's view of every recorded game to what Showdown's stream
+     sends that player: of a split line its own side's half, and of a line
+     for the other side alone, nothing.
+   - `src/showdown/export.hpp`: teams in Showdown's export text
+     (`Teams.import`), which is how team pools are kept. `tests/export_test.cpp`
+     holds it to what Showdown packs of the same text, on the 50 sample
+     teams in `tests/teams/ou` (and by hand on the other 281 OU teams and
+     the targeted ones: all equal).
+   - The CMake target `adv` carries `-ffp-contract=off` and nothing else, and
+     a project that takes the engine in gets the target without the tests.
+   Olympus's own checks of its tokens ran the engine on a million games
+   between teams of anything with no stop at something unported, and are
+   what found the line above.
 
 ## The battle's start
 
@@ -499,4 +547,5 @@ most need `--teams DIR`:
 | `tools/unported.cjs` | the checklist's callbacks that `src/callbacks.hpp` does not register; `--show ID` prints Showdown's source for an effect's |
 | `tools/gen_tables.cjs` | writes `src/data/`; stops on a field it has no place for |
 | `tools/tables_ref.cjs` | writes `tests/fixtures/tables.txt` |
+| `tools/teams_ref.cjs` | packs a file of exported teams as Showdown does, a line a team: what `tests/export_test.cpp` compares with |
 | `tools/prng_ref.cjs` | prints the line `tests/prng_test.cpp` must print |
