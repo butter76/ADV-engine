@@ -124,20 +124,42 @@ function of the checklist must run at least once in the recorded games
 (`tools/coverage.cjs`); one the random games never reach gets a written
 scenario.
 
-What is tested today (`ctest`, no Node needed):
+What is tested today (`ctest`, no Node needed). Every replay test runs with
+`--complete`: a game that stops at something unported fails it, as a line
+that differs does.
 
 | Test | What it shows |
 |---|---|
 | `prng` | 2,000,000 mixed calls give the hash Showdown's PRNG gives (`tools/prng_ref.cjs`) |
 | `trace_draws` | all 20,124 draws of 50 recorded games replay from their seeds |
-| `replay_openings` | 200 games up to the first choice, line for line |
-| `replay_switches` | 30 games of 30 turns in which both players switch whenever they can; 9 run to the end and 21 stop at something unported, with no line different before |
-| `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches, line for line until each ends or stops |
-| `replay_any` | 60 games of 12 turns with any choice at all, line for line until each ends or stops |
-| `replay_regressions` | two whole games that once differed |
-| `replay_targeted` | 14 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`); all run to the end, line for line |
-| `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not; 3 run to the end and 21 stop at something unported, with no line different before |
-| `data` | the tables state the same 1,891 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
+| `replay_openings` | 200 games up to the first choice |
+| `replay_switches` | 30 games of 30 turns in which both players switch whenever they can |
+| `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches |
+| `replay_any` | 60 OU games of 12 turns with any choice at all |
+| `replay_regressions` | nine whole games that once differed |
+| `replay_targeted` | 16 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`) |
+| `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not |
+| `data` | the tables state the same 2,227 facts as Showdown, Metronome's list in its order among them (`tools/tables_ref.cjs`, written apart from the generator) |
+
+The recorded games behind the last full run, none of them with a line
+different and every one run to its end (30,124,089 lines over 13,800 games):
+
+| Games | Teams | Turns | Lines |
+|---|---|---|---|
+| 1,000 + 800 + 200 | OU | up to 99 | 3,239,062 |
+| 1,500 | OU, never replayed before the run | no limit | 3,993,491 |
+| 600 + 2,000 + 3,000 | random | 60, 99, no limit | 8,425,138 |
+| 2,500 | random, never replayed before the run | no limit | 3,931,821 |
+| 600 + 1,200 | targeted | 99, no limit | 5,334,021 |
+| 400 | targeted (freezing and thawing alone) | no limit | 5,200,556 |
+
+Of the checklist's 624 functions, 564 ran in those games on Showdown's side
+(`tools/coverage.cjs`). The 60 that did not: later generations' conditions
+and the validator's rules (44), nine that only doubles can reach (Follow Me,
+Helping Hand, Lightning Rod's and Counter's redirection), six that Gen 3
+never calls (`onModifyType` of Hidden Power and Weather Ball, Rapid Spin's
+`onAfterSubDamage`, White Herb's `onAnyAfterMega`, the `toxic` volatile's
+two), and Torment's `onEnd`, which nothing in Gen 3 brings about.
 
 ## Order of work
 
@@ -205,18 +227,21 @@ What is tested today (`ctest`, no Node needed):
       end), 1,103,568 lines over 600 games between the targeted teams (599
       run to the end), and 209,489 lines over 600 games between random
       teams, of which 34 run to the end.
-   5. Next, by random games stopped of 600: one-hit KOs (78), Rollout and
-      Ice Ball (42), the moves that call another (Metronome, Mirror Move,
-      Nature Power, Assist, 52), Jump Kick's crash (36), Transform (22),
-      Conversion and Conversion 2 (32), Recycle, Trick, Skill Swap and Role
-      Play (67), Magic Coat and Snatch (33), Future Sight and Doom Desire
-      (31), Mimic and Sketch (32), Secret Power, Weather Ball, Camouflage,
-      Follow Me, Helping Hand, Tri Attack, Triple Kick, Uproar, Bide, Fury
-      Cutter, Memento, Lightning Rod's redirection. About 75 callbacks that
-      Gen 3 can reach are left; the other 66 unregistered are later
-      generations' conditions, the validator's rules, and berries with
-      nothing to do when eaten.
-4. Zero differences in all three environments.
+   5. ~~One-hit KOs, Jump Kick's crash, Triple Kick, Memento; Rollout, Ice
+      Ball, Fury Cutter, Uproar, Bide; Conversion, Conversion 2, Camouflage,
+      Recycle, Trick, Skill Swap, Role Play, Transform, Mimic, Sketch;
+      Metronome, Assist, Mirror Move, Nature Power; Magic Coat, Snatch;
+      Future Sight and Doom Desire, with the newer hit steps they land
+      through; Weather Ball, Tri Attack, Secret Power; Helping Hand and
+      Follow Me as singles has them; Mental Herb, Liquid Ooze; the Endless
+      Battle Clause and the turn limit.~~ Done: 574 of the checklist's 653
+      callbacks are registered (`tools/unported.cjs`), and none of the 79
+      left can run in Gen 3 singles.
+4. Zero differences in all three environments. Reached for the OU teams,
+   for random teams of anything, and for the targeted teams, over 13,800
+   games (see Testing). Still to do: random *legal* teams, runs in the
+   millions, piped to the checker instead of stored, and a pass over the
+   branches that remain `unported` inside ported handlers (below).
 5. Speed: the listener masks, a benchmark against hoenn.
 6. Olympus reads the engine's player stream (a separate change in olympus).
 
@@ -282,11 +307,21 @@ numbers are in `sim/` at the pinned commit.
 
 ## Open
 
-- **A test passes when no line differs**, however early its games stop. The
-  count of games that run to the end is printed, not required; that has to
-  change once moves are in.
-- **Unported and reached by the recorded games:** what step 3 lists as
-  next, and anything past turn 100.
+- **Branches still `unported` inside ported code**, none reached in 13,800
+  games: a stalling move's ninth success in a row (a draw from 2^32), a
+  forced switch for a side that has a switch queued, a Pokémon fainting as
+  its own move switches it out, a healing move stopped by `TryHeal`, a
+  second Pokémon tied to one trapping volatile, Beat Up's Attack handler
+  with no ally left (Showdown would crash there), and the fixed limits
+  (16 queued actions, 8 volatiles, 24 handlers of one event).
+- **A mod inherits from the next generation's.** Gen 3 takes
+  `hitStepAccuracy` and `hitStepInvulnerabilityEvent` from Gen 4's mod, not
+  from `sim/battle-actions.ts`; a Future Sight's accuracy was wrong by a
+  truncation until the games showed it. Before porting anything from
+  `sim/`, look for it in `data/mods/gen4/scripts.ts`.
+- **Read, do not recall.** The turn limit was first written from memory as
+  `turn >= 1000`; the pinned source says `> 1000`. Games that ran to turn
+  1000 showed it.
 - **Not modelled yet, and marked in the code:** the check that skips a
   handler whose effect was replaced after gathering (done for volatiles and
   side conditions only).
@@ -294,19 +329,29 @@ numbers are in `sim/` at the pinned commit.
   Showdown's list has the same source, so the last one answers for all.
 - **A locked move's target is not kept.** Showdown stores the slot a charging
   or locked move was aimed at; in singles every case comes out as the foe.
-- **Random teams found nothing the targeted teams did not, but stop early.**
-  Every random game reaches an unported move within a few turns, so what
-  comes later in a game is compared only by the OU and targeted teams. The
-  targeted teams found five differences the OU teams could not: a Pokémon's
-  last move kept after it left, a refused volatile reported as a failure,
-  Nightmare outlasting sleep, and Imprison's two effects on choices (a
-  refused move, and Struggle when every move is secretly disabled).
+- **Each kind of team found what the others could not.** Targeted teams in
+  batch 4: a last move kept after leaving, a refused volatile reported as a
+  failure, Nightmare outlasting sleep, Imprison's refused choice and its
+  Struggle. Random teams in batch 5: `setStatus` returning null under
+  Uproar, Mental Herb, a multi-hit move called asleep, Focus Band against a
+  confused Pokémon's own hit, Destiny Bond and Endure against a future
+  move, the type a transformed Pokémon is "known" to have, PP Ups of a
+  copied move, a future move's faint written after `upkeep`. Long targeted
+  games: Yawn through Safeguard, a move with no PP shown as disabled under
+  a hidden disable, the Struggle notice naming a Pokémon that has since
+  left, and the turn limit.
 - **Shield Dust's filter is a stand-in.** `ModifySecondaries` passes a list
   in Showdown; the engine has one secondary a move, and the handler answers
   false for "only what has a `self` is kept".
 - **A handler in a move's secondary or `self` is not in the handler table.**
-  Three moves have one. Rapid Spin's and Baton Pass's are called by name
-  from the pipeline; Tri Attack is refused.
+  Three moves have one, each called by name from the pipeline: Rapid
+  Spin's, Baton Pass's and Tri Attack's.
+- **A made-up move is the active move with some fields overridden.** Bide's
+  release and a landing Future Sight are objects Showdown builds on the
+  spot; the engine sets `fixed_damage` and reads the rest from the real
+  move's row, which happens to agree but for `ignoreImmunity` (handled).
+- **Mimic and Transform keep the slots they cover** (`base_move_slots`,
+  one bit a slot), where Showdown keeps a second list of slot objects.
 - **Two differences were found only by long games** (a fainted Pokémon's
   status blocking Freeze Clause, and a Perish Song faint written after
   `upkeep`), in 4 of 1,000 games of up to 99 turns. Both are fixed and kept
@@ -326,8 +371,11 @@ numbers are in `sim/` at the pinned commit.
   `arceus` and `commanding` are kept. The 23% of dispatches that could be
   removed outright is a lower bound.
 - **Constant handlers are not counted by `coverage.cjs`**; it wraps functions.
-- **Endless Battle Clause** has code in both the rule and the core and can
-  end a game; it has to be ported, and random games rarely reach it.
+- **The Endless Battle Clause is ported but has never fired** in a recorded
+  game: it needs a Pokémon that had Skill Swap used on it by a foe, a stale
+  Pokémon across from it, and more than 100 turns. Staleness is tracked as
+  Showdown tracks it, its quirks included (every item given marks its
+  holder, and Trick never marks it as coming from the other side).
 - **Choice parsing** (`sim/side.ts`, 1,406 lines) decides what is refused
   and what the request says next; how much of it is needed is not yet read.
 - **pkmn.bot** runs an unknown Showdown commit. The engine follows one commit.
@@ -365,8 +413,9 @@ most need `--teams DIR`:
 
 | Tool | What it does |
 |---|---|
+| `tests/replay.cpp` (`replay FILE [--complete]`) | compares a recorded trace with the engine, line by line |
 | `tools/trace.cjs` | records games (`--teams DIR` or `random`, `--games`, `--first`, `--out`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
-| `tools/coverage.cjs` | counts runs of each checklist function over the same games |
+| `tools/coverage.cjs` | counts runs of each checklist function over the same games (`--teams DIR` or `random`) |
 | `tools/census.cjs` | events, sorts and draws per update, to `build/census.json` |
 | `tools/dump_dex.cjs` | the data as JSON and the checklist, to `build/dex/` |
 | `tools/unported.cjs` | the checklist's callbacks that `src/callbacks.hpp` does not register; `--show ID` prints Showdown's source for an effect's |

@@ -42,6 +42,10 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
   case Part::Kind::Number: return std::to_string(p.number);
   case Part::Kind::Side: return side_id(p.number);
   case Part::Kind::Player: return names.players[size_t(p.number)];
+  case Part::Kind::TurnsLeft:
+    return "You will auto-tie if the battle doesn't end in " + (p.number == 1 ? std::string("1 turn") : std::to_string(p.number) + " turns") +
+           " (on turn 1000).";
+  case Part::Kind::PlayerSays: return names.players[size_t(p.number)] + std::string(p.text);
   case Part::Kind::SideName: return side_id(p.number) + ": " + names.players[size_t(p.number)];
   case Part::Kind::Pokemon:
     return side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
@@ -132,7 +136,8 @@ inline std::string request_json(const Battle& b, int side, const Names& names) {
     if (m.id == Move::Frustration) name += " " + std::to_string(std::max((255 - p.happiness) * 10 / 25, 1));
     out += std::string(i ? "," : "") + "{\"move\":" + json(name) + ",\"id\":" + json(MOVE_NAMES[uint16_t(m.id)].id) +
            (r.struggle ? std::string() : ",\"pp\":" + std::to_string(m.pp) + ",\"maxpp\":" + std::to_string(m.maxpp)) +
-           ",\"target\":" + json(TARGET_NAMES[uint8_t(m.target)]) + ",\"disabled\":" + (m.disabled ? "true" : "false") +
+           (m.no_target ? std::string() : ",\"target\":" + json(TARGET_NAMES[uint8_t(m.target)])) + ",\"disabled\":" +
+           (m.disabled ? "true" : "false") +
            (m.disabled_source ? ",\"disabledSource\":\"\"" : "") + "}";
   }
   out += "]";

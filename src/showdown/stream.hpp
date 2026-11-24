@@ -75,11 +75,13 @@ struct Stream {
     } else {
       unported("the choice \"" + std::string(text.substr(0, text.find(' '))) + "\"");
     }
-    if (battle.struggle_notice[size_t(side)]) {
+    if (battle.struggle_notice[size_t(side)] >= 0) {
       // Side.chooseMove tells the side alone that it has no move left.
-      const Side& s = battle.sides[side];
-      lines.push_back("s " + side_id(side) + " |-activate|" + side_id(side) + "a: " + names.teams[side].names[s.active] + "|move: Struggle");
-      battle.struggle_notice[size_t(side)] = false;
+      // It names the Pokémon that was asked, which the turn may since have
+      // switched out.
+      lines.push_back("s " + side_id(side) + " |-activate|" + side_id(side) + "a: " +
+                      names.teams[side].names[size_t(battle.struggle_notice[size_t(side)])] + "|move: Struggle");
+      battle.struggle_notice[size_t(side)] = -1;
     }
     if (refusal != Refusal::None) {
       // Side.emitChoiceError (side.ts:527).

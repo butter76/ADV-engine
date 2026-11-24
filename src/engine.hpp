@@ -147,13 +147,24 @@ inline void clear_volatile(Ctx& c, Ref r, bool include_switch_flags = true) {
   Pokemon& p = c.b.at(r);
   remove_linked_volatiles(c, r);
   p.boosts = Boosts{};
+  // moveSlots = baseMoveSlots.slice(): the moves Mimic or Transform gave go.
+  for (int i = 0; i < p.base_moves; i++) {
+    if (p.virtual_slots >> i & 1) p.move_slots[i] = p.base_move_slots[i];
+  }
+  p.moves = p.base_moves;
+  p.virtual_slots = 0;
+  p.transformed = false;
+  p.volatile_staleness = false;
+  p.known_type = true; // setSpecies, at the end of clearVolatile
+  p.hp_type = p.base_hp_type;
+  p.hp_power = p.base_hp_power;
   p.ability = p.base_ability;
   p.n_volatiles = 0;
   if (include_switch_flags) {
     p.switch_flag = p.force_switch_flag = false;
     p.switch_flag_move = Move::None;
   }
-  p.last_move = p.move_this_turn = Move::None;
+  p.last_move = p.move_this_turn = p.last_move_used = Move::None;
   p.last_damage = 0;
   p.attacked_by = {};
   p.newly_switched = true;
@@ -370,6 +381,10 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
     old.is_active = false;
     old.is_started = false;
     old.stats_raised_this_turn = old.stats_lowered_this_turn = false;
+    // In Gens 3 and 4 the Pokémon coming in is handed the item the one
+    // leaving last used up.
+    p.last_item = old.last_item;
+    old.last_item = Item::None;
     old.skip_pursuit = false;
     old.pursuit_activated = false;
     // The two trade places in side.pokemon. A fainted Pokémon's `fnt` status
@@ -384,7 +399,10 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
   p.active_move_actions = 0;
   for (MoveSlot& slot : p.move_slots) slot.used = false;
   // In Gen 3 an item knocked off is lost again at every switch-in.
-  if (p.item_knocked_off && p.item != Item::None) unported("a Pokémon that lost its item to Knock Off holding one again");
+  if (p.item_knocked_off && p.item != Item::None) {
+    add(c, {part::text("-hint"), part::text("In Gens 3-4, Knock Off makes a Pokémon lose its held item every time it switches in.")});
+    p.item = Item::None;
+  }
   p.ability_state = init_effect_state(c.b, p.ability != Ability::None, r);
   p.item_state = init_effect_state(c.b, p.item != Item::None, r);
   run_event(c, events::BEFORE_SWITCH_IN, on(r));
@@ -445,14 +463,15 @@ inline Request get_move_request_data(Ctx& c, Ref r) {
   for (int i = 0; i < p.moves; i++) {
     const MoveSlot& slot = p.move_slots[i];
     Target target = data(slot.id).target;
-    if (slot.id == Move::Curse && data(p.species).types[0] != Type::Ghost && data(p.species).types[1] != Type::Ghost) {
-      target = Target::Self;
-    }
+    const bool plain_curse = slot.id == Move::Curse && !has_type(p, Type::Ghost);
+    if (plain_curse) target = Target::Self;
     // A hidden disable is not shown to the last active Pokémon of its side,
     // which in singles is every Pokémon.
-    const bool disabled = slot.disabled == Disabled::Yes || (slot.disabled == Disabled::No && slot.pp == 0);
+    const bool disabled = slot.disabled == Disabled::Yes || slot.pp == 0; // no PP shows through a hidden disable
     has_valid_move |= !disabled;
-    request.moves[request.n_moves++] = {slot.id, slot.pp, slot.maxpp, target, disabled};
+    // Curse's target is always written, since it is worked out here.
+    const bool no_target = slot.no_target && !plain_curse;
+    request.moves[request.n_moves++] = {slot.id, slot.pp, slot.maxpp, target, disabled, no_target};
   }
   if (!has_valid_move) {
     // With nothing to use, the one move listed is Struggle.
@@ -480,11 +499,13 @@ inline void clear_choice(Ctx& c, int s) {
     const int forced = std::min(out, can_switch(c.b, s));
     side.choice.forced_switches_left = uint8_t(forced);
     side.choice.forced_passes_left = uint8_t(out - forced);
-  }
-  for (int i = 0; i < c.b.queue.size; i++) {
-    const Action& a = c.b.queue.list[i];
-    if ((a.choice == Choice::Switch || a.choice == Choice::InstaSwitch) && a.pokemon.side == s) {
-      unported("a request while the side has a switch queued");
+    // A side that only waits may have a switch still queued; one that is
+    // asked to replace a Pokémon should not.
+    for (int i = 0; out && i < c.b.queue.size; i++) {
+      const Action& a = c.b.queue.list[i];
+      if ((a.choice == Choice::Switch || a.choice == Choice::InstaSwitch) && a.pokemon.side == s) {
+        unported("a request to a side that has a switch queued");
+      }
     }
   }
 }
@@ -548,10 +569,70 @@ enum class Refusal : uint8_t { None, Invalid, Unavailable };
 // The turn.
 // ---------------------------------------------------------------------------
 
+// Battle.maybeTriggerEndlessBattleClause (battle.ts:1820): past turn 100, a
+// battle in which every side's active Pokémon is stale, one of them made so
+// by the other side, and not both sides can bring in one that is not, ends.
+inline bool maybe_trigger_endless_battle_clause(Ctx& c, const std::array<bool, 2>& trapped, const std::array<Staleness, 2>& stale) {
+  Battle& b = c.b;
+  if (b.turn <= 100) return false;
+  // The turn limit, which is not part of the clause, and its warnings.
+  if (b.turn > 1000) {
+    add(c, {part::text("message"), part::text("It is turn 1000. You have hit the turn limit!")});
+    win(c, -1);
+    return true;
+  }
+  if ((b.turn >= 500 && b.turn % 100 == 0) || (b.turn >= 900 && b.turn % 10 == 0) || b.turn >= 990) {
+    add(c, {part::text("bigerror"), part::turns_left(1000 - b.turn)});
+  }
+  if (stale[0] == Staleness::None || stale[1] == Staleness::None) return false;
+  if (stale[0] != Staleness::External && stale[1] != Staleness::External) return false;
+  // Whether each side can switch to one that is not stale. A trapped side
+  // ends the look, so the sides after it count as unable too.
+  std::array<bool, 2> can_switch_{};
+  for (int s = 0; s < 2; s++) {
+    if (trapped[size_t(s)]) break;
+    const Side& side = b.sides[size_t(s)];
+    for (int i = 0; i < side.size; i++) {
+      const Pokemon& p = side.pokemon[size_t(i)];
+      if (!p.fainted && !p.volatile_staleness && p.staleness == Staleness::None) can_switch_[size_t(s)] = true;
+    }
+  }
+  if (can_switch_[0] && can_switch_[1]) return false;
+  // The loser is a side whose team came with a healing berry and a way to
+  // get it back. `berry` is that of the last Pokémon looked at.
+  std::array<bool, 2> loses{};
+  for (int s = 0; s < 2; s++) {
+    const Side& side = b.sides[size_t(s)];
+    bool berry = false, cycle = false;
+    for (int position = 0; position < side.size && !(berry && cycle); position++) {
+      const Pokemon& p = side.pokemon[index_at(side, position)];
+      berry = restorative(p.set.item);
+      if (p.set.ability == Ability::Pickup) cycle = true;
+      for (const Move m : p.set.moves) cycle |= m == Move::Recycle;
+    }
+    loses[size_t(s)] = berry && cycle;
+  }
+  if (loses[0] != loses[1]) {
+    const int loser = loses[0] ? 0 : 1;
+    add(c, {part::text("-message"),
+            part::player_says(loser, "'s team started with the rudimentary means to perform restorative berry-cycling and thus loses.")});
+    win(c, loser ^ 1);
+    return true;
+  }
+  if (loses[0]) {
+    add(c, {part::text("-message"),
+            part::text("Each side's team started with the rudimentary means to perform restorative berry-cycling.")});
+  }
+  win(c, -1);
+  return true;
+}
+
 // Battle.endTurn (battle.ts:1640).
 inline void end_turn(Ctx& c) {
   Battle& b = c.b;
   b.turn++;
+  std::array<bool, 2> trapped{true, true};
+  std::array<Staleness, 2> stale{};
   for (uint8_t s = 0; s < 2; s++) {
     Side& side = b.sides[s];
     if (side.active == 0xFF) continue;
@@ -586,14 +667,15 @@ inline void end_turn(Ctx& c) {
     // A hit is forgotten once the Pokémon that dealt it has left.
     if (p.attacked_by.source && b.at(p.attacked_by.source).is_active) p.attacked_by.this_turn = false;
     else p.attacked_by = {};
+    trapped[s] = p.trapped != Trapped::No;
+    stale[s] = p.volatile_staleness ? Staleness::External : p.staleness;
     p.active_turns++;
   }
   for (Side& side : b.sides) {
     for (int i = 0; i < side.size; i++) compact_volatiles(side.pokemon[i]);
     compact_side_conditions(side);
   }
-  // maybeTriggerEndlessBattleClause (battle.ts) does nothing through turn 100.
-  if (b.turn > 100) unported("turn 101");
+  if (maybe_trigger_endless_battle_clause(c, trapped, stale)) return;
   add(c, {part::text("turn"), part::number(b.turn)});
   b.quick_claw_roll = random(b, c.out, 5) < 1; // randomChance(1, 5)
   make_request(c, RequestState::Move);
@@ -891,7 +973,7 @@ inline Refusal choose_move(Ctx& c, int s, int slot) {
   }
   side.choice.action = ChoiceState::Kind::Move;
   side.choice.move = chosen;
-  b.struggle_notice[size_t(s)] = struggle;
+  b.struggle_notice[size_t(s)] = struggle ? int8_t(side.active) : int8_t(-1);
   if (p.maybe_disabled) side.choice.cant_undo = true;
   if (is_choice_done(b, 0) && is_choice_done(b, 1)) commit_choices(c);
   return Refusal::None;

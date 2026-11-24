@@ -86,12 +86,16 @@ inline void init_pokemon(Battle& b, Out& out, Pokemon& p, const Set& set) {
     }
     const MoveData& m = data(move);
     const uint8_t pp = m.no_pp_boosts ? m.pp : uint8_t(m.pp * 8 / 5); // calculatePP with 3 PP Ups (battle.ts:2390)
+    if (!m.no_pp_boosts) p.pp_ups |= uint8_t(1 << p.moves);
     p.move_slots[p.moves++] = {move, pp, pp};
   }
 
   Type computed;
   hidden_power(p.set.ivs, computed, p.hp_power);
   p.hp_type = p.set.hp_type != Type::None ? p.set.hp_type : computed;
+  p.base_hp_type = p.hp_type;
+  p.base_hp_power = p.hp_power;
+  p.base_moves = p.moves;
   p.base_ability = p.ability = set.ability;
   p.item = set.item;
   set_species(p, p.base_species);

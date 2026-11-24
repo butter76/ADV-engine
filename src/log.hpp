@@ -22,6 +22,8 @@ struct Part {
     Side,     // `p1`
     SideName, // a side as text: `p1: Name`
     Player,   // the player's name
+    PlayerSays, // the player's name and then a literal, in one field
+    TurnsLeft,  // the warning that the battle will be tied at turn 1000
     Pokemon,  // `p1a: Name` when active, `p1: Name` when not
     Details,  // getFullDetails: details and health, split by viewer
     Health,   // getHealth: split by viewer
@@ -63,6 +65,8 @@ constexpr Part text(std::string_view t) { return {.kind = Part::Kind::Text, .tex
 constexpr Part number(int32_t v) { return {.kind = Part::Kind::Number, .number = v}; }
 constexpr Part side(int s) { return {.kind = Part::Kind::Side, .number = s}; }
 constexpr Part player(int s) { return {.kind = Part::Kind::Player, .number = s}; }
+constexpr Part turns_left(int n) { return {.kind = Part::Kind::TurnsLeft, .number = n}; }
+constexpr Part player_says(int s, std::string_view t) { return {.kind = Part::Kind::PlayerSays, .text = t, .number = s}; }
 constexpr Part side_name(int s) { return {.kind = Part::Kind::SideName, .number = s}; }
 constexpr Part ability(Ability a) { return {.kind = Part::Kind::Ability, .id = uint16_t(a)}; }
 constexpr Part move(adv::Move m) { return {.kind = Part::Kind::Move, .id = uint16_t(m)}; }

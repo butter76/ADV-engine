@@ -126,6 +126,13 @@ int main(int argc, char** argv) {
                           str(CALLBACK_NAMES[uint8_t(h.callback)]), num(h.order), num(h.priority), num(h.sub_order)}));
   }
 
+  {
+    const MetronomePool& pool = metronome_pool();
+    for (int i = 0; i < pool.n; i++) {
+      const std::string place = num(i);
+      lines.push_back(join({"metronome", std::string(3 - place.size(), '0') + place, str(MOVE_NAMES[uint16_t(pool.moves[size_t(i)])].id)}));
+    }
+  }
   std::sort(lines.begin(), lines.end());
   std::ifstream fixture(argv[1]);
   if (!fixture) {

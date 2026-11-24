@@ -7,13 +7,13 @@
 // The games are those of tools/trace.cjs with the same arguments, and the
 // digest printed must equal its digest: the wrapping changes nothing.
 //
-// Usage: SHOWDOWN=... node tools/coverage.cjs --teams DIR [--games N] [--first K]
+// Usage: SHOWDOWN=... node tools/coverage.cjs --teams DIR|random [--games N] [--first K]
 //                                             [--format ID] [--out FILE]
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const {showdown, loadTeams, lcg, record, gen5} = require('./lib.cjs');
+const {showdown, loadTeams, randomTeam, lcg, record, gen5} = require('./lib.cjs');
 
 const opts = {games: 100, first: 1, format: 'gen3ou', out: 'build/coverage.json', checklist: 'build/dex/callbacks.json'};
 for (let i = 2; i < process.argv.length; i += 2) opts[process.argv[i].slice(2)] = process.argv[i + 1];
@@ -54,12 +54,12 @@ for (const dex of [S.Dex.mod('gen3'), S.Dex]) {
   }
 }
 
-const teams = loadTeams(S.Teams, opts.teams);
+const teams = opts.teams === 'random' ? null : loadTeams(S.Teams, opts.teams);
 const digest = crypto.createHash('sha1');
 let updates = 0;
 for (let g = opts.first; g < opts.first + opts.games; g++) {
   const rnd = lcg(Math.imul(g, 0x9E3779B1) ^ 0x2026);
-  const pair = [teams[rnd(teams.length)], teams[rnd(teams.length)]];
+  const pair = teams ? [teams[rnd(teams.length)], teams[rnd(teams.length)]] : [randomTeam(S, rnd), randomTeam(S, rnd)];
   const seed = gen5(BigInt.asUintN(64, BigInt(g) * 0x9E3779B97F4A7C15n));
   const game = record(S, {format: opts.format, seed, teams: pair, rnd});
   digest.update(game.lines.join('\n') + '\n');

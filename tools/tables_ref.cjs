@@ -95,5 +95,12 @@ for (const r of [format, ...[...dex.formats.getRuleTable(format).keys()].map(k =
   handlers('rule', r.id, r);
 }
 
+// What Metronome draws from, in its order: the moves with the flag, by number.
+{
+  const pool = dex.moves.all().filter(m => (!m.isNonstandard || m.isNonstandard === 'Unobtainable') && m.flags.metronome);
+  pool.sort((a, b) => a.num - b.num);
+  pool.forEach((m, i) => lines.push(['metronome', String(i).padStart(3, '0'), id(m.name)].join(' ')));
+}
+
 lines.sort();
 process.stdout.write(lines.join('\n') + '\n');

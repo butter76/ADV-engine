@@ -1,0 +1,87 @@
+=== [gen3ou] thawing ===
+
+Entei @ Leftovers
+Ability: Pressure
+- Sacred Fire
+- Flame Wheel
+- Calm Mind
+- Rest
+
+Arcanine @ Leftovers
+Ability: Intimidate
+- Flame Wheel
+- Extreme Speed
+- Howl
+- Roar
+
+Ho-Oh @ Leftovers
+Ability: Pressure
+- Sacred Fire
+- Recover
+- Thunder Wave
+- Earthquake
+
+Quilava @ Leftovers
+Ability: Blaze
+- Flame Wheel
+- Smokescreen
+- Quick Attack
+- Swift
+
+Ninetales @ Leftovers
+Ability: Flash Fire
+- Flame Wheel
+- Confuse Ray
+- Sleep Talk
+- Rest
+
+Swampert @ Leftovers
+Ability: Torrent
+- Sacred Fire
+- Surf
+- Protect
+- Refresh
+
+=== [gen3ou] freezing ===
+
+Regice @ Leftovers
+Ability: Clear Body
+- Ice Beam
+- Blizzard
+- Powder Snow
+- Ice Punch
+
+Articuno @ Leftovers
+Ability: Pressure
+- Ice Beam
+- Blizzard
+- Hail
+- Powder Snow
+
+Jynx @ Leftovers
+Ability: Oblivious
+- Ice Punch
+- Powder Snow
+- Blizzard
+- Tri Attack
+
+Glalie @ Leftovers
+Ability: Inner Focus
+- Ice Beam
+- Blizzard
+- Hail
+- Powder Snow
+
+Dewgong @ Leftovers
+Ability: Thick Fat
+- Ice Beam
+- Aurora Beam
+- Powder Snow
+- Blizzard
+
+Lapras @ Leftovers
+Ability: Water Absorb
+- Ice Beam
+- Blizzard
+- Powder Snow
+- Tri Attack

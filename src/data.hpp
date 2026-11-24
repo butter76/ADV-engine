@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <string_view>
@@ -182,6 +183,25 @@ constexpr const NatureData& data(Nature n) { return NATURE_DATA[uint8_t(n)]; }
 
 // Showdown's `damageTaken` of a defending type against an attacking one:
 // 0 normal, 1 super effective, 2 resisted, 3 immune.
+// What Metronome draws from: every move of Gen 3 with the `metronome` flag,
+// by number. Each typed Hidden Power is one of them, all of one number, in
+// the order Showdown's data lists them.
+struct MetronomePool {
+  std::array<Move, MOVES> moves{};
+  int n = 0;
+};
+inline const MetronomePool& metronome_pool() {
+  static const MetronomePool pool = [] {
+    MetronomePool out;
+    for (int i = 1; i < MOVES; i++) {
+      if (MOVE_DATA[i].flags & flag(MoveFlag::Metronome)) out.moves[size_t(out.n++)] = Move(i);
+    }
+    std::stable_sort(out.moves.begin(), out.moves.begin() + out.n,
+                     [](Move a, Move b) { return MOVE_DATA[uint16_t(a)].num < MOVE_DATA[uint16_t(b)].num; });
+    return out;
+  }();
+  return pool;
+}
 constexpr uint8_t damage_taken(Type defender, Type attacker) { return TYPE_CHART[uint8_t(defender)][uint8_t(attacker)]; }
 constexpr bool immune(Type type, Immunity to) { return TYPE_IMMUNITIES[uint8_t(type)] & immunity(to); }
 

@@ -8,7 +8,10 @@
 // compared; both are counted by reason. The battle's closing `e` line, which
 // repeats the teams and the input, is not compared.
 //
-// Usage: replay FILE
+// Usage: replay FILE [--complete]
+//
+// With --complete every game must run to its end: one that is skipped or
+// stops fails the run, as a line that differs does.
 
 #include <cstdio>
 #include <fstream>
@@ -118,8 +121,9 @@ void check(const Game& g, Tally& t) {
 } // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::fprintf(stderr, "usage: replay FILE\n");
+  const bool complete = argc == 3 && std::string(argv[2]) == "--complete";
+  if (argc != 2 && !complete) {
+    std::fprintf(stderr, "usage: replay FILE [--complete]\n");
     return 2;
   }
   std::ifstream in(argv[1]);
@@ -163,5 +167,6 @@ int main(int argc, char** argv) {
               static_cast<unsigned long long>(t.choices), static_cast<unsigned long long>(t.requests));
   for (const auto& [why, count] : t.stops) std::printf("  stopped %d: %s\n", count, why.c_str());
   for (const auto& [why, count] : t.skips) std::printf("  skipped %d: %s\n", count, why.c_str());
+  if (complete && (t.stopped || t.skipped)) return 1;
   return t.failures || !(t.matched + t.stopped) ? 1 : 0;
 }

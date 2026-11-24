@@ -1,0 +1,172 @@
+=== [gen3ou] callers ===
+
+Togetic @ Leftovers
+Ability: Serene Grace
+- Metronome
+- Tri Attack
+- Encore
+- Follow Me
+
+Skarmory @ Leppa Berry
+Ability: Sturdy
+- Mirror Move
+- Spikes
+- Whirlwind
+- Drill Peck
+
+Skitty @ Mental Herb
+Ability: Cute Charm
+- Assist
+- Nature Power
+- Attract
+- Helping Hand
+
+Xatu @ Leftovers
+Ability: Synchronize
+- Future Sight
+- Magic Coat
+- Wish
+- Night Shade
+
+Jirachi @ Sitrus Berry
+Ability: Serene Grace
+- Doom Desire
+- Thunder Wave
+- Calm Mind
+- Rest
+
+Sableye @ Choice Band
+Ability: Keen Eye
+- Snatch
+- Recover
+- Knock Off
+- Shadow Ball
+
+=== [gen3ou] swaps ===
+
+Ditto @ Quick Claw
+Ability: Limber
+- Transform
+
+Smeargle @ Mail
+Ability: Own Tempo
+- Sketch
+- Mimic
+- Role Play
+- Skill Swap
+
+Alakazam @ Choice Band
+Ability: Synchronize
+- Trick
+- Recycle
+- Psychic
+- Calm Mind
+
+Kecleon @ Oran Berry
+Ability: Color Change
+- Conversion
+- Conversion 2
+- Camouflage
+- Thief
+
+Slaking @ Sitrus Berry
+Ability: Truant
+- Skill Swap
+- Slack Off
+- Return
+- Bulk Up
+
+Shedinja @ Lum Berry
+Ability: Wonder Guard
+- Shadow Ball
+- Toxic
+- Protect
+- Baton Pass
+
+=== [gen3ou] kicks and rolls ===
+
+Hitmonlee @ Focus Band
+Ability: Limber
+- High Jump Kick
+- Triple Kick
+- Jump Kick
+- Endure
+
+Miltank @ Leftovers
+Ability: Thick Fat
+- Rollout
+- Defense Curl
+- Milk Drink
+- Bide
+
+Walrein @ Leftovers
+Ability: Thick Fat
+- Ice Ball
+- Sheer Cold
+- Fissure
+- Rest
+
+Scizor @ Scope Lens
+Ability: Swarm
+- Fury Cutter
+- Guillotine
+- Pursuit
+- Agility
+
+Exploud @ Chesto Berry
+Ability: Soundproof
+- Uproar
+- Rest
+- Horn Drill
+- Earthquake
+
+Dusclops @ Leftovers
+Ability: Pressure
+- Memento
+- Destiny Bond
+- Grudge
+- Will-O-Wisp
+
+=== [gen3ou] oddities two ===
+
+Castform @ Leftovers
+Ability: Forecast
+- Weather Ball
+- Sunny Day
+- Hail
+- Sandstorm
+
+Tentacruel @ Leftovers
+Ability: Liquid Ooze
+- Surf
+- Toxic
+- Giga Drain
+- Mirror Coat
+
+Houndoom @ Salac Berry
+Ability: Flash Fire
+- Will-O-Wisp
+- Beat Up
+- Flamethrower
+- Counter
+
+Ludicolo @ Leftovers
+Ability: Swift Swim
+- Leech Seed
+- Giga Drain
+- Secret Power
+- Rain Dance
+
+Medicham @ Leppa Berry
+Ability: Pure Power
+- Psych Up
+- Recover
+- Reflect
+- Meditate
+
+Wobbuffet @ Leftovers
+Ability: Shadow Tag
+- Encore
+- Counter
+- Mirror Coat
+- Safeguard

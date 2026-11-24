@@ -315,7 +315,13 @@ inline double damage(Ctx& c, double amount) {
     p.hp = uint16_t(p.hp - dealt);
     if (!p.hp) faint(c, target, source, effect);
   }
-  if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Rule) unported("damage from a move outside its hit");
+  if (effect.kind == EffectKind::Rule) unported("damage from a rule");
+  if (effect.kind == EffectKind::Move) {
+    // A move's damage outside its hit (Jump Kick's crash) is written bare.
+    if (source) c.b.at(source).last_damage = dealt;
+    add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target)});
+    return dealt;
+  }
   if (effect == adv::effect(Condition::Partiallytrapped)) {
     // Named for the move that binds.
     Effect by{};
@@ -529,6 +535,13 @@ inline void remove_linked_volatiles(Ctx& c, Ref r) {
 // Items (pokemon.ts).
 // ---------------------------------------------------------------------------
 
+// RESTORATIVE_BERRIES (pokemon.ts:41), but for Enigma Berry, which the Gen 3
+// tables do not have.
+constexpr bool restorative(Item item) {
+  return item == Item::LeppaBerry || item == Item::AguavBerry || item == Item::FigyBerry ||
+         item == Item::IapapaBerry || item == Item::MagoBerry || item == Item::SitrusBerry || item == Item::WikiBerry ||
+         item == Item::OranBerry;
+}
 // Pokemon.eatItem() from a handler: the Pokémon eats the berry it holds.
 inline bool eat_item(Ctx& c, Ref r) {
   Pokemon& p = c.b.at(r);
@@ -543,6 +556,13 @@ inline bool eat_item(Ctx& c, Ref r) {
   add(c, {part::text("-enditem"), part::pokemon(c.b, r), part::item(p.item), part::text("[eat]")});
   single_event(c, callback("", "Eat"), item, &p.item_state, on(r), source, source_effect);
   // Nothing listens for EatItem or AfterUseItem in Gen 3.
+  // A healing berry that was given to the Pokémon makes it stale.
+  if (restorative(p.item)) {
+    if (p.pending_staleness == Staleness::Internal && p.staleness != Staleness::External) p.staleness = Staleness::Internal;
+    if (p.pending_staleness == Staleness::External) p.staleness = Staleness::External;
+    p.pending_staleness = Staleness::None;
+  }
+  p.last_item = p.item;
   p.item = Item::None;
   p.item_state = EffectState{};
   p.used_item_this_turn = true;
@@ -561,9 +581,103 @@ inline bool use_item(Ctx& c, Ref r) {
   // stat changes of its own.
   add(c, {part::text("-enditem"), part::pokemon(c.b, r), part::item(p.item)});
   single_event(c, callback("", "Use"), item, &p.item_state, on(r), source, source_effect);
+  p.last_item = p.item;
   p.item = Item::None;
   p.item_state = EffectState{};
   p.used_item_this_turn = true;
+  return true;
+}
+
+// Pokemon.takeItem(source) (pokemon.ts:1873): the item, or nothing with
+// `refused` when something kept it where it was.
+struct Taken {
+  Item item = Item::None;
+  bool refused = false;
+};
+inline Taken take_item(Ctx& c, Ref r, Ref source = {}) {
+  Pokemon& p = c.b.at(r);
+  if (!source) source = r;
+  if (p.item == Item::None) return {};
+  const Item item = p.item;
+  if (!run_event(c, event("TakeItem"), on(r), source, {}, relay::yes).truthy()) return {Item::None, true};
+  p.item = Item::None;
+  EffectState old = p.item_state;
+  p.item_state = EffectState{};
+  p.pending_staleness = Staleness::None;
+  single_event(c, callback("", "End"), effect(item), &old, on(r));
+  // Nothing listens for AfterTakeItem in Gen 3.
+  return {item, false};
+}
+// Pokemon.setItem(item, source, effect) (pokemon.ts:1890).
+inline bool set_item(Ctx& c, Ref r, Item item, Ref source = {}, Effect by = {}) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp || !p.is_active) return false;
+  // Every item given is marked; only Trick with a foe for a source would
+  // mark it as coming from outside, and Trick names no source.
+  const bool external = c.effect == effect(Move::Trick) && source && source.side != r.side;
+  p.pending_staleness = external ? Staleness::External : Staleness::Internal;
+  const Item old = p.item;
+  EffectState old_state = p.item_state;
+  p.item = item;
+  p.item_state = init_effect_state(c.b, item != Item::None, r);
+  if (old != Item::None) single_event(c, callback("", "End"), effect(old), &old_state, on(r));
+  if (item != Item::None) single_event(c, callback("", "Start"), effect(item), &p.item_state, on(r), source, by);
+  return true;
+}
+// Pokemon.setAbility (pokemon.ts:1930) in Gen 3: nothing listens for
+// SetAbility and the new ability is not started. `by` is named on the line;
+// a Transform writes none.
+inline bool set_ability(Ctx& c, Ref r, Ability ability, Ref source, Effect by) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp) return false;
+  const Ability old = p.ability;
+  single_event(c, callback("", "End"), effect(old), &p.ability_state, on(r), source);
+  p.ability = ability;
+  p.ability_state = init_effect_state(c.b, ability != Ability::None, r);
+  if (by) {
+    add(c, {part::text("-ability"), part::pokemon(c.b, r), part::ability(ability), part::ability(old), part::from(by), part::of(c.b, source)});
+  }
+  return true;
+}
+// Pokemon.setType(type) for one type.
+inline void set_type(Ctx& c, Ref r, Type type) {
+  c.b.at(r).types = {type, Type::None};
+  c.b.at(r).known_type = true;
+}
+
+// A slot that Mimic or Transform puts a move over keeps what it was.
+inline void make_virtual(Pokemon& p, int i) {
+  if (!(p.virtual_slots >> i & 1) && i < p.base_moves) p.base_move_slots[size_t(i)] = p.move_slots[size_t(i)];
+  p.virtual_slots |= uint8_t(1 << i);
+}
+// Pokemon.transformInto (pokemon.ts:1291) in Gen 3.
+inline bool transform_into(Ctx& c, Ref r, Ref into) {
+  Pokemon& p = c.b.at(r);
+  const Pokemon& o = c.b.at(into);
+  if (o.fainted || o.transformed) return false;
+  // setSpecies(species, effect, true): everything but the base stats.
+  const Stats base = p.base_stored_stats;
+  set_species(p, o.species);
+  p.base_stored_stats = base;
+  p.transformed = true;
+  p.types = o.types;
+  p.known_type = false; // a foe's type is not known to be what it shows
+  p.stored_stats = o.stored_stats;
+  p.hp_type = o.hp_type;
+  p.hp_power = o.hp_power;
+  for (int i = 0; i < MOVE_SLOTS; i++) make_virtual(p, i);
+  p.moves = o.moves;
+  for (int i = 0; i < o.moves; i++) {
+    // Five PP at most, and for a maximum the move's PP with the PP Ups of
+    // the user's own move in that place (calculatePP).
+    const MoveData& m = data(o.move_slots[size_t(i)].id);
+    const bool ups = !m.no_pp_boosts && (p.pp_ups >> i & 1);
+    p.move_slots[size_t(i)] = {o.move_slots[size_t(i)].id, uint8_t(std::min<int>(5, m.pp)), uint8_t(ups ? m.pp * 8 / 5 : m.pp), Disabled::No,
+                               false, o.move_slots[size_t(i)].no_target};
+  }
+  p.boosts = o.boosts;
+  add(c, {part::text("-transform"), part::pokemon(c.b, r), part::pokemon(c.b, into)});
+  set_ability(c, r, o.ability, r, {});
   return true;
 }
 
@@ -633,9 +747,10 @@ inline SideCondition* slot_condition_of(Side& s, Condition id) {
 }
 inline bool add_slot_condition(Ctx& c, int side, Condition id, Ref source, Effect source_effect) {
   Side& s = c.b.sides[side];
-  if (slot_condition_of(s, id)) {
-    if (has(effect(id), ON_RESTART)) unported("a slot condition's onRestart");
-    return false;
+  if (SideCondition* there = slot_condition_of(s, id)) {
+    if (!has(effect(id), ON_RESTART)) return false;
+    const Ref at{uint8_t(side), s.active};
+    return single_event(c, ON_RESTART, effect(id), &there->state, on(at), source, source_effect).truthy();
   }
   int kept = 0;
   for (int i = 0; i < s.n_slot_conditions; i++) {
@@ -698,24 +813,27 @@ inline Immunity status_immunity(Condition status) {
 // Pokemon.setStatus(status, source, sourceEffect). `status` None clears it.
 // With no source it is the event's or the Pokémon itself; with no source
 // effect, the current effect.
-inline bool set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {}) {
+inline bool set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {});
+// What Pokemon.setStatus returned: a SetStatus handler's null (Uproar) is not
+// the false that makes a move fail.
+inline Relay set_status_result(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {}) {
   Pokemon& p = c.b.at(r);
-  if (!p.hp) return false;
-  if (!p.is_active && status != Condition::None) return false;
+  if (!p.hp) return relay::no;
+  if (!p.is_active && status != Condition::None) return relay::no;
   if (!source) source = c.event.source;
   if (!source_effect) source_effect = c.effect;
   if (!source) source = r;
   const bool from_status_move = source_effect.kind == EffectKind::Move && source_effect &&
                                 data(Move(source_effect.id)).status != Condition::None;
   if (p.status == status && !p.status_fnt) {
-    if (status == Condition::None) return false;
+    if (status == Condition::None) return relay::no;
     if (from_status_move && data(Move(source_effect.id)).status == p.status) {
       add(c, {part::text("-fail"), part::pokemon(c.b, r), part::text(CONDITION_NAMES[uint8_t(p.status)].id)});
     } else if (from_status_move) {
       add(c, {part::text("-fail"), part::pokemon(c.b, source)});
       attr_last_move(c, "[still]");
     }
-    return false;
+    return relay::no;
   }
   if (status != Condition::None) {
     // Toxic poison is immune to what poison is.
@@ -724,10 +842,11 @@ inline bool set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect 
     const bool natural = to == Immunity(0xFF) || get_immunity(p, to);
     if (!run_status_immunity(c, r, CONDITION_NAMES[uint8_t(as)].id, natural)) {
       if (from_status_move) add(c, {part::text("-immune"), part::pokemon(c.b, r)});
-      return false;
+      return relay::no;
     }
-    if (!run_event(c, SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id)).truthy()) {
-      return false;
+    if (const Relay allowed = run_event(c, SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id));
+        !allowed.truthy()) {
+      return allowed;
     }
   }
   const Condition previous = p.status;
@@ -736,13 +855,17 @@ inline bool set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect 
   p.status_fnt = false;
   p.status_state = status == Condition::None ? EffectState{} : init_effect_state(c.b, true, r);
   p.status_state.source = source;
-  if (status == Condition::None) return true;
+  if (status == Condition::None) return relay::yes;
   if (!single_event(c, ON_START, effect(status), &p.status_state, on(r), source, source_effect).truthy()) {
     p.status = previous;
     p.status_state = previous_state;
-    return false;
+    return relay::no;
   }
-  return run_event(c, AFTER_SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id)).truthy();
+  return run_event(c, AFTER_SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id)).truthy() ? relay::yes
+                                                                                                                                 : relay::no;
+}
+inline bool set_status(Ctx& c, Ref r, Condition status, Ref source, Effect source_effect) {
+  return set_status_result(c, r, status, source, source_effect).truthy();
 }
 // Pokemon.trySetStatus: the status it has, if it has one, is "set" again.
 inline bool try_set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {}) {

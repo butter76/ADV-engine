@@ -40,21 +40,20 @@ add_test(NAME trace_draws COMMAND trace_draws ${CMAKE_SOURCE_DIR}/tests/fixtures
 add_executable(replay tests/replay.cpp)
 target_link_libraries(replay PRIVATE adv)
 # 200 games up to the first choice.
-add_test(NAME replay_openings COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/ou-200.opening.trace)
+add_test(NAME replay_openings COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/ou-200.opening.trace --complete)
 # 30 games of 30 turns in which both players switch whenever they can.
-add_test(NAME replay_switches COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/switch-30.trace)
+add_test(NAME replay_switches COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/switch-30.trace --complete)
 # 20 games of 40 turns in which both players use only plain damaging moves, or switch.
-add_test(NAME replay_plain_moves COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/plain-20.trace)
+add_test(NAME replay_plain_moves COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/plain-20.trace --complete)
 # 60 games of 12 turns with any choice at all; most stop at a move not ported yet.
-add_test(NAME replay_any COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/any-60.trace)
+add_test(NAME replay_any COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/any-60.trace --complete)
 # Whole games that once differed: a fainted Pokémon's status, and a faint
 # resolved after an effect that only counts down.
-add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/regressions.trace)
+add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/regressions.trace --complete)
 # Games between teams written to use particular moves (tests/teams/targeted),
-# and between teams of anything Gen 3 has, legal or not. The second kind
-# mostly stop at something not ported; what comes before must not differ.
-add_test(NAME replay_targeted COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-14.trace)
-add_test(NAME replay_random COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace)
+# and between teams of anything Gen 3 has, legal or not.
+add_test(NAME replay_targeted COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-16.trace --complete)
+add_test(NAME replay_random COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace --complete)
 
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)

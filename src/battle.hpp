@@ -96,6 +96,7 @@ struct EffectState {
   // user's `trapper`): when the other leaves, this one goes.
   Ref linked;
   Condition linked_status = Condition::None;
+  Ref last_damage_source; // Bide: who last hurt its user
   uint8_t target_side = 0; // the target, when it is a side
 };
 
@@ -110,12 +111,17 @@ enum class Disabled : uint8_t { No, Yes, Hidden };
 // Pokemon.trapped: false, true, or 'hidden' (a trap the player is not told of
 // until a switch is refused).
 enum class Trapped : uint8_t { No, Yes, Hidden };
+// Pokemon.staleness, for the Endless Battle Clause.
+enum class Staleness : uint8_t { None, Internal, External };
 
 struct MoveSlot {
   Move id = Move::None; // Hidden Power, never one of its typed moves
   uint8_t pp = 0, maxpp = 0;
   Disabled disabled = Disabled::No;
   bool used = false;
+  // A slot Mimic or Sketch made has no target written on it, and a request
+  // lists it without one; Transform copies a slot's target as it finds it.
+  bool no_target = false;
 };
 
 struct Pokemon {
@@ -127,8 +133,14 @@ struct Pokemon {
   uint8_t happiness = 0;
   std::array<MoveSlot, MOVE_SLOTS> move_slots{};
   uint8_t moves = 0; // how many slots are filled
-  Type hp_type = Type::None;
-  uint8_t hp_power = 0;
+  // Pokemon.baseMoveSlots, as far as it differs: the slots that Mimic or
+  // Transform put another move over (`virtual_slots`, a bit each) are kept
+  // here as they were, and put back when the Pokémon leaves.
+  std::array<MoveSlot, MOVE_SLOTS> base_move_slots{};
+  uint8_t base_moves = 0, virtual_slots = 0;
+  uint8_t pp_ups = 0; // Pokemon.ppUps: a bit for each move it came with that has PP Ups
+  Type hp_type = Type::None, base_hp_type = Type::None;
+  uint8_t hp_power = 0, base_hp_power = 0;
   Stats base_stored_stats, stored_stats;
   Boosts boosts;
   std::array<Type, 2> types{};
@@ -161,6 +173,15 @@ struct Pokemon {
   bool item_knocked_off = false;
   bool used_item_this_turn = false;
   bool transformed = false;
+  Item last_item = Item::None; // the item it last used up, for Recycle
+  // Staleness: what it has, what eating a healing berry will give it, and
+  // (until it leaves) whether Skill Swap was used on it by a foe.
+  Staleness staleness = Staleness::None, pending_staleness = Staleness::None;
+  bool volatile_staleness = false;
+  // Pokemon.lastMoveUsed: the last move it began, called ones included, and
+  // the type that move had in the end.
+  Move last_move_used = Move::None;
+  Type last_move_used_type = Type::None;
   // Pokemon.attackedBy: the last hit taken from a Pokémon still on the field.
   // In singles every entry of Showdown's list has the one source.
   struct AttackedBy {
@@ -246,6 +267,7 @@ struct RequestMove {
   uint8_t pp = 0, maxpp = 0;
   Target target = Target::Normal;
   bool disabled = false;
+  bool no_target = false;
   bool disabled_source = false; // a refused choice wrote an empty disabledSource on it
 };
 
@@ -288,7 +310,9 @@ struct Battle {
   bool sent_requests = true;
   // Showdown told a side, and it alone, that its Pokémon will Struggle; whatever
   // writes the sides' lines clears it.
-  std::array<bool, 2> struggle_notice{};
+  // The Pokémon a side was just told has no move left but Struggle, by its
+  // place in the team; -1 for none.
+  std::array<int8_t, 2> struggle_notice{-1, -1};
   // Battle.activeMove, activePokemon and activeTarget: the move in use, as a
   // copy that its use may change.
   struct ActiveMove {
@@ -309,6 +333,10 @@ struct Battle {
     int8_t self_boosts_first = -1; // the stat its self boosts list first, if not the usual order
     Condition volatile_status = Condition::None;
     bool on_hit = false; // it still has its onHit
+    uint8_t hit = 0;           // which hit of a multi-hit move this is, from 1
+    bool has_bounced = false;  // Magic Coat sent it back
+    bool never_crit = false;   // Future Sight's damage, worked out when it is used
+    uint32_t fixed_damage = 0; // Bide: the damage of the move it makes up to release
     uint8_t magnitude = 0;     // Magnitude: what it drew
     bool heals = false;        // Present: it heals a quarter in place of damage
     uint8_t flinch_chance = 0; // King's Rock: a second secondary, to flinch

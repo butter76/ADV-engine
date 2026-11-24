@@ -61,14 +61,9 @@ inline const char* unsupported(Move move) {
   if (m.target != Target::Normal && m.target != Target::Any && m.target != Target::AllAdjacent &&
       m.target != Target::AllAdjacentFoes && m.target != Target::Self && m.target != Target::All &&
       m.target != Target::FoeSide && m.target != Target::AllySide && m.target != Target::AllyTeam &&
-      m.target != Target::Scripted && m.target != Target::RandomNormal) {
+      m.target != Target::Scripted && m.target != Target::RandomNormal && m.target != Target::AdjacentAlly) {
     return "a move on a team";
   }
-  if (m.ohko) return "a one-hit KO move";
-  if (m.selfdestruct == SelfDestruct::IfHit) return "a move that faints its user if it hits";
-  if (m.multiaccuracy) return "a move that checks its accuracy for each hit";
-  if ((m.calls_move && move != Move::SleepTalk) || m.has_crash_damage) return "a move of a special kind";
-  if (move == Move::TriAttack) return "a move with a handler in its secondary";
   return nullptr;
 }
 
@@ -91,6 +86,7 @@ inline void attr_last_move(Ctx& c, std::string_view attribute) {
   if (line.parts[0].kind == Part::Kind::Text && line.parts[0].text == "-anim") {
     if (attribute == "[still]") {
       c.out.log.erase(c.out.log.begin() + c.out.last_move_line);
+      c.out.log_lines--;
       c.out.last_move_line = -1;
       return;
     }
@@ -149,7 +145,8 @@ inline bool run_immunity(Ctx& c, Ref target, bool message) {
   const Type type = c.b.active_move.type;
   const Pokemon& p = c.b.at(target);
   // A move that ignores immunity, as every status move does by default.
-  if (data(c.b.active_move.id).ignore_immunity) return true;
+  // (Not the move Bide makes up to release, which has none of Bide's own data.)
+  if (data(c.b.active_move.id).ignore_immunity && !c.b.active_move.fixed_damage) return true;
   if (type == Type::None || type == Type::Unknown) return true;
   const bool negate = !run_event(c, events::NEGATE_IMMUNITY, on(target)).truthy();
   bool levitating = false, not_immune;
@@ -192,7 +189,7 @@ inline int run_effectiveness(const Battle& b, Ref target) {
 }
 
 // Gen 3's BattleActions.modifyDamage (data/mods/gen3/scripts.ts:51).
-inline double modify_damage(Ctx& c, double base_damage, Ref source, Ref target) {
+inline double modify_damage(Ctx& c, double base_damage, Ref source, Ref target, bool message = true) {
   Battle& b = c.b;
   Battle::ActiveMove& move = b.active_move;
   const Effect me = effect(move.id);
@@ -213,14 +210,14 @@ inline double modify_damage(Ctx& c, double base_damage, Ref source, Ref target) 
   const int type_mod = std::clamp(run_effectiveness(b, target), -6, 6);
   move.type_mod = int8_t(type_mod);
   if (type_mod > 0) {
-    add(c, {part::text("-supereffective"), part::pokemon(b, target)});
+    if (message) add(c, {part::text("-supereffective"), part::pokemon(b, target)});
     for (int i = 0; i < type_mod; i++) base_damage *= 2;
   }
   if (type_mod < 0) {
-    add(c, {part::text("-resisted"), part::pokemon(b, target)});
+    if (message) add(c, {part::text("-resisted"), part::pokemon(b, target)});
     for (int i = 0; i > type_mod; i--) base_damage = std::floor(base_damage / 2);
   }
-  if (move.crit) add(c, {part::text("-crit"), part::pokemon(b, target)});
+  if (move.crit && message) add(c, {part::text("-crit"), part::pokemon(b, target)});
   base_damage = run_event(c, events::MODIFY_DAMAGE, on(source), target, me, relay::number(base_damage)).number;
   // Battle.randomizer (battle.ts): 85 to 100 in a hundred.
   base_damage = trunc(trunc(base_damage * (100 - double(random(b, c.out, 16)))) / 100);
@@ -283,6 +280,7 @@ constexpr bool is_wide(Target t) {
 }
 
 inline void rapidspin_self_onHit(Ctx& c, Ref pokemon); // callbacks.hpp
+inline void triattack_secondary_onHit(Ctx& c, Ref target, Ref source);
 
 inline HitData hit_data(const Battle::ActiveMove& active, HitEffect effect_) {
   const MoveData& m = data(active.id);
@@ -331,15 +329,17 @@ inline constexpr EventNames MODIFY_SECONDARIES = event("ModifySecondaries");
 
 // BattleActions.getDamage (battle-actions.ts) for the move itself. Undefined
 // for a move with no power, false when the target is immune.
-inline Relay get_damage(Ctx& c, Ref source, Ref target) {
+inline Relay get_damage(Ctx& c, Ref source, Ref target, bool message = true) {
   Battle& b = c.b;
   Battle::ActiveMove& move = b.active_move;
   const Effect me = effect(move.id);
-  if (!run_immunity(c, target, true)) return relay::no;
+  if (!run_immunity(c, target, message)) return relay::no;
+  if (data(move.id).ohko) return relay::number(b.at(target).hp); // Gen 3: what it has left
   if (has(me, Callback::damageCallback)) {
     return call(c, {me, Callback::damageCallback}, relay::undefined, on(source), target, me);
   }
   if (data(move.id).damage_level) return relay::number(b.at(source).level);
+  if (move.fixed_damage) return relay::number(move.fixed_damage);
   if (data(move.id).damage) return relay::number(data(move.id).damage);
   double base_power = move.base_power;
   if (has(me, Callback::basePowerCallback)) {
@@ -355,7 +355,7 @@ inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   crit_ratio = std::clamp(crit_ratio, 0, 5);
   static constexpr uint32_t CRIT_MULT[] = {0, 16, 8, 4, 3, 2};
   move.crit = false;
-  if (crit_ratio) move.crit = random(b, c.out, CRIT_MULT[crit_ratio]) < 1; // randomChance(1, n)
+  if (crit_ratio && !move.never_crit) move.crit = random(b, c.out, CRIT_MULT[crit_ratio]) < 1; // randomChance(1, n)
   if (move.crit) move.crit = run_event(c, events::CRITICAL_HIT, on(target), {}, me).truthy();
   const Relay power = run_event(c, events::BASE_POWER, on(source), target, me, relay::number(base_power), true);
   if (!power.truthy()) return relay::number(0);
@@ -377,7 +377,7 @@ inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   if ((move.id == Move::Explosion || move.id == Move::SelfDestruct) && physical) defense = std::max(std::floor(defense / 2), 1.0);
   const double level = attacker.level;
   const double base_damage = trunc(trunc(trunc(trunc(2 * level / 5 + 2) * base_power * attack) / defense) / 50);
-  return relay::number(modify_damage(c, base_damage, source, target));
+  return relay::number(modify_damage(c, base_damage, source, target, message));
 }
 
 // What a confused Pokémon does to itself: getDamage(pokemon, pokemon, 40), a
@@ -461,7 +461,12 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
   // A move on the user's team runs its onHit as a move on a Pokémon does.
   const bool on_field = is_wide(data(id).target) && data(id).target != Target::AllyTeam && !is_self;
   Relay did_anything = damage;
+  // Memento: the user faints if the move was not stopped.
+  const auto faint_user = [&] {
+    if (which == HitEffect::Move && data(id).selfdestruct == SelfDestruct::IfHit && damage != relay::no) faint(c, source, source, me);
+  };
   if (hit && !target) {
+    faint_user();
     damage = combine_results(damage, relay::yes);
     did_anything = combine_results(did_anything, relay::yes);
   } else if (hit) {
@@ -526,12 +531,23 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
           did_something = combine_results(did_something, move_event(c, callback("", "HitField"), target, source));
         }
       } else {
+        if (which == HitEffect::Secondary && id == Move::TriAttack) {
+          // The onHit of its secondary, which is not in the handler table.
+          const auto parent = c.event;
+          c.event = {"Hit", on(target), source, me, 1};
+          const Effect current = c.effect;
+          c.effect = me;
+          triattack_secondary_onHit(c, target, source);
+          c.effect = current;
+          c.event = parent;
+        }
         if (which == HitEffect::Move && b.active_move.on_hit && has(me, events::ON_HIT)) {
           const Relay result = move_event(c, events::ON_HIT, target, source);
           did_something = combine_results(did_something, result);
         }
         if (!is_self && !is_secondary) run_event(c, events::HIT, on(target), source, me);
       }
+      faint_user();
       // A move that switches its user out does something if a switch is
       // possible.
       if (which == HitEffect::Move && data(id).self_switch != SelfSwitch::None) {
@@ -543,7 +559,8 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
       did_anything = combine_results(did_anything, did_something);
     }
   }
-  if (!did_anything.truthy() && did_anything.kind != Relay::Kind::Number && !d.has_self) {
+  if (!did_anything.truthy() && did_anything.kind != Relay::Kind::Number && !d.has_self &&
+      !(which == HitEffect::Move && data(id).selfdestruct != SelfDestruct::None)) {
     if (!is_self && !is_secondary && did_anything == relay::no) {
       add(c, {part::text("-fail"), part::pokemon(b, source)});
       attr_last_move(c, "[still]");
@@ -726,6 +743,8 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   if (!run_immunity(c, target, false)) natural_immunity = true;
   else if (move_event(c, events::ON_TRY_IMMUNITY, target, source) == relay::no) natural_immunity = true;
 
+  // The move's accuracy with the user's accuracy and the target's evasion.
+  const auto staged_accuracy = [&]() -> Relay {
   Relay accuracy = move.accuracy ? relay::number(move.accuracy) : relay::yes;
   if (accuracy.kind == Relay::Kind::Number) {
     // Accuracy and evasion stages are thirds, not halves.
@@ -740,7 +759,26 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
     if (boost_ > 0) accuracy.number /= BOOST_TABLE[boost_];
     else if (boost_ < 0) accuracy.number *= BOOST_TABLE[-boost_];
   }
-  accuracy = run_event(c, events::MODIFY_ACCURACY, on(target), source, me, accuracy);
+  return accuracy;
+  };
+  Relay accuracy = staged_accuracy();
+  if (data(move.id).ohko) {
+    // A one-hit KO has its own accuracy, 30 and a point for each level the
+    // user is above the target, and fails against a higher level. Nothing
+    // modifies it. A target out of reach keeps the staged accuracy.
+    const Pokemon& aimed = b.at(target);
+    const bool out_of_reach = volatile_of(b.at(target), Condition::Fly) || volatile_of(b.at(target), Condition::Bounce) ||
+                              volatile_of(b.at(target), Condition::Dive) || volatile_of(b.at(target), Condition::Dig);
+    if (!out_of_reach) {
+      if (b.at(source).level < aimed.level) {
+        add(c, {part::text("-immune"), part::pokemon(b, target), part::text("[ohko]")});
+        return relay::no;
+      }
+      accuracy = relay::number(30 + b.at(source).level - aimed.level);
+    }
+  } else {
+    accuracy = run_event(c, events::MODIFY_ACCURACY, on(target), source, me, accuracy);
+  }
   accuracy = run_event(c, events::ACCURACY, on(target), source, me, accuracy);
   bool hit = true;
   if (accuracy != relay::yes) {
@@ -788,7 +826,20 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
     int i = 0;
     damage = relay::number(0);
     for (; i < hits && b.at(target).hp && b.at(source).hp; i++) {
-      if (b.at(source).status == Condition::Slp) break; // no multi-hit move can be used asleep
+      // Asleep, only a move usable asleep goes on, or one such a move called.
+      const bool sleep_usable = data(move.id).sleep_usable || (move.source_effect.kind == EffectKind::Move && move.source_effect &&
+                                                               data(Move(move.source_effect.id)).sleep_usable);
+      if (b.at(source).status == Condition::Slp && !sleep_usable) break;
+      move.hit = uint8_t(i + 1);
+      // Triple Kick checks its accuracy again for each later hit.
+      if (data(move.id).multiaccuracy && i > 0) {
+        Relay again = run_event(c, events::MODIFY_ACCURACY, on(target), source, me, staged_accuracy());
+        again = run_event(c, events::ACCURACY, on(target), source, me, again);
+        if (again != relay::yes) {
+          if (again.kind != Relay::Kind::Number) unported("an accuracy that is neither true nor a number");
+          if (!(double(random(b, c.out, 100)) < again.number)) break;
+        }
+      }
       const Relay one = move_hit(c, target, source);
       if (one == relay::no) break;
       if (one.truthy() || one.kind == Relay::Kind::Number || one.undefined()) null_damage = false;
@@ -808,6 +859,7 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   if (target && target != source) {
     b.at(target).attacked_by = {source, move.id, uint16_t(damage.kind == Relay::Kind::Number ? damage.number : 0), true};
   }
+  if (data(move.id).ohko && !b.at(target).hp) add(c, {part::text("-ohko")});
   // A hit that dealt no damage, a status move's included, ends here.
   if (damage.kind != Relay::Kind::Number) return damage;
   each_event(c, events::UPDATE_AFTER_HIT);
@@ -816,34 +868,102 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   return damage;
 }
 
+// BattleActions.trySpreadMoveHit (battle-actions.ts) on one target, with the
+// steps in Gen 3's order and Gen 4's versions of two of them
+// (data/mods/gen4/scripts.ts:112). Gen 3's own moves go through tryMoveHit above; this
+// is how a Future Sight lands. The move is the made-up one in
+// `active_move`, which has no handlers of its own and no type.
+inline bool try_spread_move_hit(Ctx& c, Ref target, Ref source) {
+  Battle& b = c.b;
+  Battle::ActiveMove& move = b.active_move;
+  const Effect me = effect(move.id);
+  set_active_move(b, source, target);
+  const auto failed = [&](const Relay& result) {
+    if (result == relay::no) {
+      add(c, {part::text("-fail"), part::pokemon(b, source)});
+      attr_last_move(c, "[still]");
+    }
+    return false;
+  };
+  if (const Relay prepared = run_event(c, events::PREPARE_HIT, on(source), target, me); !prepared.truthy()) return failed(prepared);
+  const auto missed = [&] {
+    attr_last_move(c, "[miss]");
+    add(c, {part::text("-miss"), part::pokemon(b, source), part::pokemon(b, target)});
+    return false;
+  };
+  if (run_event(c, events::INVULNERABILITY, on(target), source, me) == relay::no) return missed();
+  // Nothing is immune to a move with no type.
+  if (const Relay tried = run_event(c, events::TRY_HIT, on(target), source, me); !tried.truthy()) return failed(tried);
+  // hitStepAccuracy as Gen 4's mod has it, which Gen 3 inherits: the stages
+  // in thirds, as tryMoveHit does, and then ModifyAccuracy.
+  Relay accuracy = relay::number(move.accuracy);
+  {
+    static constexpr double BOOST_TABLE[] = {1, 4.0 / 3, 5.0 / 3, 2, 7.0 / 3, 8.0 / 3, 3};
+    run_event(c, events::MODIFY_BOOST_OF, on(source), {}, {}, relay::boosts(sparse(b.at(source).boosts)));
+    int boost_ = std::clamp(int(b.at(source).boosts.accuracy), -6, 6);
+    if (boost_ > 0) accuracy.number *= BOOST_TABLE[boost_];
+    else accuracy.number /= BOOST_TABLE[-boost_];
+    const Relay seen = run_event(c, events::MODIFY_BOOST_OF, on(target), {}, {}, relay::boosts(sparse(b.at(target).boosts)));
+    boost_ = std::clamp(int(seen.kind == Relay::Kind::Boosts ? seen.boosts.value[6] : b.at(target).boosts.evasion), -6, 6);
+    if (boost_ > 0) accuracy.number /= BOOST_TABLE[boost_];
+    else if (boost_ < 0) accuracy.number *= BOOST_TABLE[-boost_];
+  }
+  accuracy = run_event(c, events::MODIFY_ACCURACY, on(target), source, me, accuracy);
+  accuracy = run_event(c, events::ACCURACY, on(target), source, me, accuracy);
+  if (accuracy != relay::yes) {
+    if (accuracy.kind != Relay::Kind::Number) unported("an accuracy that is neither true nor a number");
+    if (!(double(random(b, c.out, 100)) < accuracy.number)) return missed();
+  }
+  // hitStepMoveHitLoop for one hit.
+  move.total_damage = 0;
+  b.at(source).last_damage = 0;
+  if (!b.at(target).hp) return false;
+  move.hit = 1;
+  const Relay damage = move_hit(c, target, source);
+  if (damage == relay::no) return false;
+  move.total_damage = damage.kind == Relay::Kind::Number ? uint16_t(damage.number) : 0;
+  each_event(c, events::UPDATE_AFTER_HIT);
+  // Faints are not resolved here before Gen 5: one waits for whatever next
+  // resolves them, which for a future move is after `upkeep`.
+  if (target != source) b.at(target).attacked_by = {source, move.id, move.total_damage, true};
+  each_event(c, events::UPDATE_AFTER_HIT);
+  run_event(c, events::AFTER_MOVE_SECONDARY, on(target), source, me);
+  return true;
+}
+
 // Gen 3's BattleActions.useMoveInner (data/mods/gen3/scripts.ts:108).
 // `from` is the move that had this one used (Showdown's sourceEffect, when
 // it is a move): it is named on the line, and Pressure applies as it would
 // to that move.
-inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from);
+inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from, bool bounced);
 
 // A move used from inside another move's hit must not disturb it: Showdown's
 // callers hold their own move object, where the engine has one active move.
 // So the caller's is put back when the called move is done.
-inline bool use_move(Ctx& c, Move id, Ref user, Ref target, Effect from = {}) {
-  if (from.kind != EffectKind::Move || !from) return use_move_inner(c, id, user, target, from);
+// The same for a move Magic Coat sends back or Snatch takes, which are used
+// from those conditions. A lock is not a caller: nothing is under way.
+inline bool use_move(Ctx& c, Move id, Ref user, Ref target, Effect from = {}, bool bounced = false) {
+  if (!from || from == effect(Condition::Lockedmove)) return use_move_inner(c, id, user, target, from, bounced);
   const Battle::ActiveMove outer = c.b.active_move;
   const Ref outer_pokemon = c.b.active_pokemon, outer_target = c.b.active_target;
-  const bool result = use_move_inner(c, id, user, target, from);
+  c.b.called_move = Move::None;
+  const bool result = use_move_inner(c, id, user, target, from, bounced);
   c.b.active_move = outer;
   c.b.active_pokemon = outer_pokemon;
   c.b.active_target = outer_target;
-  c.b.called_move = id;
+  // Showdown's active move is left as the last one used, however deep.
+  if (c.b.called_move == Move::None) c.b.called_move = id;
   return result;
 }
 
-inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from) {
+inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from, bool bounced) {
   Battle& b = c.b;
   const MoveData& m = data(id);
   b.active_move = {.id = id, .type = m.type, .category = m.category, .base_power = m.base_power,
                    .accuracy = m.accuracy, .target = m.target, .crit_ratio = m.crit_ratio,
                    .secondary_chance = m.secondary.chance, .self_boosts = m.self_boosts,
                    .volatile_status = m.volatile_status, .on_hit = true, .source_effect = from};
+  b.active_move.has_bounced = bounced;
   const Effect me = effect(id);
   Pokemon& p = b.at(user);
   const auto self_targeted = [&] {
@@ -855,7 +975,10 @@ inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from) {
   // The move's own onModifyMove, then everyone's; they change the active
   // move in place.
   move_event(c, events::ON_MODIFY_MOVE, user, target);
-  if (!run_event(c, events::MODIFY_MOVE, on(user), target, me, relay::yes).truthy()) return false;
+  const bool modified = run_event(c, events::MODIFY_MOVE, on(user), target, me, relay::yes).truthy();
+  p.last_move_used = id;
+  p.last_move_used_type = b.active_move.type;
+  if (!modified) return false;
   // A handler may have changed the move's target (Curse without a Ghost).
   if (b.active_move.target != m.target) target = self_targeted() ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (p.fainted) return false;
@@ -863,9 +986,18 @@ inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from) {
   if (from.kind == EffectKind::Move && from) {
     add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::from_move(Move(from.id))});
   } else if (from) {
-    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::text("[from] lockedmove")});
+    // A condition's name: `lockedmove`, `Magic Coat`, `Snatch`.
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::from(from)});
+  } else if (!target) {
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::text("null")});
   } else {
     add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target)});
+  }
+  // A move on an ally has no one to be used on in singles.
+  if (!target) {
+    attr_last_move(c, "[notarget]");
+    add(c, {part::text("-notarget"), part::pokemon(b, user)});
+    return false;
   }
 
   // Pokemon.getMoveTargets (pokemon.ts) in singles: the target, unless it
@@ -941,7 +1073,7 @@ inline void run_move(Ctx& c, Move id, Ref user) {
   // else the foe's active Pokémon, fainted or not.
   const bool on_self = data(id).target == Target::Self || data(id).target == Target::All ||
                        data(id).target == Target::AllySide || data(id).target == Target::AllyTeam;
-  const Ref target = on_self ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
+  const Ref target = on_self ? user : data(id).target == Target::AdjacentAlly ? Ref{} : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   b.active_move = {.id = id, .type = data(id).type, .category = data(id).category};
   set_active_move(b, user, target);
   const Relay will_try = run_event(c, events::BEFORE_MOVE, on(user), target, me);
@@ -950,7 +1082,12 @@ inline void run_move(Ctx& c, Move id, Ref user) {
     b.has_active_move = false;
     return;
   }
-  if (has(me, Callback::beforeMoveCallback)) unported("a move with a beforeMoveCallback");
+  // beforeMoveCallback: Bide's own, which ends the action while it bides.
+  if (has(me, Callback::beforeMoveCallback) &&
+      call(c, {me, Callback::beforeMoveCallback}, relay::undefined, on(user), target, me) == relay::yes) {
+    b.has_active_move = false;
+    return;
+  }
   if (id == Move::None) unported("a turn to recharge that nothing stopped");
   p.last_damage = 0;
   // A Pokémon locked into its move pays no PP for it, and uses it from
