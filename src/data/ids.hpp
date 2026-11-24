@@ -1274,6 +1274,7 @@ enum class Callback : uint8_t {
   onFoeModifySpD,
   onFoeRedirectTarget,
   onFoeTrapPokemon,
+  onFractionalPriority,
   onHit,
   onHitField,
   onImmunity,
@@ -1301,13 +1302,16 @@ enum class Callback : uint8_t {
   onRestart,
   onSetStatus,
   onSideEnd,
+  onSideResidual,
   onSideRestart,
   onSideStart,
   onSourceAccuracy,
   onSourceBasePower,
   onSourceInvulnerability,
   onSourceModifyAccuracy,
+  onSourceModifyAtk,
   onSourceModifyDamage,
+  onSourceModifySpA,
   onSourceTryHeal,
   onStallMove,
   onStart,
@@ -1334,6 +1338,6 @@ enum class Callback : uint8_t {
   onWeatherModifyDamage,
 };
 
-inline constexpr int CALLBACKS = 110;
+inline constexpr int CALLBACKS = 114;
 
 } // namespace adv

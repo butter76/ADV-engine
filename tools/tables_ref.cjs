@@ -26,13 +26,13 @@ for (const s of species) {
   const b = s.baseStats;
   const ratio = s.genderRatio || {F: 0.5};
   lines.push(['species', s.id, s.num, id(s.types[0]), id(s.types[1]), b.hp, b.atk, b.def, b.spa, b.spd, b.spe,
-    id(s.abilities[0]), id(s.abilities[1]), s.weighthg, s.gender || '-', Math.round(ratio.F * 8), id(s.baseSpecies)].join(' '));
+    id(s.abilities[0]), id(s.abilities[1]), s.weighthg, s.maxHP || 0, s.gender || '-', Math.round(ratio.F * 8), id(s.baseSpecies)].join(' '));
 }
 
 for (const m of dex.moves.all().filter(legal)) {
   const sec = m.secondary || {}, self = m.self || {};
   const hits = m.multihit === undefined ? '-' : Array.isArray(m.multihit) ? m.multihit.join('-') : `${m.multihit}-${m.multihit}`;
-  lines.push(['move', m.id, m.num, id(m.type), m.category, m.basePower, m.accuracy === true ? 'true' : m.accuracy, m.pp,
+  lines.push(['move', id(m.name), m.id, m.num, id(m.type), m.category, m.basePower, m.accuracy === true ? 'true' : m.accuracy, m.pp,
     m.priority, m.target, m.critRatio, Object.keys(m.flags).sort().join(',') || '-',
     m.damage === undefined || m.damage === null ? '-' : m.damage, frac(m.drain), frac(m.recoil), frac(m.heal), hits,
     m.selfdestruct || '-', m.selfSwitch || '-',
@@ -76,8 +76,15 @@ const handlers = (kind, eid, e) => {
     if (typeof v !== 'function' && !/^on[A-Z]/.test(key)) continue;
     lines.push(['handler', kind, eid, key, e[key + 'Order'] || 0, e[key + 'Priority'] || 0, e[key + 'SubOrder'] || 0].join(' '));
   }
+  // A rank given under a name the effect has no handler for.
+  const bases = new Set(Object.keys(e || {}).filter(k => rank.test(k)).map(k => k.replace(/(SubOrder|Order|Priority)$/, '')));
+  for (const key of bases) {
+    if (e[key] !== undefined) continue;
+    if (!e[key + 'Order'] && !e[key + 'Priority'] && !e[key + 'SubOrder']) continue;
+    lines.push(['rank', kind, eid, key, e[key + 'Order'] || 0, e[key + 'Priority'] || 0, e[key + 'SubOrder'] || 0].join(' '));
+  }
 };
-for (const m of dex.moves.all().filter(legal)) { handlers('move', m.id, m); handlers('condition', m.id, m.condition); }
+for (const m of dex.moves.all().filter(legal)) { handlers('move', id(m.name), m); handlers('condition', m.id, m.condition); }
 for (const a of dex.abilities.all().filter(legal)) { handlers('ability', a.id, a); handlers('condition', a.id, a.condition); }
 for (const it of dex.items.all().filter(legal)) handlers('item', it.id, it);
 for (const cid of Object.keys(dex.data.Conditions)) handlers('condition', cid, dex.conditions.get(cid));

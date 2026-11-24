@@ -68,7 +68,12 @@ function build(S, formatId) {
   const rules = [...dex.formats.getRuleTable(format).keys()].map(r => dex.formats.get(r)).filter(r => r.exists);
   const plain = {
     species: dex.species.all().filter(legal).map(e => strip('species', e.id, e)),
-    move: dex.moves.all().filter(legal).map(e => strip('move', e.id, e)),
+    // A typed Hidden Power has the id `hiddenpower`; here each is its own move,
+    // under the id of its name, and `realId` is Showdown's.
+    move: dex.moves.all().filter(legal).map(e => {
+      const id = e.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return {...strip('move', id, e), id, realId: e.id};
+    }),
     ability: dex.abilities.all().filter(legal).map(e => strip('ability', e.id, e)),
     item: dex.items.all().filter(legal).map(e => strip('item', e.id, e)),
     condition: Object.keys(dex.data.Conditions).map(id => strip('condition', id, dex.conditions.get(id))),

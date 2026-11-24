@@ -34,6 +34,13 @@ add_executable(trace_draws tests/trace_draws.cpp)
 target_link_libraries(trace_draws PRIVATE adv)
 add_test(NAME trace_draws COMMAND trace_draws ${CMAKE_SOURCE_DIR}/tests/fixtures/ou-50.brief.trace)
 
+# The engine on recorded games, up to each game's first choice: every draw,
+# log line and request. A game that reaches a handler not yet ported stops
+# and is counted, not compared.
+add_executable(replay tests/replay.cpp)
+target_link_libraries(replay PRIVATE adv)
+add_test(NAME replay_openings COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/ou-200.opening.trace)
+
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)
 target_link_libraries(dispatch_bench PRIVATE adv)

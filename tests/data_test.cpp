@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     lines.push_back(join({"species", str(SPECIES_NAMES[i].id), num(s.num), id(TYPE_NAMES, s.types[0]),
                           id(TYPE_NAMES, s.types[1]), num(s.base[0]), num(s.base[1]), num(s.base[2]), num(s.base[3]),
                           num(s.base[4]), num(s.base[5]), id(ABILITY_NAMES, s.abilities[0]),
-                          id(ABILITY_NAMES, s.abilities[1]), num(s.weight_hg), GENDER[uint8_t(s.gender)],
+                          id(ABILITY_NAMES, s.abilities[1]), num(s.weight_hg), num(s.max_hp), GENDER[uint8_t(s.gender)],
                           num(s.female_eighths), id(SPECIES_NAMES, s.base_species)}));
   }
 
@@ -66,7 +66,8 @@ int main(int argc, char** argv) {
       if (m.flags >> f & 1) flags.push_back(str(MOVE_FLAG_NAMES[f]));
     }
     lines.push_back(join(
-        {"move", str(MOVE_NAMES[i].id), num(m.num), id(TYPE_NAMES, m.type), CATEGORY[uint8_t(m.category)],
+        {"move", str(MOVE_NAMES[i].id), str(MOVE_NAMES[m.real_move == Move::None ? i : int(m.real_move)].id), num(m.num),
+         id(TYPE_NAMES, m.type), CATEGORY[uint8_t(m.category)],
          num(m.base_power), m.accuracy ? num(m.accuracy) : "true", num(m.pp), num(m.priority),
          str(TARGET_NAMES[uint8_t(m.target)]), num(m.crit_ratio), flags.empty() ? "-" : join(flags, ','),
          m.damage_level ? "level" : m.damage ? num(m.damage) : "-", frac(m.drain), frac(m.recoil), frac(m.heal),
@@ -121,7 +122,7 @@ int main(int argc, char** argv) {
   for (const Handler& h : HANDLERS) {
     static constexpr const char* KIND[] = {"move", "ability", "item", "condition", "rule"};
     const Name* names[] = {MOVE_NAMES, ABILITY_NAMES, ITEM_NAMES, CONDITION_NAMES, RULE_NAMES};
-    lines.push_back(join({"handler", KIND[uint8_t(h.kind)], str(names[uint8_t(h.kind)][h.id].id),
+    lines.push_back(join({h.handled ? "handler" : "rank", KIND[uint8_t(h.kind)], str(names[uint8_t(h.kind)][h.id].id),
                           str(CALLBACK_NAMES[uint8_t(h.callback)]), num(h.order), num(h.priority), num(h.sub_order)}));
   }
 

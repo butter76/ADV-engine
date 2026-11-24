@@ -82,7 +82,7 @@ const FIELDS = {
       'status', 'volatileStatus', 'sideCondition', 'slotCondition', 'weather', 'boosts', 'secondary', 'self',
       'ignoreImmunity', 'noPPBoosts', 'sleepUsable', 'stallingMove', 'callsMove', 'hasCrashDamage', 'condition'],
     // Not read by anything Gen 3 singles runs.
-    unused: ['zMove', 'maxMove', 'baseMoveType', 'realMove', 'placeholderFor', 'nonGhostTarget', 'pressureTarget',
+    unused: ['zMove', 'maxMove', 'baseMoveType', 'realMove', 'realId', 'placeholderFor', 'nonGhostTarget', 'pressureTarget',
       'isViable', 'smartTarget', 'tracksTarget', 'noSketch', 'secondaries'],
     constant: {affectsFainted: false, forceSTAB: false, hasSheerForceBoost: false, ignoreAbility: false,
       ignoreDefensive: false, ignoreNegativeOffensive: false, ignoreOffensive: false,
@@ -140,7 +140,15 @@ const text = s => JSON.stringify(String(s));
 
 const TARGETS = [...new Set(moves.map(m => m.target))];
 const FLAGS = [...new Set(moves.flatMap(m => Object.keys(m.flags)))].sort();
-const CALLBACKS = [...new Set(callbacks.map(c => c.name))].sort();
+// A rank (`onSwitchInPriority`) can be given for a name the effect has no
+// handler under: Showdown reads an ability's `onStart` as its `onSwitchIn`
+// and ranks it by that name. Those names are callbacks too.
+const rankBase = key => key.replace(/(SubOrder|Order|Priority)$/, '');
+const rankNames = e => [...new Set(Object.keys(e || {}).filter(isRank).map(rankBase))];
+const CALLBACKS = [...new Set([
+  ...callbacks.map(c => c.name),
+  ...[...moves, ...abilities, ...items, ...rules, ...conditions].flatMap(e => [...rankNames(e), ...rankNames(e.condition)]),
+])].sort();
 // A type's damageTaken has every generation's types, capitalized, and then the
 // other things a type can be immune to, in lower case.
 const IMMUNITIES = [...new Set(plain.type.flatMap(t => Object.keys(t.damageTaken).filter(k => /^[a-z]/.test(k))))].sort();
@@ -211,7 +219,7 @@ files['species.inc'] = header('species') + species.map(s => {
     `.types = {Type::${ref('type', types, s.types[0])}, Type::${ref('type', types, s.types[1])}}`,
     `.base = {${b.hp}, ${b.atk}, ${b.def}, ${b.spa}, ${b.spd}, ${b.spe}}`,
     `.abilities = {Ability::${ref('ability', abilities, s.abilities[0])}, Ability::${ref('ability', abilities, s.abilities[1])}}`,
-    `.weight_hg = ${s.weighthg}`,
+    `.weight_hg = ${s.weighthg}`, s.maxHP ? `.max_hp = ${s.maxHP}` : '',
     `.gender = Gender::${{M: 'Male', F: 'Female', N: 'None', '': 'Either'}[s.gender || '']}`,
     `.female_eighths = ${Math.round(ratio.F * 8)}`,
     `.base_species = Species::${ref('species', species, s.baseSpecies)}`,
@@ -230,7 +238,8 @@ files['species.inc'] = header('species') + species.map(s => {
     const sec = m.secondary, self = m.self;
     const multihit = m.multihit === undefined ? null : Array.isArray(m.multihit) ? m.multihit : [m.multihit, m.multihit];
     return '  ' + fields([
-      `.num = ${m.num}`, `.type = Type::${ref('type', types, m.type)}`, `.category = Category::${m.category}`,
+      `.num = ${m.num}`, m.realId !== m.id ? `.real_move = Move::${ref('move', moves, m.realId)}` : '',
+      `.type = Type::${ref('type', types, m.type)}`, `.category = Category::${m.category}`,
       `.base_power = ${m.basePower}`, `.accuracy = ${m.accuracy === true ? 0 : m.accuracy}`, `.pp = ${m.pp}`,
       `.priority = ${m.priority}`, `.target = Target::${ident(m.target)}`, `.crit_ratio = ${m.critRatio}`,
       `.flags = ${Object.keys(m.flags).sort().map(f => `flag(MoveFlag::${ident(f)})`).join(' | ') || '0'}`,
@@ -323,7 +332,7 @@ files['conditions.inc'] = header('conditions') + conditions.map(c => {
   ];
   const rows = [];
   const add = (kindName, list, id, name, source) => {
-    rows.push({kind: kindName, ident: list[index(list).get(id)].ident, name,
+    rows.push({kind: kindName, ident: list[index(list).get(id)].ident, name, handled: true,
       order: source[name + 'Order'] || 0, priority: source[name + 'Priority'] || 0, subOrder: source[name + 'SubOrder'] || 0});
   };
   for (const [kindName, kind, list, own] of KINDS) {
@@ -335,9 +344,20 @@ files['conditions.inc'] = header('conditions') + conditions.map(c => {
     else if ((c.kind === 'move' || c.kind === 'ability') && nested) add('Condition', conditions, c.id, c.name, conditions.find(e => e.id === c.id));
     else if (c.path.includes('.') && !/^(secondary|self)\./.test(c.path) && !nested) unknown.push(`handler ${c.kind} ${c.id} ${c.path}`);
   }
+  // Ranks under a name with no handler.
+  for (const [kindName, list] of [['Move', moves], ['Ability', abilities], ['Item', items], ['Rule', rules], ['Condition', conditions]]) {
+    for (const e of list) {
+      for (const name of rankNames(e)) {
+        if (rows.some(r => r.kind === kindName && r.ident === e.ident && r.name === name)) continue;
+        if (!e[name + 'Order'] && !e[name + 'Priority'] && !e[name + 'SubOrder']) continue; // a rank of nothing
+        rows.push({kind: kindName, ident: e.ident, name, handled: false,
+          order: e[name + 'Order'] || 0, priority: e[name + 'Priority'] || 0, subOrder: e[name + 'SubOrder'] || 0});
+      }
+    }
+  }
   rows.sort((a, b) => a.kind.localeCompare(b.kind) || a.ident.localeCompare(b.ident) || a.name.localeCompare(b.name));
   files['handlers.inc'] = header('handlers') + rows.map(r =>
-    `  {EffectKind::${r.kind}, uint16_t(${r.kind}::${r.ident}), Callback::${r.name}, ${r.order}, ${r.priority}, ${r.subOrder}},`).join('\n') + '\n';
+    `  {EffectKind::${r.kind}, uint16_t(${r.kind}::${r.ident}), Callback::${r.name}, ${r.order}, ${r.priority}, ${r.subOrder}, ${r.handled}},`).join('\n') + '\n';
 }
 
 if (unknown.length) {

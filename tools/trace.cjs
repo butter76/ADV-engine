@@ -7,6 +7,8 @@
 // --brief 1 writes the games, teams, draws and choices alone, without what
 // Showdown sent: enough to replay the draws, and small enough to keep in git.
 // The digest is of the full trace either way.
+// --opening 1 writes each game up to its first choice: the teams, the battle's
+// start and the first requests.
 //
 // Game k of a run is the same game whatever --first and --games are: its seed
 // and its teams depend on k alone.
@@ -16,7 +18,7 @@ const path = require('path');
 const crypto = require('crypto');
 const {showdown, loadTeams, lcg, record, gen5, COMMIT} = require('./lib.cjs');
 
-const opts = {games: 100, first: 1, format: 'gen3ou', out: '', sites: '', brief: ''};
+const opts = {games: 100, first: 1, format: 'gen3ou', out: '', sites: '', brief: '', opening: ''};
 for (let i = 2; i < process.argv.length; i += 2) opts[process.argv[i].slice(2)] = process.argv[i + 1];
 opts.games = +opts.games;
 opts.first = +opts.first;
@@ -55,7 +57,12 @@ for (let g = opts.first; g < opts.first + opts.games; g++) {
   const game = record(S, {format: opts.format, seed, teams: pair, rnd, site: opts.sites ? site : null});
   const text = game.lines.join('\n') + '\n';
   digest.update(text);
-  if (fd !== null) fs.writeSync(fd, opts.brief ? game.lines.filter(l => /^[GTdcE]/.test(l)).join('\n') + '\n' : text);
+  if (fd !== null) {
+    let lines = game.lines;
+    if (opts.opening) lines = lines.slice(0, lines.findIndex(l => l.startsWith('c '))).concat(['E']);
+    if (opts.brief) lines = lines.filter(l => /^[GTdcE]/.test(l));
+    fs.writeSync(fd, lines.join('\n') + '\n');
+  }
   updates += game.updates;
   turns += game.turns;
   lines += game.lines.length;

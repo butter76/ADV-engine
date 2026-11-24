@@ -6,9 +6,11 @@ pkmn.ai's ladder runs). Given the same seed, teams and choices it must make
 the same random draws in the same order and write the same log and the same
 requests, bugs included.
 
-Status (2026-11-23): step 1 of "Order of work" is done. There is a PRNG, the
-static tables, a trace recorder and the tools that measure Showdown. There is
-no battle yet.
+Status (2026-11-23): step 1 of "Order of work" is done, and the first two
+slices of step 2: a battle runs from its teams to its first request. Of 200
+recorded games, 100 match Showdown there in every draw, log line and request;
+the other 100 stop at a handler that is not ported yet (Sand Stream,
+Intimidate, Arena Trap). Nothing can be chosen yet.
 
 ## What was measured
 
@@ -124,6 +126,7 @@ What is tested today (`ctest`, no Node needed):
 |---|---|
 | `prng` | 2,000,000 mixed calls give the hash Showdown's PRNG gives (`tools/prng_ref.cjs`) |
 | `trace_draws` | all 20,124 draws of 50 recorded games replay from their seeds |
+| `replay_openings` | 200 games up to the first choice: every draw, log line and request of the 100 that reach it, and no difference in any |
 | `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
@@ -132,11 +135,81 @@ What is tested today (`ctest`, no Node needed):
    each Showdown callback runs.~~ Done.
 2. A skeleton that plays whole games on a restricted set: team setup and
    stats, switching, the queue, the turn loop, requests, plain damaging
-   moves. The recorder generates teams from what is implemented.
+   moves. The recorder generates teams from what is implemented. In slices,
+   each compared with recorded games before the next starts:
+   1. ~~Team setup: packed teams, stats, Hidden Power, genders, PP, and the
+      `side` object of the first request.~~ Done: 200 games, 2,400 Pokémon,
+      1,241 draws, 400 sides, no difference (`tests/replay.cpp`).
+   2. ~~The battle's start, up to the first request: events, the queue,
+      switching in, the log and its text.~~ Done for the games whose leads
+      need nothing unported: 100 of 200, with 675 draws, 3,010 log lines and
+      200 requests compared and no difference. Sand Stream (59 games),
+      Intimidate (39) and Arena Trap (2) stop the rest; they need the
+      weather, boosts and trapping. See "The battle's start" below.
+   3. Turns of switches only.
+   4. Plain damaging moves, fainting, forced switches, the end.
 3. Widen the set by how often things occur, to the whole checklist.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
 6. Olympus reads the engine's player stream (a separate change in olympus).
+
+## The battle's start
+
+Read from Showdown for slice 2, so that it need not be read again. Line
+numbers are in `sim/` at the pinned commit.
+
+- **Rules are pseudo-weathers.** The constructor adds every rule that has a
+  handler other than `onBegin` and the validation ones to the field with
+  `addPseudoWeather` (`battle.ts:116`), in the rule table's order. That is how
+  Sleep Clause Mod's `onSetStatus` is gathered. Their `onBegin`s write the
+  `|rule|` lines from `start()`.
+- **`start()`** (`battle.ts`) writes `gen` and `tier`, runs the `onBegin`s,
+  then queues `start` and runs the turn loop. The `start` action writes
+  `teamsize` and `start`, then `switchIn` for each side's first Pokémon.
+- **`switchIn`** (`battle-actions.ts`) sets `abilityState` and `itemState`
+  with `initEffectState` (an `effectOrder` from a counter, only for an
+  active target), runs `BeforeSwitchIn`, writes the `switch` line (a split
+  line: details and health), runs `EntryHazard`, and after turn 0
+  `AfterEntryHazard`. It then inserts a `runSwitch` action.
+- **Inserting an action draws on a tie** (`battle-queue.ts`, `insertChoice`):
+  among queued actions of equal order, priority and speed the place is
+  `random(first, last + 1)`.
+- **`runSwitch`** gathers every queued `runSwitch`, sorts all active Pokémon
+  by speed (a shuffle on a tie), records that order as `speedOrder`, and runs
+  `fieldEvent('SwitchIn')`. A handler's speed there is lowered by its
+  Pokémon's place in `speedOrder`, so those handlers never tie across
+  Pokémon.
+- **`getCallback`** (`battle.ts`) makes an ability's or item's `onStart` its
+  `onSwitchIn`. In Gen 3 an ability with `onAfterEntryHazard` answers
+  `onSwitchIn` with that at turn 0 and with nothing later. The ranks are
+  still read under the name `onSwitchIn`, so a rank can exist for a name the
+  effect has no handler under.
+- **`runEvent`** (`battle.ts:765`): the relay value starts as `true` when
+  none is given; a handler's return replaces it unless it is `undefined`; a
+  falsy value stops the event; a whole-number result is passed through
+  `modify` with the event's modifier. A status's handler is skipped when the
+  holder no longer has that status. Gen 3 has no ability or item suppression.
+- **`singleEvent`** (`battle.ts:578`) calls one effect's `on<Event>`, with the
+  same status check, and returns the relay value when there is no handler.
+- **`fieldEvent`** (`battle.ts:489`) for `Residual` also gathers every effect
+  that has a duration, handler or not, and counts it down.
+- **After every action** `runAction` resolves faints, runs `Update` on each
+  active Pokémon in speed order (not after `start` or a switch in Gen 3), and
+  asks for switches if a Pokémon has `switchFlag`.
+- **`endTurn`** clears each move slot's `disabled`, runs `DisableMove` (the
+  event, then once per move slot), `TrapPokemon` and `MaybeTrapPokemon`, and
+  for each foe's other possible ability `FoeMaybeTrapPokemon`; then writes
+  `turn`, rolls Quick Claw (`randomChance(1, 5)`) and makes the requests.
+- **A move request** (`pokemon.ts`, `getMoveRequestData`) runs `LockMove`,
+  lists each slot's name, id, PP, target and `disabled`, and adds `trapped`
+  or `maybeTrapped`. Hidden Power is named with its type and power, Return
+  and Frustration with their power. A request has no `noCancel` in `gen3ou`,
+  since Cancel Mod is on and both sides are asked.
+- **A log line with a function part is a split**: `|split|pN`, the line with
+  each function's `secret`, then the line with its `shared`. Health is shown
+  to the other side as a percentage, rounded up, and 99 when not full.
+- **A Pokémon's text is its slot when active** (`p1a: Name`) and its side
+  when not (`p1: Name`), taken when the line is written.
 
 ## Open
 
@@ -157,6 +230,28 @@ What is tested today (`ctest`, no Node needed):
 - **Choice parsing** (`sim/side.ts`, 1,406 lines) decides what is refused
   and what the request says next; how much of it is needed is not yet read.
 - **pkmn.bot** runs an unknown Showdown commit. The engine follows one commit.
+
+## Conventions
+
+- **Showdown's names, in snake_case.** `baseStoredStats` is
+  `base_stored_stats`; a function is named for the one it ports and cites
+  its file and line.
+- **The battle holds no text.** Nicknames and balls belong to the formatter
+  (`src/showdown/`), which also turns packed teams into sets and the state
+  into Showdown's text and JSON.
+- **Levels stop at 100.** Showdown allows 9,999; HP would pass 16 bits.
+- **The tests' draws** go through `Out::draws`, null otherwise.
+- **A handler is a function of the same name.** `callbacks.hpp` has one
+  function for each Showdown callback ported, registered against the
+  generated handler table. Reaching a handler that has none throws
+  `Unported` with its name, and so does a branch of a ported one that needs
+  something the engine lacks. A replay that stops this way is counted by
+  what stopped it, never as a match.
+- **The log is typed parts.** A `Line` is one call of Showdown's `add`, its
+  parts kept as what they were (a Pokémon, its details, its health, a
+  number, a literal). Text is made from it in `src/showdown/log.hpp`.
+- **Dispatch is not yet fast.** Handlers are found through a hash map; the
+  listener masks of design rule 5 are step 5.
 
 ## Running it
 

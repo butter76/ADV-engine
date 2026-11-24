@@ -41,6 +41,7 @@ struct SpeciesData {
   std::array<uint8_t, 6> base{}; // by Stat
   std::array<Ability, 2> abilities{};
   uint16_t weight_hg = 0;
+  uint16_t max_hp = 0;            // Shedinja's 1; 0: from the formula
   Gender gender = Gender::Either; // the one gender it can have, or Either
   uint8_t female_eighths = 4;     // of Either: how many in eight are female
   Species base_species = Species::None;
@@ -59,6 +60,9 @@ struct Secondary {
 
 struct MoveData {
   uint16_t num = 0;
+  // A typed Hidden Power is the move Hidden Power to Showdown (the id
+  // `hiddenpower`), with a type; None for every other move.
+  Move real_move = Move::None;
   Type type = Type::None;
   Category category = Category::Status;
   uint8_t base_power = 0;
@@ -120,7 +124,9 @@ struct NatureData {
 enum class EffectKind : uint8_t { Move, Ability, Item, Condition, Rule };
 
 // One handler as Showdown gathers it: who answers to which name, and the
-// `Order`, `Priority` and `SubOrder` it is sorted by.
+// `Order`, `Priority` and `SubOrder` it is sorted by. `handled` is false for
+// ranks given under a name the effect has no handler for (an ability's
+// `onSwitchInPriority` when its handler is `onStart`).
 struct Handler {
   EffectKind kind;
   uint16_t id;
@@ -128,6 +134,7 @@ struct Handler {
   int32_t order;
   int32_t priority;
   int32_t sub_order;
+  bool handled;
 };
 
 constexpr uint16_t immunity(Immunity i) { return uint16_t(1u << uint8_t(i)); }
