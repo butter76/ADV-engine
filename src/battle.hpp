@@ -122,6 +122,8 @@ struct MoveSlot {
   // A slot Mimic or Sketch made has no target written on it, and a request
   // lists it without one; Transform copies a slot's target as it finds it.
   bool no_target = false;
+  // A Hidden Power slot that Transform made is named with its type.
+  bool typed_name = false;
 };
 
 struct Pokemon {
@@ -182,14 +184,20 @@ struct Pokemon {
   // the type that move had in the end.
   Move last_move_used = Move::None;
   Type last_move_used_type = Type::None;
-  // Pokemon.attackedBy: the last hit taken from a Pokémon still on the field.
-  // In singles every entry of Showdown's list has the one source.
+  // Pokemon.attackedBy. Showdown keeps every hit taken, and drops those of a
+  // Pokémon that has left when the turn ends. Here: for each Pokémon of the
+  // other side, by its place in its team, the last hit it gave (`order` 0:
+  // none, else when among all hits taken), and whether any hit it gave this
+  // turn did damage. A landing Future Sight is a hit from one that may have
+  // left, which is why one record is not enough.
   struct AttackedBy {
-    Ref source;
     Move move = Move::None;
     uint16_t damage = 0;
-    bool this_turn = false;
-  } attacked_by;
+    bool this_turn = false, damaged_this_turn = false;
+    uint32_t order = 0;
+  };
+  std::array<AttackedBy, TEAM_SIZE> attacked_by{};
+  uint32_t attacks = 0;
   uint8_t active_turns = 0, previously_switched_in = 0;
   Move last_move = Move::None, move_this_turn = Move::None;
   uint16_t last_damage = 0;

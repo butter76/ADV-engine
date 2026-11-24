@@ -764,7 +764,7 @@ ADV_HANDLER(leppaberry_onEat) {
   }
   if (!slot) return relay::undefined;
   slot->pp = uint8_t(std::min(slot->pp + 10, int(slot->maxpp)));
-  add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("item: Leppa Berry"), part::move(slot->id),
+  add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("item: Leppa Berry"), slot_name(p, *slot),
           part::text("[consumed]")});
   return relay::undefined;
 }
@@ -1441,6 +1441,7 @@ ADV_HANDLER(sleeptalk_onTryHit) {
   (void)p;
   return !volatile_of(q, Condition::Choicelock) && !volatile_of(q, Condition::Encore) ? relay::yes : relay::no;
 }
+inline bool call_move(Ctx& c, Move id, Ref user, Effect by); // below
 ADV_HANDLER(sleeptalk_onHit) {
   ADV_UNUSED;
   Pokemon& p = c.b.at(t.pokemon);
@@ -1456,11 +1457,7 @@ ADV_HANDLER(sleeptalk_onHit) {
     add(c, {part::text("cant"), part::pokemon(c.b, t.pokemon), part::text("nopp"), part::text(MOVE_NAMES[uint16_t(slot.id)].id)});
     return relay::undefined;
   }
-  if (const char* why = unsupported(slot.id)) unported(std::string(why) + ", called by Sleep Talk");
-  const Target aim = data(slot.id).target;
-  const bool on_self = aim == Target::Self || aim == Target::All || aim == Target::AllySide || aim == Target::AllyTeam;
-  const Ref target = on_self ? t.pokemon : Ref{uint8_t(t.pokemon.side ^ 1), c.b.sides[t.pokemon.side ^ 1].active};
-  use_move(c, slot.id, t.pokemon, target, effect(Move::SleepTalk));
+  call_move(c, slot.id, t.pokemon, effect(Move::SleepTalk));
   return relay::undefined;
 }
 // Beat Up: one typeless hit of 10 power for each of the user's Pokémon that
@@ -1555,8 +1552,9 @@ ADV_HANDLER(destinybond_condition_onMoveAborted) {
 ADV_HANDLER(encore_condition_onStart) {
   ADV_UNUSED;
   Pokemon& p = c.b.at(t.pokemon);
+  // Pokemon.getMoveData: the first slot that has the move.
   const MoveSlot* slot = nullptr;
-  for (int i = 0; i < p.moves; i++) {
+  for (int i = 0; !slot && i < p.moves; i++) {
     if (p.move_slots[i].id == p.last_move) slot = &p.move_slots[i];
   }
   if (p.last_move == Move::None || (data(p.last_move).flags & flag(MoveFlag::Failencore)) || !slot || !slot->pp) return relay::no;
@@ -1573,8 +1571,13 @@ ADV_HANDLER(encore_condition_onOverrideAction) {
 ADV_HANDLER(encore_condition_onResidual) {
   ADV_UNUSED;
   const Pokemon& p = c.b.at(t.pokemon);
+  // The first slot that has the move, as getMoveData finds it.
   bool usable = false;
-  for (int i = 0; i < p.moves; i++) usable |= p.move_slots[i].id == c.effect_state->move && p.move_slots[i].pp > 0;
+  for (int i = 0; i < p.moves; i++) {
+    if (p.move_slots[i].id != c.effect_state->move) continue;
+    usable = p.move_slots[i].pp > 0;
+    break;
+  }
   if (!usable) remove_volatile(c, t.pokemon, Condition::Encore);
   return relay::undefined;
 }
@@ -1614,7 +1617,7 @@ ADV_HANDLER(disable_condition_onStart) {
   for (int i = 0; i < p.moves; i++) {
     if (p.move_slots[i].id != p.last_move) continue;
     if (!p.move_slots[i].pp) return relay::no;
-    add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("Disable"), part::move(p.last_move)});
+    add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("Disable"), slot_name(p, p.move_slots[i])});
     c.effect_state->move = p.last_move;
     return relay::undefined;
   }
@@ -1991,8 +1994,9 @@ ADV_HANDLER(teleport_onTry) {
 }
 ADV_HANDLER(revenge_basePowerCallback) {
   ADV_UNUSED;
-  const Pokemon::AttackedBy& hit = c.b.at(t.pokemon).attacked_by;
-  const bool damaged_by_target = hit.source == source && hit.damage > 0 && hit.this_turn;
+  // Any hit from the target this turn that did damage.
+  const Pokemon::AttackedBy& hit = c.b.at(t.pokemon).attacked_by[source.index];
+  const bool damaged_by_target = hit.order && hit.damaged_this_turn;
   return relay::number(c.b.active_move.base_power * (damaged_by_target ? 2 : 1));
 }
 ADV_HANDLER(falseswipe_onDamage) {
@@ -2749,8 +2753,12 @@ ADV_HANDLER(assist_onHit) {
 // knows it.
 ADV_HANDLER(mirrormove_onHit) {
   ADV_UNUSED;
-  const Pokemon::AttackedBy& hit = c.b.at(t.pokemon).attacked_by;
-  if (!hit.source || c.b.at(hit.source).last_move == Move::None || hit.move == Move::None) return relay::no;
+  int by = 0;
+  const Pokemon::AttackedBy* last = last_attacked_by(c.b.at(t.pokemon), by);
+  if (!last) return relay::no;
+  const Pokemon::AttackedBy& hit = *last;
+  const Ref hit_source{uint8_t(t.pokemon.side ^ 1), uint8_t(by)};
+  if (c.b.at(hit_source).last_move == Move::None || hit.move == Move::None) return relay::no;
   const Move move = data(hit.move).real_move != Move::None ? data(hit.move).real_move : hit.move;
   static constexpr Move NO_MIRROR[] = {Move::Assist,      Move::Curse,     Move::DoomDesire, Move::FocusPunch, Move::FutureSight,
                                        Move::MagicCoat,   Move::Metronome, Move::Mimic,      Move::MirrorMove, Move::NaturePower,
@@ -2759,7 +2767,7 @@ ADV_HANDLER(mirrormove_onHit) {
   for (const Move no : NO_MIRROR) {
     if (no == move) return relay::no;
   }
-  const Pokemon& attacker = c.b.at(hit.source);
+  const Pokemon& attacker = c.b.at(hit_source);
   bool known = false;
   for (int i = 0; i < attacker.moves; i++) known |= same_move(attacker.move_slots[size_t(i)].id, move);
   if (!known) return relay::no;
@@ -3410,14 +3418,13 @@ ADV_HANDLER(wonderguard_onTryHit) {
   // runEffectiveness and runImmunity of the move against the holder.
   const Pokemon& p = c.b.at(t.pokemon);
   int total = 0;
-  bool immune_to = false;
   for (const Type type : p.types) {
     if (type == Type::None) continue;
     const uint8_t taken = damage_taken(type, move.type);
     total += taken == 1 ? 1 : taken == 2 ? -1 : 0;
-    immune_to |= taken == 3;
   }
-  if (total <= 0 || immune_to) {
+  // runImmunity, which Foresight can turn off for a Ghost.
+  if (total <= 0 || !run_immunity(c, t.pokemon, false)) {
     add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::WonderGuard))});
     return relay::null;
   }

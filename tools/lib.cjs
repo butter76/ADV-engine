@@ -78,6 +78,25 @@ function randomTeam({Dex}, rnd) {
   return team;
 }
 
+// A legal team: one of Showdown's own Gen 3 random-battle teams, which are
+// level-balanced sets of moves each species can have. Its seed comes from the
+// game's generator.
+function legalTeam({Teams}, rnd) {
+  let seed = 0n;
+  for (let i = 0; i < 4; i++) seed = seed << 16n | BigInt(rnd(65536));
+  return Teams.getGenerator('gen3randombattle', gen5(seed)).getTeam();
+}
+
+// Where a game's two teams come from: a directory of team files, `random`
+// (anything Gen 3 has) or `randbats` (legal sets). The result takes the
+// game's generator.
+function teamSource(S, teams) {
+  if (teams === 'random') return rnd => [randomTeam(S, rnd), randomTeam(S, rnd)];
+  if (teams === 'randbats') return rnd => [legalTeam(S, rnd), legalTeam(S, rnd)];
+  const loaded = loadTeams(S.Teams, teams);
+  return rnd => [loaded[rnd(loaded.length)], loaded[rnd(loaded.length)]];
+}
+
 // The driver's own generator, apart from the battle's, so that choices do not
 // depend on how many draws the battle made.
 function lcg(seed) {
@@ -261,6 +280,6 @@ function record({Battle, Teams, Dex}, {format, seed, teams, rnd, site, turns, ch
   return {lines: out, updates, turns: battle.turn};
 }
 
-const gen5 = n => 'gen5,' + BigInt(n).toString(16).padStart(16, '0');
+function gen5(n) { return 'gen5,' + BigInt(n).toString(16).padStart(16, '0'); }
 
-module.exports = {COMMIT, showdown, loadTeams, randomTeam, lcg, choose, play, record, gen5};
+module.exports = {COMMIT, showdown, loadTeams, randomTeam, legalTeam, teamSource, lcg, choose, play, record, gen5};

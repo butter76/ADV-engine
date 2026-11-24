@@ -167,6 +167,7 @@ inline void clear_volatile(Ctx& c, Ref r, bool include_switch_flags = true) {
   p.last_move = p.move_this_turn = p.last_move_used = Move::None;
   p.last_damage = 0;
   p.attacked_by = {};
+  p.attacks = 0;
   p.newly_switched = true;
   p.being_called_back = false;
   set_species(p, p.base_species);
@@ -390,6 +391,10 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
     // The two trade places in side.pokemon. A fainted Pokémon's `fnt` status
     // is cleared.
     old.position = p.position;
+    if (old.fainted) {
+      old.status = Condition::None;
+      old.status_state = EffectState{};
+    }
     old.status_fnt = false;
     p.position = 0;
   }
@@ -665,8 +670,11 @@ inline void end_turn(Ctx& c) {
     }
     if (p.fainted) continue;
     // A hit is forgotten once the Pokémon that dealt it has left.
-    if (p.attacked_by.source && b.at(p.attacked_by.source).is_active) p.attacked_by.this_turn = false;
-    else p.attacked_by = {};
+    for (uint8_t i = 0; i < TEAM_SIZE; i++) {
+      Pokemon::AttackedBy& hit = p.attacked_by[i];
+      if (hit.order && b.at({uint8_t(s ^ 1), i}).is_active) hit.this_turn = hit.damaged_this_turn = false;
+      else hit = {};
+    }
     trapped[s] = p.trapped != Trapped::No;
     stale[s] = p.volatile_staleness ? Staleness::External : p.staleness;
     p.active_turns++;
@@ -928,26 +936,25 @@ inline Refusal choose_move(Ctx& c, int s, int slot) {
   // the Pokémon is locked into a move.
   const Request request = get_move_request_data(c, r);
   // Pokemon.getMoves() with nothing held back: a move disabled in secret
-  // (Imprison) is disabled here, though the request did not say so.
+  // (Imprison) is disabled here, though the request did not say so. This goes
+  // by slot: a Pokémon can have a move twice (two Hidden Powers).
   Pokemon& p = b.at(r);
-  const auto usable = [&](Move id) {
-    for (int i = 0; i < p.moves; i++) {
-      if (p.move_slots[i].id == id) return p.move_slots[i].pp > 0 && p.move_slots[i].disabled == Disabled::No;
-    }
-    return false;
-  };
+  const auto usable = [&](int i) { return p.move_slots[size_t(i)].pp > 0 && p.move_slots[size_t(i)].disabled == Disabled::No; };
   bool any_usable = false;
-  for (int i = 0; i < p.moves; i++) any_usable |= usable(p.move_slots[i].id);
+  for (int i = 0; i < p.moves; i++) any_usable |= usable(i);
   // A default choice is the first move that is not disabled, in the request
   // or in truth.
   for (int i = 0; slot < 0 && i < request.n_moves; i++) {
-    if (request.moves[i].disabled) continue;
-    if (any_usable && !request.locked && !request.struggle && !usable(request.moves[i].id)) continue;
+    if (request.moves[size_t(i)].disabled) continue;
+    if (any_usable && !request.locked && !request.struggle && !usable(i)) continue;
     slot = i;
   }
   if (slot < 0 || slot >= request.n_moves) unported("a move the Pokémon does not have");
-  Move chosen = request.moves[slot].id;
+  Move chosen = request.moves[size_t(slot)].id;
   bool struggle = request.struggle;
+  // The move is enabled if any slot that has it is.
+  bool enabled = false;
+  for (int i = 0; i < p.moves; i++) enabled |= p.move_slots[size_t(i)].id == chosen && usable(i);
   if (request.locked) {
     // The locked move, whatever its PP.
   } else if (!any_usable) {
@@ -956,16 +963,19 @@ inline Refusal choose_move(Ctx& c, int s, int slot) {
     chosen = Move::Struggle;
     struggle = true;
     if (p.maybe_locked) side.choice.cant_undo = true;
-  } else if (request.moves[slot].disabled) {
-    unported("a disabled move chosen");
-  } else if (!usable(chosen)) {
-    // Refused. The request is corrected (updateDisabledRequest and the
-    // move's own entry), and sent again if that changed anything.
+  } else if (!enabled) {
+    // Refused. The request is corrected (updateDisabledRequest, and the
+    // first of its moves with that id), and sent again if that changed
+    // anything.
     Request& sent = b.requests[s];
+    int first = slot;
+    for (int i = sent.n_moves - 1; i >= 0; i--) {
+      if (sent.moves[size_t(i)].id == chosen) first = i;
+    }
     bool updated = false;
     if (p.maybe_locked) p.maybe_locked = sent.maybe_locked = false, updated = true;
-    if (!sent.moves[slot].disabled) sent.moves[slot].disabled = true, updated = true;
-    if (!sent.moves[slot].disabled_source) sent.moves[slot].disabled_source = true, updated = true;
+    if (!sent.moves[size_t(first)].disabled) sent.moves[size_t(first)].disabled = true, updated = true;
+    if (!sent.moves[size_t(first)].disabled_source) sent.moves[size_t(first)].disabled_source = true, updated = true;
     if (updated) sent.update = true;
     side.choice.error = true;
     b.refused_move[size_t(s)] = chosen;

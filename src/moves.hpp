@@ -125,6 +125,25 @@ inline LockedMove get_locked_move(Ctx& c, Ref r) {
   unported("a move locked by something else");
 }
 
+// Pokemon.gotAttacked (pokemon.ts): a hit taken from a Pokémon of the other
+// side.
+inline void got_attacked(Pokemon& p, Ref source, Move move, uint16_t damage) {
+  Pokemon::AttackedBy& hit = p.attacked_by[source.index];
+  hit = {move, damage, true, hit.damaged_this_turn || damage > 0, ++p.attacks};
+}
+// Pokemon.getLastAttackedBy: who gave the last hit still remembered, and it.
+inline const Pokemon::AttackedBy* last_attacked_by(const Pokemon& p, int& by) {
+  const Pokemon::AttackedBy* last = nullptr;
+  for (int i = 0; i < TEAM_SIZE; i++) {
+    if (p.attacked_by[size_t(i)].order && (!last || p.attacked_by[size_t(i)].order > last->order)) last = &p.attacked_by[size_t(i)], by = i;
+  }
+  return last;
+}
+// A slot's name as Showdown's moveSlot.move has it.
+inline Part slot_name(const Pokemon& p, const MoveSlot& slot) {
+  return slot.typed_name ? part::hidden_power(p.hp_type) : part::move(slot.id);
+}
+
 // Pokemon.deductPP (pokemon.ts): how much PP the move lost.
 inline int deduct_pp(Pokemon& p, Move move, int amount = 1) {
   for (int i = 0; i < p.moves; i++) {
@@ -856,9 +875,7 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   }
   if (move.total_damage) apply_recoil_damage(c, move.total_damage, source);
   // Pokemon.gotAttacked: who hit, with what, and for how much.
-  if (target && target != source) {
-    b.at(target).attacked_by = {source, move.id, uint16_t(damage.kind == Relay::Kind::Number ? damage.number : 0), true};
-  }
+  if (target && target != source) got_attacked(b.at(target), source, move.id, uint16_t(damage.kind == Relay::Kind::Number ? damage.number : 0));
   if (data(move.id).ohko && !b.at(target).hp) add(c, {part::text("-ohko")});
   // A hit that dealt no damage, a status move's included, ends here.
   if (damage.kind != Relay::Kind::Number) return damage;
@@ -925,7 +942,7 @@ inline bool try_spread_move_hit(Ctx& c, Ref target, Ref source) {
   each_event(c, events::UPDATE_AFTER_HIT);
   // Faints are not resolved here before Gen 5: one waits for whatever next
   // resolves them, which for a future move is after `upkeep`.
-  if (target != source) b.at(target).attacked_by = {source, move.id, move.total_damage, true};
+  if (target != source) got_attacked(b.at(target), source, move.id, move.total_damage);
   each_event(c, events::UPDATE_AFTER_HIT);
   run_event(c, events::AFTER_MOVE_SECONDARY, on(target), source, me);
   return true;
@@ -983,15 +1000,16 @@ inline bool use_move_inner(Ctx& c, Move id, Ref user, Ref target, Effect from, b
   if (b.active_move.target != m.target) target = self_targeted() ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (p.fainted) return false;
   c.out.last_move_line = int32_t(c.out.log.size());
+  // With no one to use it on (a move on an ally, in singles) the target is
+  // written as Showdown writes a null.
+  const Part aimed_at = target ? part::pokemon(b, target) : part::text("null");
   if (from.kind == EffectKind::Move && from) {
-    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::from_move(Move(from.id))});
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), aimed_at, part::from_move(Move(from.id))});
   } else if (from) {
     // A condition's name: `lockedmove`, `Magic Coat`, `Snatch`.
-    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target), part::from(from)});
-  } else if (!target) {
-    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::text("null")});
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), aimed_at, part::from(from)});
   } else {
-    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target)});
+    add(c, {part::text("move"), part::pokemon(b, user), part::move(id), aimed_at});
   }
   // A move on an ally has no one to be used on in singles.
   if (!target) {

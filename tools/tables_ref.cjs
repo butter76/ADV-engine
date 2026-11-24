@@ -20,7 +20,8 @@ const boosts = b => STATS.map(s => (b && b[s]) || 0).join(',');
 const frac = f => (f ? `${f[0]}/${f[1]}` : '-');
 const lines = [];
 
-const species = dex.species.all().filter(legal);
+// With each species its cosmetic forms, which a set may name.
+const species = dex.species.all().filter(legal).flatMap(s => [s, ...(s.cosmeticFormes || []).map(f => dex.species.get(f))]);
 const here = new Set(species.map(s => s.id));
 for (const s of species) {
   const b = s.baseStats;

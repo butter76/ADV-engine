@@ -29,6 +29,7 @@ struct Part {
     Health,   // getHealth: split by viewer
     Ability,  // an ability's name
     Move,     // a move's name
+    HiddenPower, // `Hidden Power ` and a type's name
     Item,     // an item's name
     Wisher,   // `[wisher] Name`
     From,     // `[from] ` and an effect's full name
@@ -70,6 +71,7 @@ constexpr Part player_says(int s, std::string_view t) { return {.kind = Part::Ki
 constexpr Part side_name(int s) { return {.kind = Part::Kind::SideName, .number = s}; }
 constexpr Part ability(Ability a) { return {.kind = Part::Kind::Ability, .id = uint16_t(a)}; }
 constexpr Part move(adv::Move m) { return {.kind = Part::Kind::Move, .id = uint16_t(m)}; }
+constexpr Part hidden_power(Type t) { return {.kind = Part::Kind::HiddenPower, .id = uint16_t(t)}; }
 constexpr Part item(adv::Item i) { return {.kind = Part::Kind::Item, .id = uint16_t(i)}; }
 constexpr Part wisher(Ref r) { return {.kind = Part::Kind::Wisher, .pokemon = r}; }
 constexpr Part from(Effect e) { return {.kind = Part::Kind::From, .id = e.id, .effect_kind = e.kind}; }

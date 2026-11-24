@@ -10,11 +10,14 @@
 //
 // Usage: replay FILE [--complete]
 //
+// FILE may be `-`, to read a trace that tools/trace.cjs is writing to a pipe.
+//
 // With --complete every game must run to its end: one that is skipped or
 // stops fails the run, as a line that differs does.
 
 #include <cstdio>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <string>
 
@@ -29,6 +32,7 @@ struct Game {
   std::string teams[2];
   std::vector<std::string> lines; // everything after the teams
   uint64_t line = 0;
+  std::string number; // from the `# game K` comment before it, if there was one
 };
 
 struct Tally {
@@ -41,9 +45,9 @@ void fail(const Game& g, Tally& t, size_t at, const std::string& want, const std
   size_t byte = 0;
   while (byte < want.size() && byte < have.size() && want[byte] == have[byte]) byte++;
   const size_t from = byte > 70 ? byte - 70 : 0;
-  std::fprintf(stderr, "game at line %llu, its line %zu, byte %zu\n  Showdown: %s\n  engine:   %s\n",
-               static_cast<unsigned long long>(g.line), at, byte, want.substr(from, 170).c_str(),
-               have.substr(from, 170).c_str());
+  std::fprintf(stderr, "game %sat line %llu, its line %zu, byte %zu\n  Showdown: %s\n  engine:   %s\n",
+               g.number.empty() ? "" : (g.number + " ").c_str(), static_cast<unsigned long long>(g.line), at, byte,
+               want.substr(from, 170).c_str(), have.substr(from, 170).c_str());
   t.failures++;
 }
 
@@ -62,7 +66,7 @@ void check(const Game& g, Tally& t) {
     const auto team = showdown::unpack(g.teams[side], stream.names.teams[side], error);
     if (!team) {
       t.skipped++;
-      t.skips[error.substr(0, error.find('"'))]++;
+      t.skips[error]++;
       return;
     }
     teams[side] = *team;
@@ -126,20 +130,27 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "usage: replay FILE [--complete]\n");
     return 2;
   }
-  std::ifstream in(argv[1]);
-  if (!in) {
-    std::fprintf(stderr, "cannot open %s\n", argv[1]);
-    return 2;
+  std::ifstream file;
+  if (std::string(argv[1]) != "-") {
+    file.open(argv[1]);
+    if (!file) {
+      std::fprintf(stderr, "cannot open %s\n", argv[1]);
+      return 2;
+    }
   }
+  std::istream& in = file.is_open() ? static_cast<std::istream&>(file) : std::cin;
   Tally t;
   Game g;
-  std::string line;
+  std::string line, number;
   uint64_t n = 0;
   while (std::getline(in, line)) {
     n++;
-    if (line.starts_with("G ")) {
+    if (line.starts_with("# game ")) {
+      number = line.substr(7);
+    } else if (line.starts_with("G ")) {
       g = Game{};
       g.line = n;
+      g.number = number;
       g.seed = line.substr(line.rfind(' ') + 1);
     } else if (line.starts_with("T p1 ")) {
       g.teams[0] = line.substr(5);

@@ -67,7 +67,10 @@ function build(S, formatId) {
   const format = dex.formats.get(formatId);
   const rules = [...dex.formats.getRuleTable(format).keys()].map(r => dex.formats.get(r)).filter(r => r.exists);
   const plain = {
-    species: dex.species.all().filter(legal).map(e => strip('species', e.id, e)),
+    // A cosmetic form (an Unown letter) is a species of its own to a battle,
+    // though the list of species leaves it out.
+    species: dex.species.all().filter(legal).flatMap(e => [e, ...(e.cosmeticFormes || []).map(f => dex.species.get(f))])
+      .map(e => strip('species', e.id, e)),
     // A typed Hidden Power has the id `hiddenpower`; here each is its own move,
     // under the id of its name, and `realId` is Showdown's.
     move: dex.moves.all().filter(legal).map(e => {

@@ -139,7 +139,7 @@ that differs does.
 | `replay_regressions` | nine whole games that once differed |
 | `replay_targeted` | 16 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`) |
 | `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not |
-| `data` | the tables state the same 2,227 facts as Showdown, Metronome's list in its order among them (`tools/tables_ref.cjs`, written apart from the generator) |
+| `data` | the tables state the same 2,254 facts as Showdown, Metronome's list in its order among them (`tools/tables_ref.cjs`, written apart from the generator) |
 
 The recorded games behind the last full run, none of them with a line
 different and every one run to its end (30,124,089 lines over 13,800 games):
@@ -152,6 +152,21 @@ different and every one run to its end (30,124,089 lines over 13,800 games):
 | 2,500 | random, never replayed before the run | no limit | 3,931,821 |
 | 600 + 1,200 | targeted | 99, no limit | 5,334,021 |
 | 400 | targeted (freezing and thawing alone) | no limit | 5,200,556 |
+
+Larger runs go through a pipe and are not stored (`tools/soak.cjs`):
+
+| Games | Teams | Result |
+|---|---|---|
+| 200,000 | legal random (`randbats`) | all match, 411,647,039 lines |
+| 200,000 | random | 119 differed and one stopped; all fixed since |
+| 200,000 | OU | 9 differed; all fixed since |
+| 1,000,000 | random, after those fixes | all match, 1,585,838,306 lines |
+
+The million had one fault of its own: the fix for Sleep Talk calling Helping
+Hand had not been replayed on the game that showed it, and it crashed the
+checker in 15 chunks of 500 games. A fix is replayed on the game that needs
+it before a long run is started; and a build with `-fsanitize=address,undefined`
+is run over a stored set after any change to the move pipeline.
 
 Of the checklist's 624 functions, 564 ran in those games on Showdown's side
 (`tools/coverage.cjs`). The 60 that did not: later generations' conditions
@@ -237,12 +252,15 @@ two), and Torment's `onEnd`, which nothing in Gen 3 brings about.
       Battle Clause and the turn limit.~~ Done: 574 of the checklist's 653
       callbacks are registered (`tools/unported.cjs`), and none of the 79
       left can run in Gen 3 singles.
-4. Zero differences in all three environments. Reached for the OU teams,
-   for random teams of anything, and for the targeted teams, over 13,800
-   games (see Testing). Still to do: random *legal* teams, runs in the
-   millions, piped to the checker instead of stored, and a pass over the
+4. Zero differences in all three environments. Reached over a million
+   games for random teams of anything (see Testing); the same run for legal
+   random teams and for OU teams comes next, and then a pass over the
    branches that remain `unported` inside ported handlers (below).
-5. Speed: the listener masks, a benchmark against hoenn.
+5. Speed: the listener masks, a benchmark against hoenn. A first reading,
+   on 2,000 recorded random-team games replayed three times on one core:
+   about 100,000 updates a second for the engine alone and 46,000 when it
+   also writes Showdown's text, against hoenn's 3,290,000 and Showdown's
+   4,150. Nothing has been profiled.
 6. Olympus reads the engine's player stream (a separate change in olympus).
 
 ## The battle's start
@@ -325,8 +343,16 @@ numbers are in `sim/` at the pinned commit.
 - **Not modelled yet, and marked in the code:** the check that skips a
   handler whose effect was replaced after gathering (done for volatiles and
   side conditions only).
-- **`attackedBy` is one record**, not a list: in singles every entry of
-  Showdown's list has the same source, so the last one answers for all.
+- **`attackedBy` is one record for each Pokémon of the other side**, not
+  Showdown's list of every hit: the last hit each gave, and whether any it
+  gave this turn did damage. One record in all was not enough: a Future
+  Sight landing is a hit from a Pokémon that may have left, and Showdown
+  forgets it at the end of the turn and falls back on the hit before.
+- **A Pokémon can have a move twice.** Two typed Hidden Powers in a set are
+  two slots of one id (only teams of anything have this). Showdown finds
+  "the move's slot" as the first with the id (PP is taken from it, Encore
+  looks at it), asks whether a move is enabled of any slot with the id, and
+  marks the first entry with the id in a corrected request.
 - **A locked move's target is not kept.** Showdown stores the slot a charging
   or locked move was aimed at; in singles every case comes out as the foe.
 - **Each kind of team found what the others could not.** Targeted teams in
@@ -339,7 +365,12 @@ numbers are in `sim/` at the pinned commit.
   copied move, a future move's faint written after `upkeep`. Long targeted
   games: Yawn through Safeguard, a move with no PP shown as disabled under
   a hidden disable, the Struggle notice naming a Pokémon that has since
-  left, and the turn limit.
+  left, and the turn limit. The first 200,000 random games through
+  `tools/soak.cjs` (119 differed, about one in 1,700): the record of who
+  attacked, a doubled Hidden Power under Imprison and Encore, a transformed
+  Hidden Power's name, Freeze Clause counting a fainted Pokémon whose
+  switch was already queued, Wonder Guard under Foresight, and Sleep Talk
+  calling a move on an ally.
 - **Shield Dust's filter is a stand-in.** `ModifySecondaries` passes a list
   in Showdown; the engine has one secondary a move, and the handler answers
   false for "only what has a `self` is kept".
@@ -358,14 +389,19 @@ numbers are in `sim/` at the pinned commit.
   as `tests/fixtures/regressions.trace`. Short games would not have shown
   them; the bar of millions of long games matters.
 - **Teams.** The tools take `--teams DIR` (hoenn's `teams/ou` so far, and
-  the repository's `tests/teams/targeted`) or `--teams random`, which makes
-  teams of anything Gen 3 has: any species, any four moves, any item, an
-  ability that three times in four is the species' own. Random legal teams
-  do not exist yet. Each batch adds a targeted team for what it ports.
+  the repository's `tests/teams/targeted`), `--teams random`, which makes
+  teams of anything Gen 3 has (any species, any four moves, any item, an
+  ability that three times in four is the species' own), or `--teams
+  randbats`, which takes Showdown's own Gen 3 random-battle teams: legal
+  sets at balanced levels. Those name Unown's letter forms, so the tables
+  hold each cosmetic form as a species (419 in all).
 - **No script fetches Showdown.** `SHOWDOWN` must point at a built checkout.
-- **A full trace is about 475 KB a game**, nearly all of it requests. Millions
-  of games have to be piped to the checker, not stored. `--brief 1` keeps
-  draws and choices only (10 KB a game).
+- **A full trace is about 475 KB a game**, nearly all of it requests, so
+  large runs are piped: `tools/soak.cjs` has `tools/trace.cjs --out -` write
+  each chunk of games to a `replay -` that reads it, several chunks at a
+  time. On 12 cores that checks about 175 games a second; recording is
+  nearly all of the time. A game that differs is named by its number and
+  can be recorded again alone.
 - **Reachable conditions are over-counted.** `dump_dex.cjs` keeps any
   condition whose id appears as a word in reachable source, so `dynamax`,
   `arceus` and `commanding` are kept. The 23% of dispatches that could be
@@ -413,9 +449,10 @@ most need `--teams DIR`:
 
 | Tool | What it does |
 |---|---|
-| `tests/replay.cpp` (`replay FILE [--complete]`) | compares a recorded trace with the engine, line by line |
-| `tools/trace.cjs` | records games (`--teams DIR` or `random`, `--games`, `--first`, `--out`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
-| `tools/coverage.cjs` | counts runs of each checklist function over the same games (`--teams DIR` or `random`) |
+| `tests/replay.cpp` (`replay FILE [--complete]`) | compares a recorded trace with the engine, line by line; `-` reads a pipe |
+| `tools/soak.cjs` | records and checks games through a pipe, in parallel (`--teams`, `--games`, `--first`, `--jobs`, `--chunk`, `--turns`); the report goes to `build/soak/` |
+| `tools/trace.cjs` | records games (`--teams DIR`, `random` or `randbats`, `--out FILE` or `-`, `--games`, `--first`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
+| `tools/coverage.cjs` | counts runs of each checklist function over the same games (`--teams DIR`, `random` or `randbats`) |
 | `tools/census.cjs` | events, sorts and draws per update, to `build/census.json` |
 | `tools/dump_dex.cjs` | the data as JSON and the checklist, to `build/dex/` |
 | `tools/unported.cjs` | the checklist's callbacks that `src/callbacks.hpp` does not register; `--show ID` prints Showdown's source for an effect's |

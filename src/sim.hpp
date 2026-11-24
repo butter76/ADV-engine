@@ -673,7 +673,7 @@ inline bool transform_into(Ctx& c, Ref r, Ref into) {
     const MoveData& m = data(o.move_slots[size_t(i)].id);
     const bool ups = !m.no_pp_boosts && (p.pp_ups >> i & 1);
     p.move_slots[size_t(i)] = {o.move_slots[size_t(i)].id, uint8_t(std::min<int>(5, m.pp)), uint8_t(ups ? m.pp * 8 / 5 : m.pp), Disabled::No,
-                               false, o.move_slots[size_t(i)].no_target};
+                               false, o.move_slots[size_t(i)].no_target, o.move_slots[size_t(i)].id == Move::HiddenPower};
   }
   p.boosts = o.boosts;
   add(c, {part::text("-transform"), part::pokemon(c.b, r), part::pokemon(c.b, into)});

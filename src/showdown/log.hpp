@@ -51,6 +51,7 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
     return side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Ability: return std::string(ABILITY_NAMES[p.id].name);
   case Part::Kind::Move: return std::string(MOVE_NAMES[p.id].name);
+  case Part::Kind::HiddenPower: return "Hidden Power " + std::string(TYPE_NAMES[p.id].name);
   case Part::Kind::FromMove: return "[from] " + std::string(MOVE_NAMES[p.id].name);
   case Part::Kind::Item: return std::string(ITEM_NAMES[p.id].name);
   case Part::Kind::Wisher: return "[wisher] " + names.teams[p.pokemon.side].names[p.pokemon.index];
