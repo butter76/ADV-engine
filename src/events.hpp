@@ -28,19 +28,40 @@ struct Unported {
 
 // What handlers return and events pass along (Showdown's relayVar): nothing,
 // a boolean or a number.
+// A boosts table with only some stats present (Showdown's SparseBoostsTable).
+// The stats are read in Boosts' order, which is the order every Gen 3 move
+// lists them in (tools/gen_tables.cjs checks that).
+inline constexpr int BOOST_STATS = 7;
+inline constexpr std::string_view BOOST_NAMES[BOOST_STATS] = {"atk", "def", "spa", "spd", "spe", "accuracy", "evasion"};
+struct SparseBoosts {
+  std::array<int8_t, BOOST_STATS> value{};
+  uint8_t present = 0;
+  constexpr bool has(int stat) const { return present >> stat & 1; }
+  constexpr void set(int stat, int v) { value[size_t(stat)] = int8_t(v), present |= uint8_t(1 << stat); }
+  constexpr void remove(int stat) { value[size_t(stat)] = 0, present &= uint8_t(~(1 << stat)); }
+  constexpr bool operator==(const SparseBoosts&) const = default;
+};
+
 struct Relay {
-  enum class Kind : uint8_t { Undefined, Null, False, True, Number } kind = Kind::Undefined;
+  enum class Kind : uint8_t { Undefined, Null, False, True, Number, Text, Boosts } kind = Kind::Undefined;
   double number = 0;
+  std::string_view text; // a status or weather id, as runStatusImmunity passes
+  SparseBoosts boosts;
   constexpr bool undefined() const { return kind == Kind::Undefined; }
-  constexpr bool truthy() const { return kind == Kind::True || (kind == Kind::Number && number != 0); }
+  constexpr bool truthy() const {
+    return kind == Kind::True || kind == Kind::Boosts || (kind == Kind::Number && number != 0) ||
+           (kind == Kind::Text && !text.empty());
+  }
   constexpr bool operator==(const Relay&) const = default;
 };
 namespace relay {
 inline constexpr Relay undefined{};
-inline constexpr Relay yes{Relay::Kind::True, 0};
-inline constexpr Relay no{Relay::Kind::False, 0};
-inline constexpr Relay null{Relay::Kind::Null, 0};
-constexpr Relay number(double v) { return {Relay::Kind::Number, v}; }
+inline constexpr Relay yes{.kind = Relay::Kind::True};
+inline constexpr Relay no{.kind = Relay::Kind::False};
+inline constexpr Relay null{.kind = Relay::Kind::Null};
+constexpr Relay number(double v) { return {.kind = Relay::Kind::Number, .number = v}; }
+constexpr Relay text(std::string_view t) { return {.kind = Relay::Kind::Text, .text = t}; }
+constexpr Relay boosts(const SparseBoosts& b) { return {.kind = Relay::Kind::Boosts, .boosts = b}; }
 } // namespace relay
 
 // What an event is run on, and what holds a handler's effect.
@@ -160,6 +181,16 @@ inline Found get_callback(const Battle& b, bool on_pokemon, Effect e, Callback n
     }
   }
   return found;
+}
+
+// Field.suppressingWeather (field.ts:106): Cloud Nine or Air Lock is out.
+inline bool suppressing_weather(const Battle& b) {
+  for (const Side& s : b.sides) {
+    if (s.active == 0xFF) continue;
+    const Pokemon& p = s.pokemon[s.active];
+    if (!p.fainted && data(p.ability).suppress_weather) return true;
+  }
+  return false;
 }
 
 // Calls a found handler.
@@ -390,6 +421,11 @@ inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, S
       c.b.at(t.pokemon).status != Condition(e.id)) {
     return value;
   }
+  const std::string_view id = CALLBACK_NAMES[uint8_t(name)].substr(2);
+  if (type_of(e) == EffectType::Weather && id != "FieldStart" && id != "FieldResidual" && id != "FieldEnd" &&
+      suppressing_weather(c.b)) {
+    return value;
+  }
   const Found f = custom ? custom : Found{e, has(e, name) ? name : NO_CALLBACK};
   if (!f) return value;
 
@@ -399,7 +435,7 @@ inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, S
   EffectState fresh;
   c.effect = e;
   c.effect_state = state ? state : &fresh;
-  c.event = {CALLBACK_NAMES[uint8_t(name)].substr(2), t, source, source_effect, 1};
+  c.event = {id, t, source, source_effect, 1};
   c.event_depth++;
   const Relay returned = call(c, f, has_relay ? value : relay::undefined, t, source, source_effect);
   c.event_depth--;
@@ -438,14 +474,17 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
         c.b.at(h.holder.pokemon).status != Condition(he.id)) {
       continue;
     }
-    // Showdown skips a weather's handlers under Air Lock here; nothing sets
-    // a weather yet.
+    if ((type_of(he) == EffectType::Weather || e.id == "Weather") && e.id != "Residual" && e.id != "End" &&
+        suppressing_weather(c.b)) {
+      continue;
+    }
     const auto parent_effect = c.effect;
     const auto parent_state = c.effect_state;
     EffectState fresh;
     c.effect = he;
     c.effect_state = h.state ? h.state : &fresh;
     c.effect_state->target = h.holder.kind;
+    c.effect_state->target_pokemon = h.holder.pokemon;
     const Relay returned = call(c, h.callback, has_relay ? value : relay::undefined, t, source, source_effect);
     c.effect = parent_effect;
     c.effect_state = parent_state;

@@ -5,30 +5,9 @@
 
 #pragma once
 
-#include "events.hpp"
+#include "sim.hpp"
 
 namespace adv {
-
-inline void add(Ctx& c, std::initializer_list<Part> parts, bool secret_only = false) {
-  Line line;
-  for (const Part& p : parts) line.parts[line.n++] = p;
-  line.secret_only = secret_only;
-  c.out.log.push_back(line);
-}
-
-// Field.suppressingWeather (field.ts:106): Cloud Nine or Air Lock is out.
-inline bool suppressing_weather(const Battle& b) {
-  for (const Side& s : b.sides) {
-    if (s.active == 0xFF) continue;
-    const Pokemon& p = s.pokemon[s.active];
-    if (!p.fainted && data(p.ability).suppress_weather) return true;
-  }
-  return false;
-}
-// Pokemon.effectiveWeather (pokemon.ts:2212) and Field.effectiveWeather.
-inline Condition effective_weather(const Battle& b) {
-  return suppressing_weather(b) ? Condition::None : b.field.weather;
-}
 
 namespace callbacks {
 
@@ -75,8 +54,142 @@ ADV_HANDLER(pressure_onStart) {
   ADV_UNUSED;
   // addSplit(side, ['-ability', pokemon, 'Pressure', '[silent]']): the other
   // side is sent an empty line.
-  add(c, {part::text("-ability"), part::pokemon(c.b, t.pokemon), part::text("Pressure"), part::text("[silent]")}, true);
+  add_split(c, t.pokemon.side,
+            {part::text("-ability"), part::pokemon(c.b, t.pokemon), part::text("Pressure"), part::text("[silent]")});
   return relay::undefined;
+}
+// Gen 3's weather abilities run their onStart from onAfterEntryHazard, which
+// getCallback makes their switch-in handler at turn 0.
+ADV_HANDLER(sandstream_onStart) {
+  ADV_UNUSED;
+  set_weather(c, Condition::Sandstorm);
+  return relay::undefined;
+}
+ADV_HANDLER(sandstream_onAfterEntryHazard) { return sandstream_onStart(c, value, t, source, source_effect); }
+ADV_HANDLER(intimidate_onStart) {
+  ADV_UNUSED;
+  // adjacentFoes(); no Pokémon has a Substitute yet.
+  const Ref foe = foe_of(c.b, t.pokemon);
+  if (!foe) {
+    hint(c, "In Gen 3, Intimidate does not activate if every target has a Substitute.", t.pokemon.side);
+    return relay::undefined;
+  }
+  add(c, {part::text("-ability"), part::pokemon(c.b, t.pokemon), part::text("Intimidate"), part::text("boost")});
+  SparseBoosts drop;
+  drop.set(0, -1); // atk
+  boost(c, drop, foe, t.pokemon, true);
+  return relay::undefined;
+}
+// The abilities that refuse a lowered stat: onTryBoost(boost, target, source,
+// effect). The line is not written for a move's secondary effect.
+#define ADV_KEEP_STATS(name, ability, first, last, shown)                                              \
+  ADV_HANDLER(name) {                                                                                  \
+    ADV_UNUSED;                                                                                        \
+    if (source && t.pokemon == source) return relay::undefined;                                        \
+    bool show = false;                                                                                 \
+    for (int stat = first; stat <= last; stat++) {                                                     \
+      if (value.boosts.has(stat) && value.boosts.value[size_t(stat)] < 0) value.boosts.remove(stat), show = true; \
+    }                                                                                                  \
+    const bool secondary = source_effect.kind == EffectKind::Move && data(Move(source_effect.id)).secondary.chance; \
+    if (show && !secondary) {                                                                          \
+      if (shown[0]) {                                                                                  \
+        add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon), part::text("unboost"), part::text(shown), \
+                part::from_ability(Ability::ability), part::of(c.b, t.pokemon)});                      \
+      } else {                                                                                         \
+        add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon), part::text("unboost"),              \
+                part::from_ability(Ability::ability), part::of(c.b, t.pokemon)});                      \
+      }                                                                                                \
+    }                                                                                                  \
+    return value;                                                                                      \
+  }
+ADV_KEEP_STATS(clearbody_onTryBoost, ClearBody, 0, BOOST_STATS - 1, "")
+ADV_KEEP_STATS(whitesmoke_onTryBoost, WhiteSmoke, 0, BOOST_STATS - 1, "")
+ADV_KEEP_STATS(hypercutter_onTryBoost, HyperCutter, 0, 0, "atk")
+ADV_KEEP_STATS(keeneye_onTryBoost, KeenEye, 5, 5, "accuracy")
+#undef ADV_KEEP_STATS
+
+ADV_HANDLER(speedboost_onResidual) {
+  ADV_UNUSED;
+  if (c.b.at(t.pokemon).active_turns) {
+    SparseBoosts up;
+    up.set(4, 1); // spe
+    boost(c, up, t.pokemon, {});
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(shedskin_onResidual) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  // The draw is made only for a Pokémon with HP and a status.
+  if (p.hp && p.status != Condition::None) unported("ability shedskin onResidual with a status");
+  return relay::undefined;
+}
+ADV_HANDLER(naturalcure_onSwitchOut) {
+  ADV_UNUSED;
+  if (c.b.at(t.pokemon).status != Condition::None) unported("ability naturalcure onSwitchOut with a status");
+  return relay::undefined;
+}
+ADV_HANDLER(rockhead_onDamage) {
+  ADV_UNUSED;
+  // Only recoil, which is not a condition the engine has yet, is refused.
+  return relay::undefined;
+}
+
+// Trapping. `this.effectState.target` is the ability's holder.
+ADV_HANDLER(arenatrap_onFoeTrapPokemon) {
+  ADV_UNUSED;
+  if (!is_adjacent(c.b, t.pokemon, c.effect_state->target_pokemon)) return relay::undefined;
+  if (is_grounded(c.b.at(t.pokemon))) try_trap(c, t.pokemon, true);
+  return relay::undefined;
+}
+ADV_HANDLER(arenatrap_onFoeMaybeTrapPokemon) {
+  ADV_UNUSED;
+  if (!source) source = c.effect_state->target_pokemon;
+  if (!source || !is_adjacent(c.b, t.pokemon, source)) return relay::undefined;
+  Pokemon& p = c.b.at(t.pokemon);
+  if (is_grounded(p, !p.known_type)) p.maybe_trapped = true;
+  return relay::undefined;
+}
+ADV_HANDLER(shadowtag_onFoeTrapPokemon) {
+  ADV_UNUSED;
+  c.b.at(t.pokemon).trapped = Trapped::Yes;
+  return relay::undefined;
+}
+ADV_HANDLER(shadowtag_onFoeMaybeTrapPokemon) {
+  ADV_UNUSED;
+  if (!source) source = c.effect_state->target_pokemon;
+  if (!source || !is_adjacent(c.b, t.pokemon, source)) return relay::undefined;
+  Pokemon& p = c.b.at(t.pokemon);
+  if (p.ability != Ability::ShadowTag) p.maybe_trapped = true;
+  return relay::undefined;
+}
+ADV_HANDLER(magnetpull_onAnyTrapPokemon) {
+  ADV_UNUSED;
+  if (has_type(c.b.at(t.pokemon), Type::Steel) && is_adjacent(c.b, t.pokemon, c.effect_state->target_pokemon)) {
+    try_trap(c, t.pokemon, true);
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(magnetpull_onAnyMaybeTrapPokemon) {
+  ADV_UNUSED;
+  if (!source) source = c.effect_state->target_pokemon;
+  if (!source || !is_adjacent(c.b, t.pokemon, source)) return relay::undefined;
+  Pokemon& p = c.b.at(t.pokemon);
+  if (!p.known_type || has_type(p, Type::Steel)) p.maybe_trapped = true;
+  return relay::undefined;
+}
+// onImmunity(type, pokemon): false makes the Pokémon immune to that.
+ADV_HANDLER(sandveil_onImmunity) {
+  ADV_UNUSED;
+  return value.text == "sandstorm" ? relay::no : relay::undefined;
+}
+ADV_HANDLER(oblivious_onImmunity) {
+  ADV_UNUSED;
+  return value.text == "attract" ? relay::no : relay::undefined;
+}
+ADV_HANDLER(magmaarmor_onImmunity) {
+  ADV_UNUSED;
+  return value.text == "frz" ? relay::no : relay::undefined;
 }
 ADV_HANDLER(truant_onSwitchIn) {
   ADV_UNUSED;
@@ -128,6 +241,44 @@ ADV_CURE_ON_UPDATE(pechaberry_onUpdate, status == Condition::Psn || status == Co
 ADV_CURE_ON_UPDATE(rawstberry_onUpdate, status == Condition::Brn, "item rawstberry")
 ADV_CURE_ON_UPDATE(persimberry_onUpdate, (void(status), false), "item persimberry")
 ADV_CURE_ON_UPDATE(mentalherb_onUpdate, (void(status), false), "item mentalherb")
+ADV_HANDLER(leftovers_onResidual) {
+  ADV_UNUSED;
+  heal(c, double(c.b.at(t.pokemon).base_maxhp) / 16);
+  return relay::undefined;
+}
+// onDamage(damage, target, source, effect): the draw is made for every
+// damage, whatever it is from.
+ADV_HANDLER(focusband_onDamage) {
+  ADV_UNUSED;
+  const bool lucky = random(c.b, c.out, 10) < 1; // randomChance(1, 10)
+  if (lucky && value.number >= c.b.at(t.pokemon).hp && source_effect.kind == EffectKind::Move && source_effect) {
+    unported("item focusband saving its holder");
+  }
+  return relay::undefined;
+}
+// The berries eaten at the end of a turn at half or a quarter of full HP.
+#define ADV_PINCH_BERRY(name, divisor, what)                                        \
+  ADV_HANDLER(name) {                                                               \
+    ADV_UNUSED;                                                                     \
+    const Pokemon& p = c.b.at(t.pokemon);                                           \
+    if (double(p.hp) <= double(p.maxhp) / divisor) unported(what " eaten");         \
+    return relay::undefined;                                                        \
+  }
+ADV_PINCH_BERRY(aguavberry_onResidual, 2, "item aguavberry")
+ADV_PINCH_BERRY(figyberry_onResidual, 2, "item figyberry")
+ADV_PINCH_BERRY(iapapaberry_onResidual, 2, "item iapapaberry")
+ADV_PINCH_BERRY(magoberry_onResidual, 2, "item magoberry")
+ADV_PINCH_BERRY(oranberry_onResidual, 2, "item oranberry")
+ADV_PINCH_BERRY(sitrusberry_onResidual, 2, "item sitrusberry")
+ADV_PINCH_BERRY(wikiberry_onResidual, 2, "item wikiberry")
+ADV_PINCH_BERRY(apicotberry_onResidual, 4, "item apicotberry")
+ADV_PINCH_BERRY(ganlonberry_onResidual, 4, "item ganlonberry")
+ADV_PINCH_BERRY(lansatberry_onResidual, 4, "item lansatberry")
+ADV_PINCH_BERRY(liechiberry_onResidual, 4, "item liechiberry")
+ADV_PINCH_BERRY(petayaberry_onResidual, 4, "item petayaberry")
+ADV_PINCH_BERRY(salacberry_onResidual, 4, "item salacberry")
+ADV_PINCH_BERRY(starfberry_onResidual, 4, "item starfberry")
+#undef ADV_PINCH_BERRY
 ADV_HANDLER(leppaberry_onUpdate) {
   ADV_UNUSED;
   const Pokemon& p = c.b.at(t.pokemon);
@@ -150,6 +301,39 @@ ADV_HANDLER(par_onModifySpe) {
   ADV_UNUSED;
   chain_modify(c, 0.25); // Quick Feet is not Gen 3's
   return relay::undefined;
+}
+// Sandstorm. Smooth Rock is not Gen 3's, so it lasts 5 turns; set by an
+// ability it has no duration at all.
+ADV_HANDLER(sandstorm_durationCallback) {
+  ADV_UNUSED;
+  return relay::number(5);
+}
+ADV_HANDLER(sandstorm_onFieldStart) {
+  ADV_UNUSED;
+  if (source_effect.kind == EffectKind::Ability && source_effect) {
+    c.effect_state->duration = 0;
+    add(c, {part::text("-weather"), part::text("Sandstorm"), part::from_ability(Ability(source_effect.id)),
+            part::of(c.b, source)});
+  } else {
+    add(c, {part::text("-weather"), part::text("Sandstorm")});
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(sandstorm_onFieldResidual) {
+  ADV_UNUSED;
+  add(c, {part::text("-weather"), part::text("Sandstorm"), part::text("[upkeep]")});
+  if (effective_weather(c.b) == Condition::Sandstorm) each_event(c, WEATHER);
+  return relay::undefined;
+}
+ADV_HANDLER(sandstorm_onWeather) {
+  ADV_UNUSED;
+  damage(c, double(c.b.at(t.pokemon).base_maxhp) / 16);
+  return relay::undefined;
+}
+ADV_HANDLER(sunnyday_onImmunity) {
+  ADV_UNUSED;
+  if (effective_weather(c.b) != Condition::Sunnyday) return relay::undefined;
+  return value.text == "frz" ? relay::no : relay::undefined;
 }
 
 #undef ADV_HANDLER
@@ -177,6 +361,26 @@ inline constexpr Ported PORTED[] = {
     R(SpeedPassClause, onBegin, speedpassclause_onBegin),
     A(Pressure, onStart, pressure_onStart),
     A(Truant, onSwitchIn, truant_onSwitchIn),
+    A(SandStream, onStart, sandstream_onStart),
+    A(SandStream, onAfterEntryHazard, sandstream_onAfterEntryHazard),
+    A(Intimidate, onStart, intimidate_onStart),
+    A(ClearBody, onTryBoost, clearbody_onTryBoost),
+    A(WhiteSmoke, onTryBoost, whitesmoke_onTryBoost),
+    A(HyperCutter, onTryBoost, hypercutter_onTryBoost),
+    A(KeenEye, onTryBoost, keeneye_onTryBoost),
+    A(ArenaTrap, onFoeTrapPokemon, arenatrap_onFoeTrapPokemon),
+    A(ArenaTrap, onFoeMaybeTrapPokemon, arenatrap_onFoeMaybeTrapPokemon),
+    A(ShadowTag, onFoeTrapPokemon, shadowtag_onFoeTrapPokemon),
+    A(ShadowTag, onFoeMaybeTrapPokemon, shadowtag_onFoeMaybeTrapPokemon),
+    A(MagnetPull, onAnyTrapPokemon, magnetpull_onAnyTrapPokemon),
+    A(MagnetPull, onAnyMaybeTrapPokemon, magnetpull_onAnyMaybeTrapPokemon),
+    A(SandVeil, onImmunity, sandveil_onImmunity),
+    A(SpeedBoost, onResidual, speedboost_onResidual),
+    A(ShedSkin, onResidual, shedskin_onResidual),
+    A(NaturalCure, onSwitchOut, naturalcure_onSwitchOut),
+    A(RockHead, onDamage, rockhead_onDamage),
+    A(Oblivious, onImmunity, oblivious_onImmunity),
+    A(MagmaArmor, onImmunity, magmaarmor_onImmunity),
     A(SwiftSwim, onModifySpe, swiftswim_onModifySpe),
     A(Chlorophyll, onModifySpe, chlorophyll_onModifySpe),
     A(Insomnia, onUpdate, insomnia_onUpdate),
@@ -197,7 +401,28 @@ inline constexpr Ported PORTED[] = {
     I(MentalHerb, onUpdate, mentalherb_onUpdate),
     I(LeppaBerry, onUpdate, leppaberry_onUpdate),
     I(MachoBrace, onModifySpe, machobrace_onModifySpe),
+    I(Leftovers, onResidual, leftovers_onResidual),
+    I(FocusBand, onDamage, focusband_onDamage),
+    I(AguavBerry, onResidual, aguavberry_onResidual),
+    I(FigyBerry, onResidual, figyberry_onResidual),
+    I(IapapaBerry, onResidual, iapapaberry_onResidual),
+    I(MagoBerry, onResidual, magoberry_onResidual),
+    I(OranBerry, onResidual, oranberry_onResidual),
+    I(SitrusBerry, onResidual, sitrusberry_onResidual),
+    I(WikiBerry, onResidual, wikiberry_onResidual),
+    I(ApicotBerry, onResidual, apicotberry_onResidual),
+    I(GanlonBerry, onResidual, ganlonberry_onResidual),
+    I(LansatBerry, onResidual, lansatberry_onResidual),
+    I(LiechiBerry, onResidual, liechiberry_onResidual),
+    I(PetayaBerry, onResidual, petayaberry_onResidual),
+    I(SalacBerry, onResidual, salacberry_onResidual),
+    I(StarfBerry, onResidual, starfberry_onResidual),
     C(Par, onModifySpe, par_onModifySpe),
+    C(Sandstorm, durationCallback, sandstorm_durationCallback),
+    C(Sandstorm, onFieldStart, sandstorm_onFieldStart),
+    C(Sandstorm, onFieldResidual, sandstorm_onFieldResidual),
+    C(Sandstorm, onWeather, sandstorm_onWeather),
+    C(Sunnyday, onImmunity, sunnyday_onImmunity),
 #undef R
 #undef A
 #undef I

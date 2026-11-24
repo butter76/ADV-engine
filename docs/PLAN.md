@@ -6,11 +6,10 @@ pkmn.ai's ladder runs). Given the same seed, teams and choices it must make
 the same random draws in the same order and write the same log and the same
 requests, bugs included.
 
-Status (2026-11-23): step 1 of "Order of work" is done, and the first two
-slices of step 2: a battle runs from its teams to its first request. Of 200
-recorded games, 100 match Showdown there in every draw, log line and request;
-the other 100 stop at a handler that is not ported yet (Sand Stream,
-Intimidate, Arena Trap). Nothing can be chosen yet.
+Status (2026-11-23): step 1 of "Order of work" is done, and three of the four
+slices of step 2. A battle runs for as long as both players switch: the
+turn loop, switching out and in, the end-of-turn step with sandstorm and
+Leftovers, fainting, forced switches and the win. No move can be used yet.
 
 ## What was measured
 
@@ -108,9 +107,13 @@ many log lines were written before it), every choice as tried, and everything
 Showdown sent. The line format is at `record` in `tools/lib.cjs`. Clock lines
 (`|t:|`) are left out. Two runs give the same bytes.
 
-The engine will replay a trace and be compared at three levels, finest first:
+The engine replays a trace through `src/showdown/stream.hpp`, which drives it
+as Showdown's stream is driven and writes the same lines; `tests/replay.cpp`
+compares the two line by line. So one comparison covers:
 
-1. **Draws.** The first draw that differs names the divergence.
+1. **Draws**, each with its arguments, its result and how many log lines
+   had been written when it was made. The first that differs names the
+   divergence.
 2. **Log text**, as sent.
 3. **Requests and errors**, including refused choices.
 
@@ -126,7 +129,8 @@ What is tested today (`ctest`, no Node needed):
 |---|---|
 | `prng` | 2,000,000 mixed calls give the hash Showdown's PRNG gives (`tools/prng_ref.cjs`) |
 | `trace_draws` | all 20,124 draws of 50 recorded games replay from their seeds |
-| `replay_openings` | 200 games up to the first choice: every draw, log line and request of the 100 that reach it, and no difference in any |
+| `replay_openings` | 200 games up to the first choice, line for line |
+| `replay_switches` | 30 games of 30 turns in which both players switch whenever they can; 9 run to the end and 21 stop at something unported, with no line different before |
 | `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
@@ -141,13 +145,18 @@ What is tested today (`ctest`, no Node needed):
       `side` object of the first request.~~ Done: 200 games, 2,400 Pokémon,
       1,241 draws, 400 sides, no difference (`tests/replay.cpp`).
    2. ~~The battle's start, up to the first request: events, the queue,
-      switching in, the log and its text.~~ Done for the games whose leads
-      need nothing unported: 100 of 200, with 675 draws, 3,010 log lines and
-      200 requests compared and no difference. Sand Stream (59 games),
-      Intimidate (39) and Arena Trap (2) stop the rest; they need the
-      weather, boosts and trapping. See "The battle's start" below.
-   3. Turns of switches only.
-   4. Plain damaging moves, fainting, forced switches, the end.
+      switching in, the log and its text, weather, boosts and trapping.~~
+      Done: 3,200 recorded openings, no difference.
+   3. ~~Turns of switches: choices and their refusals, switching out, the
+      end-of-turn step, damage and healing from effects, fainting, forced
+      switches, the win.~~ Done as far as games without moves go: over 150
+      games of up to 100 turns, 158,321 lines compared and equal, none
+      different. Every one of those games ends by stopping: 78 where a
+      trapped Pokémon has to move, 52 at turn 101 (the Endless Battle Clause
+      code), the rest at Trace, Cloud Nine, Flash Fire, Truant or a berry
+      being eaten. Only 2 of them reach a faint before stopping, so fainting
+      and forced switches are compared but thinly.
+   4. Moves, starting with plain damaging ones.
 3. Widen the set by how often things occur, to the whole checklist.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
@@ -213,6 +222,15 @@ numbers are in `sim/` at the pinned commit.
 
 ## Open
 
+- **A test passes when no line differs**, however early its games stop. The
+  count of games that run to the end is printed, not required; that has to
+  change once moves are in.
+- **Unported and reached by switch-only games:** a move choice, Trace,
+  Cloud Nine, Flash Fire's end, Truant after turn 0, eating a berry, a
+  default choice for a move request, anything past turn 100.
+- **Not modelled yet, and marked in the code:** volatiles, side conditions,
+  the check that skips a handler whose effect was replaced after gathering,
+  and effects whose duration counts down.
 - **No teams of its own.** The tools take `--teams DIR`; so far that has been
   hoenn's `teams/ou`. The random-legal and random-anything environments do
   not exist yet, and they are what will reach the 62% OU does not.
@@ -264,7 +282,7 @@ most need `--teams DIR`:
 
 | Tool | What it does |
 |---|---|
-| `tools/trace.cjs` | records games (`--games`, `--first`, `--out`, `--brief 1`, `--sites 1`) |
+| `tools/trace.cjs` | records games (`--games`, `--first`, `--out`, `--turns N`, `--choices switch`, `--opening 1`, `--brief 1`, `--sites 1`) |
 | `tools/coverage.cjs` | counts runs of each checklist function over the same games |
 | `tools/census.cjs` | events, sorts and draws per update, to `build/census.json` |
 | `tools/dump_dex.cjs` | the data as JSON and the checklist, to `build/dex/` |

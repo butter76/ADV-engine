@@ -7,6 +7,8 @@
 // --brief 1 writes the games, teams, draws and choices alone, without what
 // Showdown sent: enough to replay the draws, and small enough to keep in git.
 // The digest is of the full trace either way.
+// --turns N stops each game after N turns. --choices switch has both players
+// switch whenever they are offered a switch.
 // --opening 1 writes each game up to its first choice: the teams, the battle's
 // start and the first requests.
 //
@@ -18,7 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 const {showdown, loadTeams, lcg, record, gen5, COMMIT} = require('./lib.cjs');
 
-const opts = {games: 100, first: 1, format: 'gen3ou', out: '', sites: '', brief: '', opening: ''};
+const opts = {games: 100, first: 1, format: 'gen3ou', out: '', sites: '', brief: '', opening: '', turns: 0, choices: ''};
 for (let i = 2; i < process.argv.length; i += 2) opts[process.argv[i].slice(2)] = process.argv[i + 1];
 opts.games = +opts.games;
 opts.first = +opts.first;
@@ -54,7 +56,7 @@ for (let g = opts.first; g < opts.first + opts.games; g++) {
   const rnd = lcg(Math.imul(g, 0x9E3779B1) ^ 0x2026);
   const pair = [teams[rnd(teams.length)], teams[rnd(teams.length)]];
   const seed = gen5(BigInt.asUintN(64, BigInt(g) * 0x9E3779B97F4A7C15n));
-  const game = record(S, {format: opts.format, seed, teams: pair, rnd, site: opts.sites ? site : null});
+  const game = record(S, {format: opts.format, seed, teams: pair, rnd, site: opts.sites ? site : null, turns: +opts.turns, choices: opts.choices});
   const text = game.lines.join('\n') + '\n';
   digest.update(text);
   if (fd !== null) {

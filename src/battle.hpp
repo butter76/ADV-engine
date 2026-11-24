@@ -77,9 +77,13 @@ struct EffectState {
   uint32_t effect_order = 0;
   uint8_t duration = 0;
   HolderKind target = HolderKind::None;
+  Ref target_pokemon; // the target, when it is a Pokémon
 };
 
 enum class Disabled : uint8_t { No, Yes, Hidden };
+// Pokemon.trapped: false, true, or 'hidden' (a trap the player is not told of
+// until a switch is refused).
+enum class Trapped : uint8_t { No, Yes, Hidden };
 
 struct MoveSlot {
   Move id = Move::None; // Hidden Power, never one of its typed moves
@@ -101,6 +105,7 @@ struct Pokemon {
   uint8_t hp_power = 0;
   Stats base_stored_stats, stored_stats;
   Boosts boosts;
+  std::array<Type, 2> types{};
   uint16_t hp = 0, maxhp = 0, base_maxhp = 0;
   Ability base_ability = Ability::None, ability = Ability::None;
   Item item = Item::None;
@@ -109,11 +114,26 @@ struct Pokemon {
   uint8_t position = 0;
   // Showdown's speed is a number: Gen 3 gives a Quick Claw holder 65535.
   uint32_t speed = 0;
-  bool is_active = false, is_started = false, fainted = false;
-  bool trapped = false, maybe_trapped = false, maybe_disabled = false, maybe_locked = false;
+  bool is_active = false, is_started = false, fainted = false, faint_queued = false;
+  bool being_called_back = false;
+  // Showdown's status `fnt`, which a fainted Pokémon has while its side is
+  // asked for a replacement.
+  bool status_fnt = false;
+  Trapped trapped = Trapped::No;
+  bool maybe_trapped = false, maybe_disabled = false, maybe_locked = false;
+  bool stats_raised_this_turn = false, stats_lowered_this_turn = false;
   bool known_type = true, newly_switched = false;
   bool switch_flag = false, force_switch_flag = false;
   uint8_t active_turns = 0, previously_switched_in = 0;
+};
+
+// What a side has chosen so far (Side.choice, side.ts). In singles a side
+// chooses one action.
+struct ChoiceState {
+  bool cant_undo = false, error = false;
+  uint8_t forced_switches_left = 0, forced_passes_left = 0;
+  enum class Kind : uint8_t { None, Pass, Switch, InstaSwitch, Move } action = Kind::None;
+  uint8_t target = 0xFF; // the team index of the Pokémon to switch to
 };
 
 struct Side {
@@ -121,6 +141,7 @@ struct Side {
   uint8_t size = 0;
   uint8_t pokemon_left = 0;
   uint8_t active = 0xFF; // the team index of the Pokémon out, or none
+  ChoiceState choice;
 };
 
 // A rule or a condition on the field (Field.pseudoWeather), in the order
@@ -147,6 +168,7 @@ struct Action {
   int32_t priority = 0;
   double speed = 0;
   Ref pokemon;
+  Ref target; // a switch: the Pokémon coming in
 };
 
 struct Queue {
@@ -171,6 +193,8 @@ struct Request {
   std::array<RequestMove, MOVE_SLOTS> moves{};
   uint8_t n_moves = 0;
   bool trapped = false, maybe_trapped = false, maybe_disabled = false, maybe_locked = false;
+  bool no_cancel = false;
+  bool update = false; // sent again after a refused choice changed it
 };
 
 struct Battle {
@@ -184,6 +208,15 @@ struct Battle {
   RequestState request_state = RequestState::None;
   bool started = false, ended = false, mid_turn = false;
   bool report_percentages = false, support_cancel = false, quick_claw_roll = false;
+  // Battle.faintQueue: who fainted, and from what.
+  struct Faint {
+    Ref target, source;
+    Effect effect;
+  };
+  std::array<Faint, 4> faint_queue{};
+  uint8_t faints = 0;
+  bool sent_requests = true;
+  int8_t winner = -1; // 0 or 1 once the battle ends with one; 2: a tie
   // Battle.speedOrder: the active Pokémon's field positions (0 for p1's, 1
   // for p2's) as the last runSwitch sorted them.
   std::array<uint8_t, 2> speed_order{};

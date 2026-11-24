@@ -45,6 +45,18 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
   case Part::Kind::Pokemon:
     return side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Ability: return std::string(ABILITY_NAMES[p.id].name);
+  case Part::Kind::From:
+    // An effect's fullname. Damage from `tox` is written as `psn`.
+    switch (p.effect_kind) {
+    case EffectKind::Ability: return "[from] ability: " + std::string(ABILITY_NAMES[p.id].name);
+    case EffectKind::Item: return "[from] item: " + std::string(ITEM_NAMES[p.id].name);
+    case EffectKind::Move: return "[from] move: " + std::string(MOVE_NAMES[p.id].name);
+    case EffectKind::Condition: return "[from] " + std::string(CONDITION_NAMES[Condition(p.id) == Condition::Tox ? uint16_t(Condition::Psn) : p.id].name);
+    case EffectKind::Rule: break;
+    }
+    return "[from] ?";
+  case Part::Kind::Of:
+    return "[of] " + side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Health: return health_text(p, secret, b.report_percentages);
   case Part::Kind::Details: {
     std::string out(SPECIES_NAMES[uint16_t(p.species)].name);
@@ -60,11 +72,10 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
 
 // Battle.add (battle.ts) and addSplit: the lines one Line becomes.
 inline void write(const Line& line, const Battle& b, const Names& names, std::vector<std::string>& out) {
-  int split = -1;
+  int split = line.secret_side;
   for (int i = 0; i < line.n; i++) {
     const Part& p = line.parts[i];
     if (p.kind == Part::Kind::Details || p.kind == Part::Kind::Health) split = p.pokemon.side;
-    if (line.secret_only && p.kind == Part::Kind::Pokemon) split = p.pokemon.side;
   }
   const auto text = [&](bool secret) {
     std::string t;
@@ -74,7 +85,7 @@ inline void write(const Line& line, const Battle& b, const Names& names, std::ve
   if (split < 0) return out.push_back(text(true));
   out.push_back("|split|" + side_id(split));
   out.push_back(text(true));
-  out.push_back(line.secret_only ? "" : text(false));
+  out.push_back(line.secret_side >= 0 ? "" : text(false));
 }
 
 // A request's JSON (Battle.getRequests, battle.ts:1432).
@@ -82,6 +93,8 @@ inline std::string request_json(const Battle& b, int side, const Names& names) {
   const Request& r = b.requests[side];
   const std::string side_json = "\"side\":" + side_request(b, side, names.players[side], names.teams[side]);
   if (r.kind == Request::Kind::Wait) return "{\"wait\":true," + side_json + "}";
+  const std::string tail = std::string(r.no_cancel ? ",\"noCancel\":true" : "") + (r.update ? ",\"update\":true" : "") + "}";
+  if (r.kind == Request::Kind::Switch) return "{\"forceSwitch\":[true]," + side_json + tail;
   const Pokemon& p = b.sides[side].pokemon[b.sides[side].active];
   std::string out = "{\"active\":[{\"moves\":[";
   for (int i = 0; i < r.n_moves; i++) {
@@ -101,9 +114,7 @@ inline std::string request_json(const Battle& b, int side, const Names& names) {
   if (r.maybe_locked) out += ",\"maybeLocked\":true";
   if (r.trapped) out += ",\"trapped\":true";
   if (r.maybe_trapped) out += ",\"maybeTrapped\":true";
-  out += "}]," + side_json;
-  if (!b.support_cancel) out += ",\"noCancel\":true";
-  return out + "}";
+  return out + "}]," + side_json + tail;
 }
 
 } // namespace adv::showdown

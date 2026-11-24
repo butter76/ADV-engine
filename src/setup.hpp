@@ -51,6 +51,7 @@ constexpr void hidden_power(const std::array<uint8_t, 6>& ivs, Type& type, uint8
 constexpr void set_species(Pokemon& p, Species species) {
   p.species = species;
   const SpeciesData& s = data(species);
+  p.types = s.types;
   uint16_t hp = stat_modify(s, p.set, Stat::Hp);
   if (s.max_hp) hp = s.max_hp;
   if (!p.maxhp) p.base_maxhp = p.maxhp = p.hp = hp;

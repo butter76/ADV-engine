@@ -112,7 +112,7 @@ function play({Battle}, {format, seed, teams, rnd, each, before}) {
 //
 // As BattleStream does after each chunk it is written, `sendUpdates` runs
 // after the players are set and after every choice.
-function record({Battle, Teams}, {format, seed, teams, rnd, site}) {
+function record({Battle, Teams}, {format, seed, teams, rnd, site, turns, choices}) {
   const out = [`G ${format} ${seed}`];
   const battle = new Battle({
     formatid: format, seed,
@@ -150,7 +150,9 @@ function record({Battle, Teams}, {format, seed, teams, rnd, site}) {
   battle.sendUpdates();
 
   let updates = 0;
-  while (!battle.ended) {
+  // `turns` stops the game once that many turns have been played; `choices`
+  // of 'switch' picks a switch whenever one is offered.
+  while (!battle.ended && !(turns && battle.turn > turns)) {
     let chose = false;
     for (const side of battle.sides) {
       const r = side.activeRequest;
@@ -162,8 +164,10 @@ function record({Battle, Teams}, {format, seed, teams, rnd, site}) {
         for (const b of bench) options.push('switch ' + b);
       } else if (r.active) {
         const a = r.active[0];
-        a.moves.forEach((m, i) => { if (!m.disabled) options.push('move ' + (i + 1)); });
-        if (!a.trapped) for (const b of bench) options.push('switch ' + b);
+        const switches = a.trapped ? [] : bench.map(b => 'switch ' + b);
+        // Moves first, then switches: the order the draws of earlier traces depend on.
+        if (choices !== 'switch' || !switches.length) a.moves.forEach((m, i) => { if (!m.disabled) options.push('move ' + (i + 1)); });
+        options.push(...switches);
       }
       const turn = battle.turn, sent = battle.log.length;
       let done = false;
@@ -172,6 +176,11 @@ function record({Battle, Teams}, {format, seed, teams, rnd, site}) {
         out.push(`c ${side.id} ${pick}`);
         done = battle.choose(side.id, pick);
         battle.sendUpdates();
+        // A player who only switches moves once a switch is refused.
+        if (!done && choices === 'switch') {
+          options.length = 0;
+          side.activeRequest.active[0].moves.forEach((m, i) => { if (!m.disabled) options.push('move ' + (i + 1)); });
+        }
       }
       if (!done) {
         out.push(`c ${side.id} default`);
