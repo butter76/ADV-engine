@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.24)
+project(adv_engine LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# The engine is headers. -ffp-contract=off: where Showdown multiplies by a
+# fraction the engine does the same arithmetic in doubles, and a fused
+# multiply-add would round differently.
+add_library(adv INTERFACE)
+target_include_directories(adv INTERFACE src)
+target_compile_options(adv INTERFACE -Wall -Wextra -Wpedantic -Werror -ffp-contract=off)
+
+enable_testing()
+
+# The PRNG on a fixed script of calls; the line is what tools/prng_ref.cjs
+# prints from Showdown's own PRNG.
+add_executable(prng_test tests/prng_test.cpp)
+target_link_libraries(prng_test PRIVATE adv)
+add_test(NAME prng COMMAND prng_test)
+set_tests_properties(prng PROPERTIES PASS_REGULAR_EXPRESSION "2000000 calls, hash 4dc30e29d5dc4fbe")
+
+# The generated tables against the facts tools/tables_ref.cjs read from Showdown.
+add_executable(data_test tests/data_test.cpp)
+target_link_libraries(data_test PRIVATE adv)
+add_test(NAME data COMMAND data_test ${CMAKE_SOURCE_DIR}/tests/fixtures/tables.txt)
+
+# Every draw of recorded Showdown games, replayed from the seed.
+add_executable(trace_draws tests/trace_draws.cpp)
+target_link_libraries(trace_draws PRIVATE adv)
+add_test(NAME trace_draws COMMAND trace_draws ${CMAKE_SOURCE_DIR}/tests/fixtures/ou-50.brief.trace)
+
+# Not a test: what dispatch costs on the measured mix of events.
+add_executable(dispatch_bench smoke/dispatch_bench.cpp)
+target_link_libraries(dispatch_bench PRIVATE adv)

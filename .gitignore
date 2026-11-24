@@ -1,0 +1,4 @@
+build/
+.showdown
+node_modules/
+.DS_Store

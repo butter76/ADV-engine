@@ -1,0 +1,1834 @@
+ability airlock 76 1
+ability arenatrap 71 0
+ability battlearmor 4 0
+ability blaze 66 0
+ability chlorophyll 34 0
+ability clearbody 29 0
+ability cloudnine 13 1
+ability colorchange 16 0
+ability compoundeyes 14 0
+ability cutecharm 56 0
+ability damp 6 0
+ability drizzle 2 0
+ability drought 70 0
+ability earlybird 48 0
+ability effectspore 27 0
+ability flamebody 49 0
+ability flashfire 18 0
+ability forecast 59 0
+ability guts 62 0
+ability hugepower 37 0
+ability hustle 55 0
+ability hypercutter 52 0
+ability illuminate 35 0
+ability immunity 17 0
+ability innerfocus 39 0
+ability insomnia 15 0
+ability intimidate 22 0
+ability keeneye 51 0
+ability levitate 26 0
+ability lightningrod 31 0
+ability limber 7 0
+ability liquidooze 64 0
+ability magmaarmor 40 0
+ability magnetpull 42 0
+ability marvelscale 63 0
+ability minus 58 0
+ability naturalcure 30 0
+ability oblivious 12 0
+ability overgrow 65 0
+ability owntempo 20 0
+ability pickup 53 0
+ability plus 57 0
+ability poisonpoint 38 0
+ability pressure 46 0
+ability purepower 74 0
+ability raindish 44 0
+ability rockhead 69 0
+ability roughskin 24 0
+ability runaway 50 0
+ability sandstream 45 0
+ability sandveil 8 0
+ability serenegrace 32 0
+ability shadowtag 23 0
+ability shedskin 61 0
+ability shellarmor 75 0
+ability shielddust 19 0
+ability soundproof 43 0
+ability speedboost 3 0
+ability static 9 0
+ability stench 1 0
+ability stickyhold 60 0
+ability sturdy 5 0
+ability suctioncups 21 0
+ability swarm 68 0
+ability swiftswim 33 0
+ability synchronize 28 0
+ability thickfat 47 0
+ability torrent 67 0
+ability trace 36 0
+ability truant 54 0
+ability vitalspirit 72 0
+ability voltabsorb 10 0
+ability waterabsorb 11 0
+ability waterveil 41 0
+ability whitesmoke 73 0
+ability wonderguard 25 0
+chart bug fighting 2
+chart bug fire 1
+chart bug flying 1
+chart bug grass 2
+chart bug ground 2
+chart bug rock 1
+chart dark bug 1
+chart dark dark 2
+chart dark fighting 1
+chart dark ghost 2
+chart dark psychic 3
+chart dragon dragon 1
+chart dragon electric 2
+chart dragon fire 2
+chart dragon grass 2
+chart dragon ice 1
+chart dragon water 2
+chart electric electric 2
+chart electric flying 2
+chart electric ground 1
+chart electric steel 2
+chart fighting bug 2
+chart fighting dark 2
+chart fighting flying 1
+chart fighting psychic 1
+chart fighting rock 2
+chart fire bug 2
+chart fire fire 2
+chart fire grass 2
+chart fire ground 1
+chart fire ice 2
+chart fire rock 1
+chart fire steel 2
+chart fire water 1
+chart flying bug 2
+chart flying electric 1
+chart flying fighting 2
+chart flying grass 2
+chart flying ground 3
+chart flying ice 1
+chart flying rock 1
+chart ghost bug 2
+chart ghost dark 1
+chart ghost fighting 3
+chart ghost ghost 1
+chart ghost normal 3
+chart ghost poison 2
+chart grass bug 1
+chart grass electric 2
+chart grass fire 1
+chart grass flying 1
+chart grass grass 2
+chart grass ground 2
+chart grass ice 1
+chart grass poison 1
+chart grass water 2
+chart ground electric 3
+chart ground grass 1
+chart ground ice 1
+chart ground poison 2
+chart ground rock 2
+chart ground water 1
+chart ice fighting 1
+chart ice fire 1
+chart ice ice 2
+chart ice rock 1
+chart ice steel 1
+chart normal fighting 1
+chart normal ghost 3
+chart poison bug 2
+chart poison fighting 2
+chart poison grass 2
+chart poison ground 1
+chart poison poison 2
+chart poison psychic 1
+chart psychic bug 1
+chart psychic dark 1
+chart psychic fighting 2
+chart psychic ghost 1
+chart psychic psychic 2
+chart rock fighting 1
+chart rock fire 2
+chart rock flying 2
+chart rock grass 1
+chart rock ground 1
+chart rock normal 2
+chart rock poison 2
+chart rock steel 1
+chart rock water 1
+chart steel bug 2
+chart steel dark 2
+chart steel dragon 2
+chart steel fighting 1
+chart steel fire 1
+chart steel flying 2
+chart steel ghost 2
+chart steel grass 2
+chart steel ground 1
+chart steel ice 2
+chart steel normal 2
+chart steel poison 3
+chart steel psychic 2
+chart steel rock 2
+chart steel steel 2
+chart water electric 1
+chart water fire 2
+chart water grass 1
+chart water ice 2
+chart water steel 2
+chart water water 2
+condition arceus standalone condition 0 0 0 0
+condition attract move condition 0 0 1 0
+condition beatup move condition 1 0 0 0
+condition bide move condition 3 0 0 0
+condition bounce move condition 2 0 0 0
+condition brn standalone status 0 0 0 0
+condition charge move condition 0 0 0 0
+condition choicelock standalone condition 0 0 1 0
+condition commanded standalone condition 0 0 1 0
+condition commanding standalone condition 0 0 1 0
+condition confusion standalone condition 0 0 0 0
+condition counter move condition 1 0 1 0
+condition curse move condition 0 0 0 0
+condition defensecurl move condition 0 0 1 0
+condition deltastream standalone weather 0 0 0 0
+condition desolateland standalone weather 0 0 0 0
+condition destinybond move condition 0 0 1 0
+condition dig move condition 2 0 0 0
+condition disable move condition 0 0 1 0
+condition dive move condition 2 0 0 0
+condition dynamax standalone condition 0 0 1 0
+condition encore move condition 0 0 1 0
+condition endure move condition 1 0 0 0
+condition flashfire ability condition 0 0 1 0
+condition flinch standalone condition 1 0 0 0
+condition fly move condition 2 0 0 0
+condition focusenergy move condition 0 0 0 0
+condition focuspunch move condition 1 0 0 0
+condition followme move condition 1 0 0 0
+condition foresight move condition 0 0 1 0
+condition frz standalone status 0 0 0 0
+condition furycutter move condition 2 0 0 0
+condition futuremove standalone condition 0 0 0 0
+condition gem standalone condition 1 0 0 1
+condition grudge move condition 0 0 0 0
+condition hail standalone weather 5 0 0 0
+condition healreplacement standalone condition 0 0 0 0
+condition helpinghand move condition 1 0 0 0
+condition iceball move condition 1 0 0 0
+condition imprison move condition 0 0 1 0
+condition ingrain move condition 0 0 0 0
+condition leechseed move condition 0 0 0 0
+condition lightscreen move condition 5 0 0 0
+condition lockedmove standalone condition 2 0 0 0
+condition lockon move condition 2 0 0 0
+condition magiccoat move condition 1 0 0 0
+condition minimize move condition 0 0 1 0
+condition mirrorcoat move condition 1 0 1 0
+condition mist move condition 5 0 0 0
+condition mudsport move condition 0 0 0 0
+condition mustrecharge standalone condition 2 0 0 0
+condition nightmare move condition 0 0 1 0
+condition par standalone status 0 0 0 0
+condition partiallytrapped standalone condition 5 0 0 0
+condition perishsong move condition 4 0 0 0
+condition primordialsea standalone weather 0 0 0 0
+condition protect move condition 1 0 0 0
+condition psn standalone status 0 0 0 0
+condition pursuit move condition 1 0 0 0
+condition rage move condition 0 0 0 0
+condition raindance standalone weather 5 0 0 0
+condition reflect move condition 5 0 0 0
+condition rollout move condition 1 0 0 0
+condition rolloutstorage standalone condition 2 0 0 0
+condition safeguard move condition 5 0 0 0
+condition sandstorm standalone weather 5 0 0 0
+condition silvally standalone condition 0 0 0 0
+condition slp standalone status 0 0 0 0
+condition snatch move condition 1 0 0 0
+condition snowscape standalone weather 5 0 0 0
+condition spikes move condition 0 0 0 0
+condition stall standalone condition 2 8 0 0
+condition stockpile move condition 0 0 1 0
+condition substitute move condition 0 0 0 0
+condition substitutebroken standalone condition 0 0 1 0
+condition sunnyday standalone weather 5 0 0 0
+condition taunt move condition 2 0 0 0
+condition torment move condition 0 0 1 0
+condition tox standalone status 0 0 0 0
+condition toxic move condition 1 0 1 0
+condition trapped standalone condition 0 0 0 0
+condition trapper standalone condition 0 0 0 0
+condition truant ability condition 0 0 0 0
+condition twoturnmove standalone condition 2 0 0 0
+condition uproar move condition 0 0 0 0
+condition watersport move condition 0 0 0 0
+condition wish move condition 2 0 0 0
+condition yawn move condition 2 0 1 0
+condition zacian standalone condition 0 0 0 0
+condition zamazenta standalone condition 0 0 0 0
+handler ability airlock onAfterEntryHazard 0 0 0
+handler ability airlock onEnd 0 0 0
+handler ability airlock onStart 0 0 0
+handler ability arenatrap onFoeMaybeTrapPokemon 0 0 0
+handler ability arenatrap onFoeTrapPokemon 0 0 0
+handler ability battlearmor onCriticalHit 0 0 0
+handler ability blaze onBasePower 0 2 0
+handler ability chlorophyll onModifySpe 0 0 0
+handler ability clearbody onTryBoost 0 0 0
+handler ability cloudnine onAfterEntryHazard 0 0 0
+handler ability cloudnine onEnd 0 0 0
+handler ability cloudnine onStart 0 0 0
+handler ability colorchange onDamagingHit 0 0 0
+handler ability compoundeyes onSourceModifyAccuracy 0 9 0
+handler ability cutecharm onDamagingHit 0 0 0
+handler ability damp onAnyDamage 0 0 0
+handler ability damp onAnyTryMove 0 0 0
+handler ability drizzle onAfterEntryHazard 0 0 0
+handler ability drizzle onStart 0 0 0
+handler ability drought onAfterEntryHazard 0 0 0
+handler ability drought onStart 0 0 0
+handler ability effectspore onDamagingHit 0 0 0
+handler ability flamebody onDamagingHit 0 0 0
+handler ability flashfire onEnd 0 0 0
+handler ability flashfire onTryHit 0 0 0
+handler ability forecast onAfterEntryHazard 0 0 0
+handler ability forecast onStart 0 0 0
+handler ability forecast onWeatherChange 0 0 0
+handler ability guts onModifyAtk 0 5 0
+handler ability hugepower onModifyAtk 0 5 0
+handler ability hustle onModifyAtk 0 5 0
+handler ability hustle onSourceModifyAccuracy 0 7 0
+handler ability hypercutter onTryBoost 0 0 0
+handler ability immunity onSetStatus 0 0 0
+handler ability immunity onUpdate 0 0 0
+handler ability innerfocus onTryAddVolatile 0 0 0
+handler ability insomnia onSetStatus 0 0 0
+handler ability insomnia onTryAddVolatile 0 0 0
+handler ability insomnia onUpdate 0 0 0
+handler ability intimidate onStart 0 0 0
+handler ability keeneye onTryBoost 0 0 0
+handler ability lightningrod onFoeRedirectTarget 0 0 0
+handler ability limber onSetStatus 0 0 0
+handler ability limber onUpdate 0 0 0
+handler ability liquidooze onSourceTryHeal 0 0 0
+handler ability magmaarmor onImmunity 0 0 0
+handler ability magmaarmor onUpdate 0 0 0
+handler ability magnetpull onAnyMaybeTrapPokemon 0 0 0
+handler ability magnetpull onAnyTrapPokemon 0 0 0
+handler ability marvelscale onModifyDef 0 6 0
+handler ability minus onModifySpA 0 0 0
+handler ability naturalcure onSwitchOut 0 0 0
+handler ability oblivious onImmunity 0 0 0
+handler ability oblivious onTryHit 0 0 0
+handler ability oblivious onUpdate 0 0 0
+handler ability overgrow onBasePower 0 2 0
+handler ability owntempo onHit 0 0 0
+handler ability owntempo onTryAddVolatile 0 0 0
+handler ability owntempo onUpdate 0 0 0
+handler ability plus onModifySpA 0 0 0
+handler ability poisonpoint onDamagingHit 0 0 0
+handler ability pressure onDeductPP 0 0 0
+handler ability pressure onStart 0 0 0
+handler ability purepower onModifyAtk 0 5 0
+handler ability raindish onResidual 10 0 3
+handler ability rockhead onDamage 0 0 0
+handler ability roughskin onDamagingHit 1 0 0
+handler ability sandstream onAfterEntryHazard 0 0 0
+handler ability sandstream onStart 0 0 0
+handler ability sandveil onImmunity 0 0 0
+handler ability sandveil onModifyAccuracy 0 8 0
+handler ability serenegrace onModifyMove 0 -2 0
+handler ability shadowtag onFoeMaybeTrapPokemon 0 0 0
+handler ability shadowtag onFoeTrapPokemon 0 0 0
+handler ability shedskin onResidual 10 0 3
+handler ability shellarmor onCriticalHit 0 0 0
+handler ability shielddust onModifySecondaries 0 0 0
+handler ability soundproof onTryHit 0 0 0
+handler ability speedboost onResidual 10 0 3
+handler ability static onDamagingHit 0 0 0
+handler ability stickyhold onTakeItem 0 0 0
+handler ability sturdy onTryHit 0 0 0
+handler ability suctioncups onDragOut 0 1 0
+handler ability swarm onBasePower 0 2 0
+handler ability swiftswim onModifySpe 0 0 0
+handler ability synchronize onAfterSetStatus 0 0 0
+handler ability thickfat onSourceBasePower 0 1 0
+handler ability torrent onBasePower 0 2 0
+handler ability trace onStart 0 0 0
+handler ability truant onBeforeMove 0 9 0
+handler ability truant onResidual 27 0 0
+handler ability truant onSwitchIn 0 0 0
+handler ability vitalspirit onSetStatus 0 0 0
+handler ability vitalspirit onTryAddVolatile 0 0 0
+handler ability vitalspirit onUpdate 0 0 0
+handler ability voltabsorb onTryHit 0 0 0
+handler ability waterabsorb onTryHit 0 0 0
+handler ability waterveil onSetStatus 0 0 0
+handler ability waterveil onUpdate 0 0 0
+handler ability whitesmoke onTryBoost 0 0 0
+handler ability wonderguard onTryHit 0 0 0
+handler condition arceus onBeforeSwitchIn 0 0 0
+handler condition arceus onSwitchIn 0 0 0
+handler condition attract onBeforeMove 0 2 0
+handler condition attract onEnd 0 0 0
+handler condition attract onStart 0 0 0
+handler condition attract onUpdate 0 0 0
+handler condition beatup onFoeModifySpD 0 -101 0
+handler condition beatup onModifySpA 0 -101 0
+handler condition bide onBeforeMove 0 0 0
+handler condition bide onDamage 0 -101 0
+handler condition bide onEnd 0 0 0
+handler condition bide onLockMove 0 0 0
+handler condition bide onMoveAborted 0 0 0
+handler condition bide onStart 0 0 0
+handler condition bounce onInvulnerability 0 0 0
+handler condition bounce onSourceBasePower 0 0 0
+handler condition brn onResidual 10 0 6
+handler condition brn onStart 0 0 0
+handler condition charge onAfterMove 0 0 0
+handler condition charge onBasePower 0 9 0
+handler condition charge onEnd 0 0 0
+handler condition charge onMoveAborted 0 0 0
+handler condition charge onRestart 0 0 0
+handler condition charge onStart 0 0 0
+handler condition choicelock onDisableMove 0 0 0
+handler condition choicelock onStart 0 0 0
+handler condition commanded onDragOut 0 2 0
+handler condition commanded onStart 0 0 0
+handler condition commanded onTrapPokemon 0 -11 0
+handler condition commanding onBeforeTurn 0 0 0
+handler condition commanding onDragOut 0 2 0
+handler condition commanding onInvulnerability 0 0 0
+handler condition commanding onTrapPokemon 0 -11 0
+handler condition confusion onBeforeMove 0 3 0
+handler condition confusion onEnd 0 0 0
+handler condition confusion onStart 0 0 0
+handler condition counter onDamage 0 -101 0
+handler condition counter onRedirectTarget 0 -1 0
+handler condition counter onStart 0 0 0
+handler condition curse onResidual 10 0 8
+handler condition curse onStart 0 0 0
+handler condition defensecurl onRestart 0 0 0
+handler condition deltastream onEffectiveness 0 -1 0
+handler condition deltastream onFieldEnd 0 0 0
+handler condition deltastream onFieldResidual 1 0 0
+handler condition deltastream onFieldStart 0 0 0
+handler condition desolateland onFieldEnd 0 0 0
+handler condition desolateland onFieldResidual 1 0 0
+handler condition desolateland onFieldStart 0 0 0
+handler condition desolateland onImmunity 0 0 0
+handler condition desolateland onTryMove 0 1 0
+handler condition desolateland onWeatherModifyDamage 0 0 0
+handler condition destinybond onBeforeMove 0 -1 0
+handler condition destinybond onFaint 0 0 0
+handler condition destinybond onMoveAborted 0 0 0
+handler condition destinybond onStart 0 0 0
+handler condition dig onImmunity 0 0 0
+handler condition dig onInvulnerability 0 0 0
+handler condition dig onSourceModifyDamage 0 0 0
+handler condition disable durationCallback 0 0 0
+handler condition disable onBeforeMove 0 7 0
+handler condition disable onDisableMove 0 0 0
+handler condition disable onEnd 0 0 0
+handler condition disable onStart 0 0 0
+handler condition dive onImmunity 0 0 0
+handler condition dive onInvulnerability 0 0 0
+handler condition dive onSourceModifyDamage 0 0 0
+handler condition dynamax onBeforeSwitchOut 0 -1 0
+handler condition dynamax onDragOut 0 2 0
+handler condition dynamax onEnd 0 0 0
+handler condition dynamax onResidual 0 -100 0
+handler condition dynamax onSourceModifyDamage 0 0 0
+handler condition dynamax onStart 0 0 0
+handler condition dynamax onTryAddVolatile 0 0 0
+handler condition encore durationCallback 0 0 0
+handler condition encore onDisableMove 0 0 0
+handler condition encore onEnd 0 0 0
+handler condition encore onOverrideAction 0 0 0
+handler condition encore onResidual 10 0 14
+handler condition encore onStart 0 0 0
+handler condition endure onDamage 0 -10 0
+handler condition endure onStart 0 0 0
+handler condition flashfire onEnd 0 0 0
+handler condition flashfire onModifyDamagePhase1 0 0 0
+handler condition flashfire onStart 0 0 0
+handler condition flinch onBeforeMove 0 8 0
+handler condition fly onInvulnerability 0 0 0
+handler condition fly onSourceModifyDamage 0 0 0
+handler condition focusenergy onModifyCritRatio 0 0 0
+handler condition focusenergy onStart 0 0 0
+handler condition focuspunch onHit 0 0 0
+handler condition focuspunch onStart 0 0 0
+handler condition focuspunch onTryAddVolatile 0 0 0
+handler condition followme onFoeRedirectTarget 0 1 0
+handler condition followme onStart 0 0 0
+handler condition foresight onModifyBoost 0 0 0
+handler condition foresight onNegateImmunity 0 0 0
+handler condition foresight onStart 0 0 0
+handler condition frz onAfterMoveSecondary 0 0 0
+handler condition frz onBeforeMove 0 10 0
+handler condition frz onDamagingHit 0 0 0
+handler condition frz onModifyMove 0 0 0
+handler condition frz onStart 0 0 0
+handler condition furycutter onRestart 0 0 0
+handler condition furycutter onStart 0 0 0
+handler condition futuremove onEnd 0 0 0
+handler condition futuremove onResidual 11 0 0
+handler condition futuremove onRestart 0 0 0
+handler condition futuremove onStart 0 0 0
+handler condition gem onBasePower 0 0 0
+handler condition grudge onBeforeMove 0 100 0
+handler condition grudge onFaint 0 0 0
+handler condition grudge onStart 0 0 0
+handler condition hail durationCallback 0 0 0
+handler condition hail onFieldEnd 0 0 0
+handler condition hail onFieldResidual 8 0 0
+handler condition hail onFieldStart 0 0 0
+handler condition hail onWeather 0 0 0
+handler condition healreplacement onStart 0 0 0
+handler condition healreplacement onSwitchIn 0 0 0
+handler condition helpinghand onBasePower 0 10 0
+handler condition helpinghand onRestart 0 0 0
+handler condition helpinghand onStart 0 0 0
+handler condition iceball onLockMove 0 0 0
+handler condition iceball onResidual 0 0 0
+handler condition iceball onStart 0 0 0
+handler condition imprison onFoeBeforeMove 0 4 0
+handler condition imprison onFoeDisableMove 0 0 0
+handler condition imprison onStart 0 0 0
+handler condition ingrain onDragOut 0 0 0
+handler condition ingrain onResidual 10 0 1
+handler condition ingrain onStart 0 0 0
+handler condition ingrain onTrapPokemon 0 0 0
+handler condition leechseed onResidual 10 0 5
+handler condition leechseed onStart 0 0 0
+handler condition lightscreen durationCallback 0 0 0
+handler condition lightscreen onAnyModifyDamagePhase1 0 0 0
+handler condition lightscreen onSideEnd 0 0 0
+handler condition lightscreen onSideStart 0 0 0
+handler condition lockedmove onEnd 0 0 0
+handler condition lockedmove onLockMove 0 0 0
+handler condition lockedmove onResidual 0 0 0
+handler condition lockedmove onRestart 0 0 0
+handler condition lockedmove onStart 0 0 0
+handler condition lockon onSourceAccuracy 0 0 0
+handler condition lockon onSourceInvulnerability 0 1 0
+handler condition magiccoat onStart 0 0 0
+handler condition magiccoat onTryHit 0 2 0
+handler condition minimize onRestart 0 0 0
+handler condition minimize onSourceModifyDamage 0 0 0
+handler condition mirrorcoat onDamage 0 -101 0
+handler condition mirrorcoat onRedirectTarget 0 -1 0
+handler condition mirrorcoat onStart 0 0 0
+handler condition mist onSideEnd 0 0 0
+handler condition mist onSideStart 0 0 0
+handler condition mist onTryBoost 0 0 0
+handler condition mudsport onAnyBasePower 0 3 0
+handler condition mudsport onStart 0 0 0
+handler condition mustrecharge onBeforeMove 0 11 0
+handler condition mustrecharge onLockMove 0 0 0
+handler condition mustrecharge onStart 0 0 0
+handler condition nightmare onResidual 10 0 7
+handler condition nightmare onStart 0 0 0
+handler condition par onBeforeMove 0 1 0
+handler condition par onModifySpe 0 -101 0
+handler condition par onStart 0 0 0
+handler condition partiallytrapped durationCallback 0 0 0
+handler condition partiallytrapped onEnd 0 0 0
+handler condition partiallytrapped onResidual 10 0 9
+handler condition partiallytrapped onStart 0 0 0
+handler condition partiallytrapped onTrapPokemon 0 0 0
+handler condition perishsong onEnd 0 0 0
+handler condition perishsong onResidual 12 0 0
+handler condition primordialsea onFieldEnd 0 0 0
+handler condition primordialsea onFieldResidual 1 0 0
+handler condition primordialsea onFieldStart 0 0 0
+handler condition primordialsea onTryMove 0 1 0
+handler condition primordialsea onWeatherModifyDamage 0 0 0
+handler condition protect onStart 0 0 0
+handler condition protect onTryHit 0 3 0
+handler condition psn onResidual 10 0 6
+handler condition psn onStart 0 0 0
+handler condition pursuit onFoeBeforeSwitchOut 0 0 0
+handler condition rage onBeforeMove 0 100 0
+handler condition rage onHit 0 0 0
+handler condition rage onStart 0 0 0
+handler condition raindance durationCallback 0 0 0
+handler condition raindance onFieldEnd 0 0 0
+handler condition raindance onFieldResidual 8 0 0
+handler condition raindance onFieldStart 0 0 0
+handler condition raindance onWeatherModifyDamage 0 0 0
+handler condition reflect durationCallback 0 0 0
+handler condition reflect onAnyModifyDamagePhase1 0 0 0
+handler condition reflect onSideEnd 0 0 0
+handler condition reflect onSideStart 0 0 0
+handler condition rollout onLockMove 0 0 0
+handler condition rollout onResidual 0 0 0
+handler condition rollout onStart 0 0 0
+handler condition rolloutstorage onBasePower 0 0 0
+handler condition safeguard durationCallback 0 0 0
+handler condition safeguard onSetStatus 0 0 0
+handler condition safeguard onSideEnd 0 0 0
+handler condition safeguard onSideStart 0 0 0
+handler condition safeguard onTryAddVolatile 0 0 0
+handler condition sandstorm durationCallback 0 0 0
+handler condition sandstorm onFieldEnd 0 0 0
+handler condition sandstorm onFieldResidual 8 0 0
+handler condition sandstorm onFieldStart 0 0 0
+handler condition sandstorm onWeather 0 0 0
+handler condition silvally onType 0 1 0
+handler condition slp onBeforeMove 0 10 0
+handler condition slp onStart 0 0 0
+handler condition slp onSwitchOut 0 0 0
+handler condition snatch onAnyPrepareHit 0 -1 0
+handler condition snatch onStart 0 0 0
+handler condition snowscape durationCallback 0 0 0
+handler condition snowscape onFieldEnd 0 0 0
+handler condition snowscape onFieldResidual 1 0 0
+handler condition snowscape onFieldStart 0 0 0
+handler condition snowscape onModifyDef 0 10 0
+handler condition spikes onEntryHazard 0 2 0
+handler condition spikes onSideRestart 0 0 0
+handler condition spikes onSideStart 0 0 0
+handler condition stall onRestart 0 0 0
+handler condition stall onStallMove 0 0 0
+handler condition stall onStart 0 0 0
+handler condition stockpile onEnd 0 0 0
+handler condition stockpile onRestart 0 0 0
+handler condition stockpile onStart 0 0 0
+handler condition substitute onEnd 0 0 0
+handler condition substitute onStart 0 0 0
+handler condition substitute onTryPrimaryHit 0 -1 0
+handler condition sunnyday durationCallback 0 0 0
+handler condition sunnyday onFieldEnd 0 0 0
+handler condition sunnyday onFieldResidual 8 0 0
+handler condition sunnyday onFieldStart 0 0 0
+handler condition sunnyday onImmunity 0 0 0
+handler condition sunnyday onWeatherModifyDamage 0 0 0
+handler condition taunt onBeforeMove 0 0 0
+handler condition taunt onDisableMove 0 0 0
+handler condition taunt onEnd 0 0 0
+handler condition taunt onStart 0 0 0
+handler condition torment onDisableMove 0 0 0
+handler condition torment onEnd 0 0 0
+handler condition torment onStart 0 0 0
+handler condition tox onResidual 10 0 6
+handler condition tox onStart 0 0 0
+handler condition tox onSwitchIn 0 0 0
+handler condition toxic onSourceAccuracy 0 0 0
+handler condition toxic onSourceInvulnerability 0 1 0
+handler condition trapped onStart 0 0 0
+handler condition trapped onTrapPokemon 0 0 0
+handler condition twoturnmove onEnd 0 0 0
+handler condition twoturnmove onLockMove 0 0 0
+handler condition twoturnmove onMoveAborted 0 0 0
+handler condition twoturnmove onStart 0 0 0
+handler condition uproar durationCallback 0 0 0
+handler condition uproar onAnySetStatus 0 0 0
+handler condition uproar onEnd 0 0 0
+handler condition uproar onLockMove 0 0 0
+handler condition uproar onResidual 10 0 11
+handler condition uproar onStart 0 0 0
+handler condition watersport onAnyBasePower 0 3 0
+handler condition watersport onStart 0 0 0
+handler condition wish onEnd 0 0 0
+handler condition yawn onEnd 0 0 0
+handler condition yawn onStart 0 0 0
+handler condition zacian onBattleStart 0 0 0
+handler condition zamazenta onBattleStart 0 0 0
+handler item aguavberry onEat 0 0 0
+handler item aguavberry onResidual 10 0 4
+handler item aguavberry onTryEatItem 0 0 0
+handler item apicotberry onEat 0 0 0
+handler item apicotberry onResidual 10 0 4
+handler item aspearberry onEat 0 0 0
+handler item aspearberry onUpdate 0 0 0
+handler item belueberry onEat 0 0 0
+handler item blackbelt onModifyAtk 0 1 0
+handler item blackglasses onModifySpA 0 1 0
+handler item blukberry onEat 0 0 0
+handler item brightpowder onModifyAccuracy 0 5 0
+handler item charcoal onModifySpA 0 1 0
+handler item cheriberry onEat 0 0 0
+handler item cheriberry onUpdate 0 0 0
+handler item chestoberry onEat 0 0 0
+handler item chestoberry onUpdate 0 0 0
+handler item choiceband onAfterMove 0 0 0
+handler item choiceband onModifyAtk 0 1 0
+handler item cornnberry onEat 0 0 0
+handler item deepseascale onModifySpD 0 2 0
+handler item deepseatooth onModifySpA 0 1 0
+handler item dragonfang onModifySpA 0 1 0
+handler item durinberry onEat 0 0 0
+handler item figyberry onEat 0 0 0
+handler item figyberry onResidual 10 0 4
+handler item figyberry onTryEatItem 0 0 0
+handler item focusband onDamage 0 -40 0
+handler item ganlonberry onEat 0 0 0
+handler item ganlonberry onResidual 10 0 4
+handler item grepaberry onEat 0 0 0
+handler item hardstone onModifyAtk 0 1 0
+handler item hondewberry onEat 0 0 0
+handler item iapapaberry onEat 0 0 0
+handler item iapapaberry onResidual 10 0 4
+handler item iapapaberry onTryEatItem 0 0 0
+handler item kelpsyberry onEat 0 0 0
+handler item kingsrock onModifyMove 0 -1 0
+handler item lansatberry onEat 0 0 0
+handler item lansatberry onResidual 10 0 4
+handler item laxincense onModifyAccuracy 0 5 0
+handler item leftovers onResidual 10 0 4
+handler item leppaberry onEat 0 0 0
+handler item leppaberry onUpdate 0 0 0
+handler item liechiberry onEat 0 0 0
+handler item liechiberry onResidual 10 0 4
+handler item lightball onModifySpA 0 1 0
+handler item luckypunch onModifyCritRatio 0 0 0
+handler item lumberry onAfterSetStatus 0 -1 0
+handler item lumberry onEat 0 0 0
+handler item lumberry onUpdate 0 0 0
+handler item machobrace onModifySpe 0 0 0
+handler item magnet onModifySpA 0 1 0
+handler item magoberry onEat 0 0 0
+handler item magoberry onResidual 10 0 4
+handler item magoberry onTryEatItem 0 0 0
+handler item magostberry onEat 0 0 0
+handler item mail onTakeItem 0 0 0
+handler item mentalherb onUpdate 0 0 0
+handler item metalcoat onModifyAtk 0 1 0
+handler item metalpowder onModifyDef 0 2 0
+handler item miracleseed onModifySpA 0 1 0
+handler item mysticwater onModifySpA 0 1 0
+handler item nanabberry onEat 0 0 0
+handler item nevermeltice onModifySpA 0 1 0
+handler item nomelberry onEat 0 0 0
+handler item oranberry onEat 0 0 0
+handler item oranberry onResidual 10 0 4
+handler item oranberry onTryEatItem 0 0 0
+handler item pamtreberry onEat 0 0 0
+handler item pechaberry onEat 0 0 0
+handler item pechaberry onUpdate 0 0 0
+handler item persimberry onEat 0 0 0
+handler item persimberry onUpdate 0 0 0
+handler item petayaberry onEat 0 0 0
+handler item petayaberry onResidual 10 0 4
+handler item pinapberry onEat 0 0 0
+handler item poisonbarb onModifyAtk 0 1 0
+handler item pomegberry onEat 0 0 0
+handler item qualotberry onEat 0 0 0
+handler item rabutaberry onEat 0 0 0
+handler item rawstberry onEat 0 0 0
+handler item rawstberry onUpdate 0 0 0
+handler item razzberry onEat 0 0 0
+handler item salacberry onEat 0 0 0
+handler item salacberry onResidual 10 0 4
+handler item scopelens onModifyCritRatio 0 0 0
+handler item seaincense onModifySpA 0 1 0
+handler item sharpbeak onModifyAtk 0 1 0
+handler item shellbell onAfterMoveSecondarySelf 0 -1 0
+handler item silkscarf onModifyAtk 0 1 0
+handler item silverpowder onModifyAtk 0 1 0
+handler item sitrusberry onEat 0 0 0
+handler item sitrusberry onResidual 10 0 4
+handler item sitrusberry onTryEatItem 0 0 0
+handler item softsand onModifyAtk 0 1 0
+handler item souldew onModifySpA 0 1 0
+handler item souldew onModifySpD 0 2 0
+handler item spelltag onModifyAtk 0 1 0
+handler item spelonberry onEat 0 0 0
+handler item starfberry onEat 0 0 0
+handler item starfberry onResidual 10 0 4
+handler item stick onModifyCritRatio 0 0 0
+handler item tamatoberry onEat 0 0 0
+handler item thickclub onModifyAtk 0 1 0
+handler item twistedspoon onModifySpA 0 1 0
+handler item watmelberry onEat 0 0 0
+handler item wepearberry onEat 0 0 0
+handler item whiteherb onAnyAfterMega 0 0 0
+handler item whiteherb onAnyAfterMove 0 0 0
+handler item whiteherb onAnySwitchIn 0 0 0
+handler item whiteherb onResidual 29 0 0
+handler item whiteherb onStart 0 0 0
+handler item whiteherb onUse 0 0 0
+handler item wikiberry onEat 0 0 0
+handler item wikiberry onResidual 10 0 4
+handler item wikiberry onTryEatItem 0 0 0
+handler move aromatherapy onHit 0 0 0
+handler move assist onHit 0 0 0
+handler move attract onTryImmunity 0 0 0
+handler move batonpass onHit 0 0 0
+handler move beatup basePowerCallback 0 0 0
+handler move beatup onModifyMove 0 0 0
+handler move bellydrum onHit 0 0 0
+handler move bide beforeMoveCallback 0 0 0
+handler move block onHit 0 0 0
+handler move bounce onTryMove 0 0 0
+handler move brickbreak onTryHit 0 0 0
+handler move camouflage onHit 0 0 0
+handler move conversion onHit 0 0 0
+handler move conversion2 onHit 0 0 0
+handler move counter beforeTurnCallback 0 0 0
+handler move counter damageCallback 0 0 0
+handler move counter onTry 0 0 0
+handler move covet onAfterHit 0 0 0
+handler move curse onHit 0 0 0
+handler move curse onModifyMove 0 0 0
+handler move curse onTryHit 0 0 0
+handler move destinybond onPrepareHit 0 0 0
+handler move detect onHit 0 0 0
+handler move detect onPrepareHit 0 0 0
+handler move dig onTryMove 0 0 0
+handler move disable onTryHit 0 0 0
+handler move dive onTryMove 0 0 0
+handler move doomdesire onTry 0 0 0
+handler move dreameater onTryImmunity 0 0 0
+handler move endeavor damageCallback 0 0 0
+handler move endeavor onTry 0 0 0
+handler move endeavor onTryImmunity 0 0 0
+handler move endure onHit 0 0 0
+handler move endure onPrepareHit 0 0 0
+handler move eruption basePowerCallback 0 0 0
+handler move facade onBasePower 0 0 0
+handler move fakeout onTry 0 0 0
+handler move falseswipe onDamage 0 -20 0
+handler move flail basePowerCallback 0 0 0
+handler move fly onTryMove 0 0 0
+handler move focuspunch beforeTurnCallback 0 0 0
+handler move focuspunch onTry 0 0 0
+handler move followme onTry 0 0 0
+handler move foresight onTryHit 0 0 0
+handler move frustration basePowerCallback 0 0 0
+handler move furycutter basePowerCallback 0 0 0
+handler move furycutter onHit 0 0 0
+handler move futuresight onTry 0 0 0
+handler move haze onHitField 0 0 0
+handler move healbell onHit 0 0 0
+handler move helpinghand onTryHit 0 0 0
+handler move hiddenpower basePowerCallback 0 0 0
+handler move hiddenpower onModifyMove 0 0 0
+handler move hiddenpower onModifyType 0 0 0
+handler move highjumpkick onMoveFail 0 0 0
+handler move iceball basePowerCallback 0 0 0
+handler move iceball onAfterMove 0 0 0
+handler move iceball onModifyMove 0 0 0
+handler move imprison onTryHit 0 0 0
+handler move jumpkick onMoveFail 0 0 0
+handler move knockoff onAfterHit 0 0 0
+handler move leechseed onTryImmunity 0 0 0
+handler move lockon onHit 0 0 0
+handler move lockon onTryHit 0 0 0
+handler move lowkick basePowerCallback 0 0 0
+handler move magnitude onModifyMove 0 0 0
+handler move magnitude onUseMoveMessage 0 0 0
+handler move meanlook onHit 0 0 0
+handler move metronome onHit 0 0 0
+handler move mimic onHit 0 0 0
+handler move mindreader onHit 0 0 0
+handler move mindreader onTryHit 0 0 0
+handler move mirrorcoat beforeTurnCallback 0 0 0
+handler move mirrorcoat damageCallback 0 0 0
+handler move mirrorcoat onTry 0 0 0
+handler move mirrormove onHit 0 0 0
+handler move moonlight onHit 0 0 0
+handler move morningsun onHit 0 0 0
+handler move naturepower onHit 0 0 0
+handler move odorsleuth onTryHit 0 0 0
+handler move painsplit onHit 0 0 0
+handler move payday onHit 0 0 0
+handler move perishsong onHitField 0 0 0
+handler move present onModifyMove 0 0 0
+handler move protect onHit 0 0 0
+handler move protect onPrepareHit 0 0 0
+handler move psychup onHit 0 0 0
+handler move psywave damageCallback 0 0 0
+handler move pursuit basePowerCallback 0 0 0
+handler move pursuit beforeTurnCallback 0 0 0
+handler move pursuit onModifyMove 0 0 0
+handler move rapidspin onAfterHit 0 0 0
+handler move rapidspin onAfterSubDamage 0 0 0
+handler move razorwind onTryMove 0 0 0
+handler move recycle onHit 0 0 0
+handler move refresh onHit 0 0 0
+handler move rest onHit 0 0 0
+handler move rest onTry 0 0 0
+handler move return basePowerCallback 0 0 0
+handler move revenge basePowerCallback 0 0 0
+handler move reversal basePowerCallback 0 0 0
+handler move roleplay onHit 0 0 0
+handler move roleplay onTryHit 0 0 0
+handler move rollout basePowerCallback 0 0 0
+handler move rollout onAfterMove 0 0 0
+handler move rollout onModifyMove 0 0 0
+handler move secretpower onModifyMove 0 0 0
+handler move sketch onHit 0 0 0
+handler move skillswap onHit 0 0 0
+handler move skullbash onTryMove 0 0 0
+handler move skyattack onTryMove 0 0 0
+handler move sleeptalk onHit 0 0 0
+handler move sleeptalk onTry 0 0 0
+handler move sleeptalk onTryHit 0 0 0
+handler move smellingsalts basePowerCallback 0 0 0
+handler move smellingsalts onHit 0 0 0
+handler move snore onTry 0 0 0
+handler move solarbeam onBasePower 0 0 0
+handler move solarbeam onTryMove 0 0 0
+handler move spiderweb onHit 0 0 0
+handler move spite onHit 0 0 0
+handler move spitup basePowerCallback 0 0 0
+handler move spitup onAfterMove 0 0 0
+handler move spitup onTry 0 0 0
+handler move splash onTry 0 0 0
+handler move splash onTryHit 0 0 0
+handler move stockpile onTry 0 0 0
+handler move struggle onModifyMove 0 0 0
+handler move substitute onHit 0 0 0
+handler move substitute onTryHit 0 0 0
+handler move superfang damageCallback 0 0 0
+handler move swallow onHit 0 0 0
+handler move swallow onTry 0 0 0
+handler move synthesis onHit 0 0 0
+handler move teleport onTry 0 0 0
+handler move thief onAfterHit 0 0 0
+handler move thunder onModifyMove 0 0 0
+handler move transform onHit 0 0 0
+handler move trick onHit 0 0 0
+handler move trick onTryImmunity 0 0 0
+handler move triplekick basePowerCallback 0 0 0
+handler move uproar onTryHit 0 0 0
+handler move waterspout basePowerCallback 0 0 0
+handler move weatherball onModifyMove 0 0 0
+handler move weatherball onModifyType 0 0 0
+handler move yawn onTryHit 0 0 0
+handler rule accuracytrapclause onValidateSet 0 0 0
+handler rule beatupnicknamesmod onBegin 0 0 0
+handler rule cancelmod onBegin 0 0 0
+handler rule endlessbattleclause onBegin 0 0 0
+handler rule evasionitemsclause onBegin 0 0 0
+handler rule evasionmovesclause onBegin 0 0 0
+handler rule freezeclausemod onBegin 0 0 0
+handler rule freezeclausemod onSetStatus 0 0 0
+handler rule hppercentagemod onBegin 0 0 0
+handler rule nicknameclause onValidateTeam 0 0 0
+handler rule obtainable onValidateTeam 0 0 0
+handler rule obtainablemisc onChangeSet 0 0 0
+handler rule ohkoclause onBegin 0 0 0
+handler rule oneboostpasserclause onBegin 0 0 0
+handler rule oneboostpasserclause onValidateTeam 0 0 0
+handler rule sleepclausemod onBegin 0 0 0
+handler rule sleepclausemod onSetStatus 0 0 0
+handler rule speciesclause onBegin 0 0 0
+handler rule speciesclause onValidateTeam 0 0 0
+handler rule speedpassclause onBegin 0 0 0
+handler rule speedpassclause onValidateTeam 0 0 0
+handler rule switchpriorityclausemod onBegin 0 0 0
+immune fire brn 3
+immune ground sandstorm 3
+immune ice frz 3
+immune ice hail 3
+immune poison psn 3
+immune poison tox 3
+immune rock sandstorm 3
+immune steel psn 3
+immune steel sandstorm 3
+immune steel tox 3
+item aguavberry 162 100 -
+item apicotberry 205 100 -
+item aspearberry 153 100 -
+item belueberry 183 100 -
+item blackbelt 241 000 -
+item blackglasses 240 000 -
+item blukberry 165 100 -
+item brightpowder 213 000 -
+item charcoal 249 000 -
+item cheriberry 149 100 -
+item chestoberry 150 100 -
+item choiceband 220 010 -
+item clawfossil 100 000 -
+item cornnberry 175 100 -
+item deepseascale 227 000 clamperl
+item deepseatooth 226 000 clamperl
+item diveball 7 001 -
+item domefossil 102 000 -
+item dragonfang 250 000 -
+item dragonscale 235 000 -
+item durinberry 182 100 -
+item figyberry 159 100 -
+item firestone 82 000 -
+item focusband 230 000 -
+item friendball 497 001 -
+item ganlonberry 202 100 -
+item greatball 3 001 -
+item grepaberry 173 100 -
+item hardstone 238 000 -
+item helixfossil 101 000 -
+item hondewberry 172 100 -
+item iapapaberry 163 100 -
+item kelpsyberry 170 100 -
+item kingsrock 221 000 -
+item lansatberry 206 100 -
+item laxincense 255 000 -
+item leafstone 85 000 -
+item leftovers 234 000 -
+item leppaberry 154 100 -
+item liechiberry 201 100 -
+item lightball 236 000 pikachu
+item luckypunch 256 000 chansey
+item lumberry 157 100 -
+item luxuryball 11 001 -
+item machobrace 215 000 -
+item magnet 242 000 -
+item magoberry 161 100 -
+item magostberry 176 100 -
+item mail 137 000 -
+item masterball 1 001 -
+item mentalherb 219 000 -
+item metalcoat 233 000 -
+item metalpowder 257 000 ditto
+item miracleseed 239 000 -
+item moonstone 81 000 -
+item mysticwater 243 000 -
+item nanabberry 166 100 -
+item nestball 8 001 -
+item netball 6 001 -
+item nevermeltice 246 000 -
+item nomelberry 178 100 -
+item oldamber 103 000 -
+item oranberry 155 100 -
+item pamtreberry 180 100 -
+item pechaberry 151 100 -
+item persimberry 156 100 -
+item petayaberry 204 100 -
+item pinapberry 168 100 -
+item poisonbarb 245 000 -
+item pokeball 4 001 -
+item pomegberry 169 100 -
+item premierball 12 001 -
+item qualotberry 171 100 -
+item quickclaw 217 000 -
+item rabutaberry 177 100 -
+item rawstberry 152 100 -
+item razzberry 164 100 -
+item repeatball 9 001 -
+item rootfossil 99 000 -
+item salacberry 203 100 -
+item scopelens 232 000 -
+item seaincense 254 000 -
+item sharpbeak 244 000 -
+item shellbell 253 000 -
+item silkscarf 251 000 -
+item silverpowder 222 000 -
+item sitrusberry 158 100 -
+item softsand 237 000 -
+item souldew 225 000 latios,latias
+item spelltag 247 000 -
+item spelonberry 179 100 -
+item starfberry 207 100 -
+item stick 259 000 farfetchd
+item sunstone 80 000 -
+item tamatoberry 174 100 -
+item thickclub 258 000 marowak,cubone
+item thunderstone 83 000 -
+item timerball 10 001 -
+item twistedspoon 248 000 -
+item ultraball 2 001 -
+item upgrade 252 000 -
+item waterstone 84 000 -
+item watmelberry 181 100 -
+item wepearberry 167 100 -
+item whiteherb 214 000 -
+item wikiberry 160 100 -
+move absorb 71 grass Special 20 100 20 0 normal 1 metronome,mirror,protect - 1/2 - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move acid 51 poison Physical 40 100 30 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,-1,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move acidarmor 151 poison Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,2,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move aerialace 332 flying Physical 60 true 20 0 any 1 contact,distance,metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move aeroblast 177 flying Physical 100 95 5 0 any 2 distance,metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move agility 97 psychic Status 0 true 30 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,2,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move aircutter 314 flying Physical 55 95 25 0 allAdjacentFoes 2 metronome,mirror,protect,slicing,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move amnesia 133 psychic Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,2,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move ancientpower 246 rock Physical 60 100 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,0,0,0 1,1,1,1,1,0,0 0,0,0,0,0,0,0 -
+move armthrust 292 fighting Physical 15 100 20 0 normal 1 contact,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move aromatherapy 312 grass Status 0 true 5 0 allyTeam 1 distance,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move assist 274 normal Status 0 true 20 0 self 1 metronome,noassist,nosleeptalk - - - - - - - 000100010 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move astonish 310 ghost Physical 30 100 15 0 normal 1 contact,metronome,minimize,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move attract 213 normal Status 0 100 15 0 normal 1 bypasssub,metronome,mirror,protect,reflectable - - - - - - - 000100000 - attract - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move aurorabeam 62 ice Special 65 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - -1,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move barrage 140 normal Physical 15 85 20 0 normal 1 bullet,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move barrier 112 psychic Status 0 true 30 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,2,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move batonpass 226 normal Status 0 true 40 0 self 1 metronome - - - - - - copyvolatile 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move beatup 251 dark Special 10 100 10 0 normal 1 allyanim,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bellydrum 187 normal Status 0 true 10 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bide 117 normal Physical 0 100 10 0 self 1 contact,failinstruct,metronome,nosleeptalk,protect - - - - - - - 000100000 - bide - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bind 20 normal Physical 15 75 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bite 44 dark Special 60 100 25 0 normal 1 bite,contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move blastburn 307 fire Special 150 90 5 0 normal 1 metronome,mirror,protect,recharge - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 mustrecharge
+move blazekick 299 fire Special 85 90 10 0 normal 2 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move blizzard 59 ice Special 120 70 5 0 allAdjacentFoes 1 metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 frz - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move block 335 normal Status 0 true 5 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bodyslam 34 normal Physical 85 100 15 0 normal 1 contact,metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move boneclub 125 ground Physical 65 85 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bonemerang 155 ground Physical 50 90 10 0 normal 1 metronome,mirror,protect - - - - 2-2 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bonerush 198 ground Physical 25 80 10 0 normal 1 metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bounce 340 flying Physical 85 85 5 0 any 1 charge,contact,distance,gravity,metronome,mirror,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move brickbreak 280 fighting Physical 75 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bubble 145 water Special 20 100 30 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bubblebeam 61 water Special 65 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bulkup 339 fighting Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 1,1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move bulletseed 331 grass Special 10 100 30 0 normal 1 bullet,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move calmmind 347 psychic Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,1,1,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move camouflage 293 normal Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move charge 268 electric Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - charge - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move charm 204 normal Status 0 100 20 0 normal 1 allyanim,metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - -2,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move clamp 128 water Special 35 75 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move cometpunch 4 normal Physical 18 85 15 0 normal 1 contact,metronome,mirror,protect,punch - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move confuseray 109 ghost Status 0 100 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - confusion - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move confusion 93 psychic Special 50 100 25 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move constrict 132 normal Physical 10 100 35 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move conversion 160 normal Status 0 true 30 0 self 1 metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move conversion2 176 normal Status 0 true 30 0 normal 1 bypasssub,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move cosmicpower 322 psychic Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,1,0,1,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move cottonspore 178 grass Status 0 85 40 0 normal 1 metronome,mirror,powder,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,-2,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move counter 68 fighting Physical 0 100 20 -5 scripted 1 contact,failcopycat,failmefirst,noassist,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move covet 343 normal Physical 40 100 40 0 normal 1 mirror,noassist,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move crabhammer 152 water Special 90 85 10 0 normal 2 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move crosschop 238 fighting Physical 100 80 5 0 normal 2 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move crunch 242 dark Special 80 100 15 0 normal 1 bite,contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - - 0,0,0,-1,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move crushclaw 306 normal Physical 75 95 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 - - 0,-1,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move curse 174 unknown Status 0 true 10 0 normal 1 metronome - - - - - - - 000100000 - curse - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move cut 15 normal Physical 50 95 30 0 normal 1 contact,metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move defensecurl 111 normal Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - defensecurl - - - 0,1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move destinybond 194 ghost Status 0 true 5 0 self 1 bypasssub,failcopycat,noassist - - - - - - - 000100000 - destinybond - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move detect 197 fighting Status 0 true 5 3 self 1 failcopycat,noassist - - - - - - - 000100100 - protect - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dig 91 ground Physical 60 100 10 0 normal 1 charge,contact,metronome,mirror,nonsky,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move disable 50 normal Status 0 55 20 0 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 000100000 - disable - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dive 291 water Special 60 100 10 0 normal 1 charge,contact,metronome,mirror,nonsky,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dizzypunch 146 normal Physical 70 100 10 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move doomdesire 353 steel Physical 120 85 5 0 normal 1 futuremove,metronome - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move doubleedge 38 normal Physical 120 100 15 0 normal 1 contact,metronome,mirror,protect - - 1/3 - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move doublekick 24 fighting Physical 30 100 30 0 normal 1 contact,metronome,mirror,protect - - - - 2-2 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move doubleslap 3 normal Physical 15 85 10 0 normal 1 contact,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move doubleteam 104 normal Status 0 true 15 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,1 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dragonbreath 225 dragon Special 60 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dragonclaw 337 dragon Special 80 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dragondance 349 dragon Status 0 true 20 0 self 1 dance,metronome,snatch - - - - - - - 000100000 - - - - - 1,0,0,0,1,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dragonrage 82 dragon Special 0 100 10 0 normal 1 metronome,mirror,protect 40 - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dreameater 138 psychic Special 100 100 15 0 normal 1 metronome,mirror,protect - 1/2 - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move drillpeck 65 flying Physical 80 100 20 0 any 1 contact,distance,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move dynamicpunch 223 fighting Physical 100 50 5 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move earthquake 89 ground Physical 100 100 10 0 allAdjacent 1 metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move eggbomb 121 normal Physical 100 75 10 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move ember 52 fire Special 40 100 25 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move encore 227 normal Status 0 100 5 0 normal 1 bypasssub,failencore,metronome,mirror,protect - - - - - - - 000100000 - encore - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move endeavor 283 normal Physical 0 100 5 0 normal 1 contact,metronome,mirror,noparentalbond,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move endure 203 normal Status 0 true 10 4 self 1 failcopycat,noassist - - - - - - - 000100100 - endure - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move eruption 284 fire Special 150 100 5 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move explosion 153 normal Physical 250 100 5 0 allAdjacent 1 metronome,mirror,noparentalbond,protect - - - - - always - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move extrasensory 326 psychic Special 80 100 30 0 normal 1 metronome,minimize,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move extremespeed 245 normal Physical 80 100 5 1 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move facade 263 normal Physical 70 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move fakeout 252 normal Physical 40 100 10 1 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move faketears 313 dark Status 0 100 20 0 normal 1 allyanim,metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,-2,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move falseswipe 206 normal Physical 40 100 40 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move featherdance 297 flying Status 0 100 15 0 normal 1 allyanim,dance,metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - -2,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move feintattack 185 dark Special 60 true 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move fireblast 126 fire Special 120 85 5 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move firepunch 7 fire Special 75 100 15 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move firespin 83 fire Special 15 70 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move fissure 90 ground Physical 0 30 5 0 normal 1 metronome,mirror,nonsky,protect - - - - - - - 010000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move flail 175 normal Physical 0 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move flamethrower 53 fire Special 95 100 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move flamewheel 172 fire Special 60 100 25 0 normal 1 contact,defrost,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move flash 148 normal Status 0 70 20 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,-1,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move flatter 260 dark Status 0 100 15 0 normal 1 allyanim,metronome,mirror,protect,reflectable - - - - - - - 000100000 - confusion - - - 0,0,1,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move fly 19 flying Physical 70 95 15 0 any 1 charge,contact,distance,gravity,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move focusenergy 116 normal Status 0 true 30 0 self 1 metronome,snatch - - - - - - - 000100000 - focusenergy - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move focuspunch 264 fighting Physical 150 100 20 -3 normal 1 contact,failcopycat,failinstruct,failmefirst,noassist,nosleeptalk,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move followme 266 normal Status 0 true 20 3 self 1 failcopycat,noassist - - - - - - - 000100000 - - - followme - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move foresight 193 normal Status 0 100 40 0 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 000100000 - foresight - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move frenzyplant 338 grass Special 150 90 5 0 normal 1 metronome,mirror,nonsky,protect,recharge - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 mustrecharge
+move frustration 218 normal Physical 0 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move furyattack 31 normal Physical 15 85 20 0 normal 1 contact,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move furycutter 210 bug Physical 10 95 20 0 normal 1 contact,metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move furyswipes 154 normal Physical 18 80 15 0 normal 1 contact,metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move futuresight 248 psychic Special 80 90 15 0 normal 1 futuremove,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move gigadrain 202 grass Special 60 100 5 0 normal 1 metronome,mirror,protect - 1/2 - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move glare 137 normal Status 0 75 30 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000000000 par - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move grasswhistle 320 grass Status 0 55 15 0 normal 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move growl 45 normal Status 0 100 40 0 allAdjacentFoes 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 - - - - - -1,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move growth 74 normal Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,1,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move grudge 288 ghost Status 0 true 5 0 self 1 bypasssub,metronome - - - - - - - 000100000 - grudge - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move guillotine 12 normal Physical 0 30 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 010000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move gust 16 flying Physical 40 100 35 0 any 1 distance,metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hail 258 ice Status 0 true 10 0 all 1 metronome - - - - - - - 000100000 - - - - hail 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move harden 106 normal Status 0 true 30 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move haze 114 ice Status 0 true 30 0 all 1 bypasssub,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move headbutt 29 normal Physical 70 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move healbell 215 normal Status 0 true 5 0 allyTeam 1 metronome,snatch,sound - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move heatwave 257 fire Special 100 90 10 0 allAdjacentFoes 1 metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move helpinghand 270 normal Status 0 true 20 5 adjacentAlly 1 bypasssub,failcopycat,noassist - - - - - - - 000100000 - helpinghand - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 bug Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 dark Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 dragon Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 electric Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 fighting Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 fire Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 flying Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 ghost Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 grass Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 ground Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 ice Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 normal Physical 0 100 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 poison Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 psychic Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 rock Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 steel Physical 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hiddenpower 237 water Special 70 100 15 0 normal 1 mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move highjumpkick 136 fighting Physical 85 90 20 0 normal 1 contact,gravity,metronome,mirror,protect - - - - - - - 000000001 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hornattack 30 normal Physical 65 100 25 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move horndrill 32 normal Physical 0 30 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 010000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move howl 336 normal Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 1,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hydrocannon 308 water Special 150 90 5 0 normal 1 metronome,mirror,protect,recharge - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 mustrecharge
+move hydropump 56 water Special 120 80 5 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hyperbeam 63 normal Physical 150 90 5 0 normal 1 metronome,mirror,protect,recharge - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 mustrecharge
+move hyperfang 158 normal Physical 80 90 15 0 normal 1 bite,contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hypervoice 304 normal Physical 90 100 10 0 allAdjacentFoes 1 metronome,mirror,protect,sound - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move hypnosis 95 psychic Status 0 60 20 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move iceball 301 ice Special 30 90 20 0 normal 1 bullet,contact,failinstruct,metronome,mirror,noparentalbond,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move icebeam 58 ice Special 95 100 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 frz - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move icepunch 8 ice Special 75 100 15 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 frz - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move iciclespear 333 ice Special 10 100 30 0 normal 1 metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move icywind 196 ice Special 55 95 15 0 allAdjacentFoes 1 metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move imprison 286 psychic Status 0 true 10 0 self 1 bypasssub,metronome - - - - - - - 000100000 - imprison - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move ingrain 275 grass Status 0 true 20 0 self 1 metronome,nonsky,snatch - - - - - - - 000100000 - ingrain - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move irondefense 334 steel Status 0 true 15 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,2,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move irontail 231 steel Physical 100 75 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - - 0,-1,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move jumpkick 26 fighting Physical 70 95 25 0 normal 1 contact,gravity,metronome,mirror,protect - - - - - - - 000000001 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move karatechop 2 fighting Physical 50 100 25 0 normal 2 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move kinesis 134 psychic Status 0 80 15 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,-1,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move knockoff 282 dark Special 20 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move leafblade 348 grass Special 70 100 15 0 normal 2 contact,metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move leechlife 141 bug Physical 20 100 15 0 normal 1 contact,metronome,mirror,protect - 1/2 - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move leechseed 73 grass Status 0 90 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - leechseed - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move leer 43 normal Status 0 100 30 0 allAdjacentFoes 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,-1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lick 122 ghost Physical 20 100 30 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lightscreen 113 psychic Status 0 true 30 0 allySide 1 metronome,snatch - - - - - - - 000100000 - - lightscreen - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lockon 199 normal Status 0 100 5 0 normal 1 metronome,mirror,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lovelykiss 142 normal Status 0 75 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lowkick 67 fighting Physical 0 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move lusterpurge 295 psychic Special 70 100 5 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 - - 0,0,0,-1,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move machpunch 183 fighting Physical 40 100 30 1 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move magicalleaf 345 grass Special 60 true 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move magiccoat 277 psychic Status 0 true 15 4 self 1 metronome - - - - - - - 000100000 - magiccoat - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move magnitude 222 ground Physical 0 100 30 0 allAdjacent 1 metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move meanlook 212 normal Status 0 true 5 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move meditate 96 psychic Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 1,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move megadrain 72 grass Special 40 100 10 0 normal 1 metronome,mirror,protect - 1/2 - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move megahorn 224 bug Physical 120 85 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move megakick 25 normal Physical 120 75 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move megapunch 5 normal Physical 80 85 20 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move memento 262 dark Status 0 true 10 0 normal 1 metronome,mirror,protect - - - - - ifHit - 000100000 - - - - - -2,0,-2,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move metalclaw 232 steel Physical 50 95 35 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,0,0,0 1,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move metalsound 319 steel Status 0 85 40 0 normal 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 - - - - - 0,0,0,-2,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move meteormash 309 steel Physical 100 85 10 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - - 0,0,0,0,0,0,0 1,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move metronome 118 normal Status 0 true 10 0 self 1 failcopycat,failmimic,noassist,nosleeptalk - - - - - - - 000100010 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move milkdrink 208 normal Status 0 true 10 0 self 1 heal,metronome,snatch - - - 1/2 - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mimic 102 normal Status 0 true 10 0 normal 1 allyanim,bypasssub,failencore,failmimic,noassist,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mindreader 170 normal Status 0 100 5 0 normal 1 metronome,mirror,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move minimize 107 normal Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - minimize - - - 0,0,0,0,0,0,1 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mirrorcoat 243 psychic Special 0 100 20 -5 scripted 1 failcopycat,failmefirst,noassist,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mirrormove 119 flying Status 0 true 20 0 self 1 failencore,metronome,noassist,nosleeptalk - - - - - - - 000100010 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mist 54 ice Status 0 true 30 0 allySide 1 metronome,snatch - - - - - - - 000100000 - - mist - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mistball 296 psychic Special 70 100 5 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 - - 0,0,-1,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move moonlight 236 normal Status 0 true 5 0 self 1 heal,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move morningsun 234 normal Status 0 true 5 0 self 1 heal,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move muddywater 330 water Special 95 85 10 0 allAdjacentFoes 1 metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - - 0,0,0,0,0,-1,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mudshot 341 ground Physical 55 95 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mudslap 189 ground Physical 20 100 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - - 0,0,0,0,0,-1,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move mudsport 300 ground Status 0 true 15 0 all 1 metronome,nonsky - - - - - - - 000100000 - mudsport - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move naturepower 267 normal Status 0 95 20 0 self 1 metronome - - - - - - - 000100010 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move needlearm 302 grass Special 60 100 15 0 normal 1 contact,metronome,minimize,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move nightmare 171 ghost Status 0 true 15 0 normal 1 metronome,mirror,protect - - - - - - - 000100000 - nightmare - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move nightshade 101 ghost Physical 0 100 15 0 normal 1 metronome,mirror,protect level - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move octazooka 190 water Special 65 85 10 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 - - 0,0,0,0,0,-1,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move odorsleuth 316 normal Status 0 100 40 0 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 000100000 - foresight - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move outrage 200 dragon Special 90 100 15 0 randomNormal 1 contact,failinstruct,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 lockedmove
+move overheat 315 fire Special 140 90 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,-2,0,0,0,0 -
+move painsplit 220 normal Status 0 true 20 0 normal 1 allyanim,metronome,mirror,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move payday 6 normal Physical 40 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move peck 64 flying Physical 35 100 35 0 any 1 contact,distance,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move perishsong 195 normal Status 0 true 5 0 all 1 distance,metronome,sound - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move petaldance 80 grass Special 70 100 20 0 randomNormal 1 contact,dance,failinstruct,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 lockedmove
+move pinmissile 42 bug Physical 14 85 20 0 normal 1 metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move poisonfang 305 poison Physical 50 100 15 0 normal 1 bite,contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 tox - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move poisongas 139 poison Status 0 55 40 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 psn - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move poisonpowder 77 poison Status 0 75 35 0 normal 1 metronome,mirror,powder,protect,reflectable - - - - - - - 000100000 psn - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move poisonsting 40 poison Physical 15 100 35 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move poisontail 342 poison Physical 50 100 25 0 normal 2 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move pound 1 normal Physical 40 100 35 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move powdersnow 181 ice Special 40 100 25 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 frz - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move present 217 normal Physical 0 90 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move protect 182 normal Status 0 true 10 3 self 1 failcopycat,noassist - - - - - - - 000100100 - protect - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move psybeam 60 psychic Special 65 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move psychic 94 psychic Special 90 100 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,-1,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move psychoboost 354 psychic Special 140 90 5 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,-2,0,0,0,0 -
+move psychup 244 normal Status 0 true 10 0 normal 1 bypasssub,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move psywave 149 psychic Special 0 80 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move pursuit 228 dark Special 40 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move quickattack 98 normal Physical 40 100 30 1 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rage 99 normal Physical 20 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 rage
+move raindance 240 water Status 0 true 5 0 all 1 metronome - - - - - - - 000100000 - - - - raindance 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rapidspin 229 normal Physical 20 100 40 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move razorleaf 75 grass Special 55 95 25 0 allAdjacentFoes 2 metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move razorwind 13 normal Physical 80 100 10 0 allAdjacentFoes 2 charge,failinstruct,metronome,mirror,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move recover 105 normal Status 0 true 20 0 self 1 heal,metronome,snatch - - - 1/2 - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move recycle 278 normal Status 0 true 10 0 self 1 metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move reflect 115 psychic Status 0 true 20 0 allySide 1 metronome,snatch - - - - - - - 000100000 - - reflect - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move refresh 287 normal Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rest 156 psychic Status 0 true 10 0 self 1 heal,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move return 216 normal Physical 0 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move revenge 279 fighting Physical 60 100 10 -4 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move reversal 179 fighting Physical 0 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move roar 46 normal Status 0 100 20 -6 normal 1 bypasssub,metronome,mirror,protect,sound - - - - - - - 001100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rockblast 350 rock Physical 25 80 10 0 normal 1 metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rockslide 157 rock Physical 75 90 10 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rocksmash 249 fighting Physical 20 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 - - 0,-1,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rockthrow 88 rock Physical 50 90 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rocktomb 317 rock Physical 50 80 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 - - 0,0,0,0,-1,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move roleplay 272 psychic Status 0 true 10 0 normal 1 allyanim,bypasssub,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rollingkick 27 fighting Physical 60 85 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move rollout 205 rock Physical 30 90 20 0 normal 1 contact,failinstruct,metronome,mirror,noparentalbond,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sacredfire 221 fire Special 100 95 5 0 normal 1 defrost,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 50 brn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move safeguard 219 normal Status 0 true 25 0 allySide 1 metronome,snatch - - - - - - - 000100000 - - safeguard - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sandattack 28 ground Status 0 100 15 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,-1,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sandstorm 201 rock Status 0 true 10 0 all 1 metronome,wind - - - - - - - 000100000 - - - - sandstorm 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sandtomb 328 ground Physical 15 70 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move scaryface 184 normal Status 0 90 10 0 normal 1 allyanim,metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,-2,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move scratch 10 normal Physical 40 100 35 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move screech 103 normal Status 0 85 40 0 normal 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 - - - - - 0,-2,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move secretpower 290 normal Physical 70 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move seismictoss 69 fighting Physical 0 100 20 0 normal 1 contact,metronome,mirror,nonsky,protect level - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move selfdestruct 120 normal Physical 200 100 5 0 allAdjacent 1 metronome,mirror,noparentalbond,protect - - - - - always - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move shadowball 247 ghost Physical 80 100 15 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - - 0,0,0,-1,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move shadowpunch 325 ghost Physical 60 true 20 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sharpen 159 normal Status 0 true 30 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 1,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sheercold 329 ice Special 0 30 5 0 normal 1 metronome,mirror,protect - - - - - - - 010000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move shockwave 351 electric Special 60 true 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move signalbeam 324 bug Physical 75 100 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move silverwind 318 bug Physical 60 100 5 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,0,0,0 1,1,1,1,1,0,0 0,0,0,0,0,0,0 -
+move sing 47 normal Status 0 55 15 0 normal 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sketch 166 normal Status 0 true 1 0 normal 1 bypasssub,failencore,failmimic,noassist,nosketch - - - - - - - 000110000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move skillswap 285 psychic Status 0 true 10 0 normal 1 allyanim,bypasssub,metronome,mirror,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move skullbash 130 normal Physical 100 100 15 0 normal 1 charge,contact,failinstruct,metronome,mirror,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move skyattack 143 flying Physical 140 90 5 0 any 2 charge,distance,failinstruct,metronome,mirror,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move skyuppercut 327 fighting Physical 85 90 15 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move slackoff 303 normal Status 0 true 10 0 self 1 heal,metronome,snatch - - - 1/2 - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move slam 21 normal Physical 80 75 20 0 normal 1 contact,metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move slash 163 normal Physical 70 100 20 0 normal 2 contact,metronome,mirror,protect,slicing - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sleeppowder 79 grass Status 0 75 15 0 normal 1 metronome,mirror,powder,protect,reflectable - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sleeptalk 214 normal Status 0 true 10 0 self 1 failcopycat,noassist,nosleeptalk - - - - - - - 000101010 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sludge 124 poison Physical 65 100 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sludgebomb 188 poison Physical 90 100 10 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move smellingsalts 265 normal Physical 60 100 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move smog 123 poison Physical 20 70 20 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 40 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move smokescreen 108 normal Status 0 100 20 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,-1,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move snatch 289 dark Status 0 true 10 4 self 1 bypasssub,failcopycat,noassist - - - - - - - 000100000 - snatch - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move snore 173 normal Physical 40 100 15 0 normal 1 metronome,mirror,protect,sound - - - - - - - 000001000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move softboiled 135 normal Status 0 true 10 0 self 1 heal,metronome,snatch - - - 1/2 - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move solarbeam 76 grass Special 120 100 10 0 normal 1 charge,failinstruct,metronome,mirror,nosleeptalk,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sonicboom 49 normal Physical 0 90 20 0 normal 1 metronome,mirror,protect 20 - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spark 209 electric Special 65 100 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spiderweb 169 bug Status 0 true 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spikecannon 131 normal Physical 20 100 15 0 normal 1 metronome,mirror,protect - - - - 2-5 - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spikes 191 ground Status 0 true 20 0 foeSide 1 metronome,mustpressure - - - - - - - 000100000 - - spikes - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spite 180 ghost Status 0 100 10 0 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spitup 255 normal Physical 0 100 10 0 normal 1 metronome,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move splash 150 normal Status 0 true 40 0 self 1 gravity,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move spore 147 grass Status 0 100 15 0 normal 1 metronome,mirror,powder,protect,reflectable - - - - - - - 000100000 slp - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move steelwing 211 steel Physical 70 90 25 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 - - 0,0,0,0,0,0,0 0,1,0,0,0,0,0 0,0,0,0,0,0,0 -
+move stockpile 254 normal Status 0 true 10 0 self 1 metronome,snatch - - - - - - - 000100000 - stockpile - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move stomp 23 normal Physical 65 100 20 0 normal 1 contact,metronome,minimize,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move strength 70 normal Physical 80 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move stringshot 81 bug Status 0 95 40 0 allAdjacentFoes 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,-1,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move struggle 165 normal Physical 50 100 1 0 randomNormal 1 contact,failencore,failmimic,noassist,nosketch,protect - - 1/4 - - - - 000010000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move stunspore 78 grass Status 0 75 30 0 normal 1 metronome,mirror,powder,protect,reflectable - - - - - - - 000100000 par - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move submission 66 fighting Physical 80 80 25 0 normal 1 contact,metronome,mirror,protect - - 1/4 - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move substitute 164 normal Status 0 true 10 0 self 1 metronome,nonsky,snatch - - - - - - - 000100000 - substitute - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sunnyday 241 fire Status 0 true 5 0 all 1 metronome - - - - - - - 000100000 - - - - sunnyday 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move superfang 162 normal Physical 0 90 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move superpower 276 fighting Physical 120 100 5 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -1,-1,0,0,0,0,0 -
+move supersonic 48 normal Status 0 55 20 0 normal 1 metronome,mirror,protect,reflectable,sound - - - - - - - 000100000 - confusion - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move surf 57 water Special 95 100 15 0 allAdjacentFoes 1 metronome,mirror,nonsky,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move swagger 207 normal Status 0 90 15 0 normal 1 allyanim,metronome,mirror,protect,reflectable - - - - - - - 000100000 - confusion - - - 2,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move swallow 256 normal Status 0 true 10 0 self 1 heal,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sweetkiss 186 normal Status 0 75 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - confusion - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move sweetscent 230 normal Status 0 100 20 0 allAdjacentFoes 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,-1 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move swift 129 normal Physical 60 true 20 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move swordsdance 14 normal Status 0 true 30 0 self 1 dance,metronome,snatch - - - - - - - 000100000 - - - - - 2,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move synthesis 235 grass Status 0 true 5 0 self 1 heal,metronome,snatch - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move tackle 33 normal Physical 35 95 35 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move tailglow 294 bug Status 0 true 20 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,0,2,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move tailwhip 39 normal Status 0 100 30 0 allAdjacentFoes 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - 0,-1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move takedown 36 normal Physical 90 85 20 0 normal 1 contact,metronome,mirror,protect - - 1/4 - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move taunt 269 dark Status 0 100 20 0 normal 1 bypasssub,metronome,protect - - - - - - - 000100000 - taunt - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move teeterdance 298 normal Status 0 100 20 0 allAdjacent 1 metronome,protect - - - - - - - 000100000 - confusion - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move teleport 100 psychic Status 0 true 20 0 self 1 metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thief 168 dark Special 40 100 10 0 normal 1 contact,failcopycat,failmefirst,mirror,noassist,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thrash 37 normal Physical 90 100 20 0 randomNormal 1 contact,failinstruct,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 lockedmove
+move thunder 87 electric Special 120 70 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 30 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thunderbolt 85 electric Special 95 100 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thunderpunch 9 electric Special 75 100 15 0 normal 1 contact,metronome,mirror,protect,punch - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thundershock 84 electric Special 40 100 30 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 10 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move thunderwave 86 electric Status 0 100 20 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000000000 par - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move tickle 321 normal Status 0 100 20 0 normal 1 bypasssub,metronome,mirror,protect,reflectable - - - - - - - 000100000 - - - - - -1,-1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move torment 259 dark Status 0 100 15 0 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 000100000 - torment - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move toxic 92 poison Status 0 85 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 tox - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move transform 144 normal Status 0 true 10 0 normal 1 bypasssub,failencore,metronome - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move triattack 161 normal Physical 80 100 10 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move trick 271 psychic Status 0 100 10 0 normal 1 allyanim,failcopycat,mirror,noassist,protect - - - - - - - 000100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move triplekick 167 fighting Physical 10 90 10 0 normal 1 contact,metronome,mirror,protect - - - - 3-3 - - 100000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move twineedle 41 bug Physical 25 100 20 0 normal 1 metronome,mirror,protect - - - - 2-2 - - 000000000 - - - - - 0,0,0,0,0,0,0 20 psn - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move twister 239 dragon Special 40 100 20 0 allAdjacentFoes 1 metronome,mirror,protect,wind - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - flinch 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move uproar 253 normal Physical 50 100 10 0 randomNormal 1 metronome,mirror,nosleeptalk,protect,sound - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 uproar
+move vinewhip 22 grass Special 35 100 10 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move visegrip 11 normal Physical 55 100 30 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move vitalthrow 233 fighting Physical 70 true 10 -1 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move volttackle 344 electric Special 120 100 15 0 normal 1 contact,metronome,mirror,protect - - 1/3 - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move waterfall 127 water Special 80 100 15 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move watergun 55 water Special 40 100 25 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move waterpulse 352 water Special 60 100 20 0 any 1 distance,metronome,mirror,protect,pulse - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 20 - confusion 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move watersport 346 water Status 0 true 15 0 all 1 metronome,nonsky - - - - - - - 000100000 - watersport - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move waterspout 323 water Special 150 100 5 0 allAdjacentFoes 1 metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move weatherball 311 normal Physical 50 100 10 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move whirlpool 250 water Special 15 70 15 0 normal 1 metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move whirlwind 18 normal Status 0 100 20 -6 normal 1 bypasssub,metronome,mirror,protect - - - - - - - 001100000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move willowisp 261 fire Status 0 75 15 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 brn - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move wingattack 17 flying Physical 60 100 35 0 any 1 contact,distance,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move wish 273 normal Status 0 true 10 0 self 1 heal,metronome - - - - - - - 000100000 - - - wish - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move withdraw 110 water Status 0 true 40 0 self 1 metronome,snatch - - - - - - - 000100000 - - - - - 0,1,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move wrap 35 normal Physical 15 85 20 0 normal 1 contact,metronome,mirror,protect - - - - - - - 000000000 - partiallytrapped - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move yawn 281 normal Status 0 true 10 0 normal 1 metronome,mirror,protect,reflectable - - - - - - - 000100000 - yawn - - - 0,0,0,0,0,0,0 0 - - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+move zapcannon 192 electric Special 100 50 5 0 normal 1 bullet,metronome,mirror,protect - - - - - - - 000000000 - - - - - 0,0,0,0,0,0,0 100 par - 0,0,0,0,0,0,0 0,0,0,0,0,0,0 0,0,0,0,0,0,0 -
+nature adamant atk spa
+nature bashful - -
+nature bold def atk
+nature brave atk spe
+nature calm spd atk
+nature careful spd spa
+nature docile - -
+nature gentle spd def
+nature hardy - -
+nature hasty spe def
+nature impish def spa
+nature jolly spe spa
+nature lax def spd
+nature lonely atk def
+nature mild spa def
+nature modest spa atk
+nature naive spe spd
+nature naughty atk spd
+nature quiet spa spe
+nature quirky - -
+nature rash spa spd
+nature relaxed def spe
+nature sassy spd spe
+nature serious - -
+nature timid spe atk
+species abra 63 psychic - 25 20 15 105 55 90 synchronize innerfocus 195 - 2 abra
+species absol 359 dark - 65 130 60 75 60 75 pressure - 470 - 4 absol
+species aerodactyl 142 rock flying 80 105 65 60 75 130 rockhead pressure 590 - 1 aerodactyl
+species aggron 306 steel rock 70 110 180 60 60 50 sturdy rockhead 3600 - 4 aggron
+species aipom 190 normal - 55 70 55 40 55 85 runaway pickup 115 - 4 aipom
+species alakazam 65 psychic - 55 50 45 135 85 120 synchronize innerfocus 480 - 2 alakazam
+species altaria 334 dragon flying 75 70 90 70 105 80 naturalcure - 206 - 4 altaria
+species ampharos 181 electric - 90 75 75 115 90 55 static - 615 - 4 ampharos
+species anorith 347 rock bug 45 95 50 40 50 75 battlearmor - 125 - 1 anorith
+species arbok 24 poison - 60 85 69 65 79 80 intimidate shedskin 650 - 4 arbok
+species arcanine 59 fire - 90 110 80 100 80 95 intimidate flashfire 1550 - 2 arcanine
+species ariados 168 bug poison 70 90 70 60 60 40 swarm insomnia 335 - 4 ariados
+species armaldo 348 rock bug 75 125 100 70 80 45 battlearmor - 682 - 1 armaldo
+species aron 304 steel rock 50 70 100 40 40 30 sturdy rockhead 600 - 4 aron
+species articuno 144 ice flying 90 85 100 95 125 85 pressure - 554 N 0 articuno
+species azumarill 184 water - 100 50 80 50 80 50 thickfat hugepower 285 - 4 azumarill
+species azurill 298 normal - 50 20 40 20 40 20 thickfat hugepower 20 - 6 azurill
+species bagon 371 dragon - 45 75 60 40 30 50 rockhead - 421 - 4 bagon
+species baltoy 343 ground psychic 40 40 55 40 70 55 levitate - 215 N 0 baltoy
+species banette 354 ghost - 64 115 65 83 63 65 insomnia - 125 - 4 banette
+species barboach 339 water ground 50 48 43 46 41 60 oblivious - 19 - 4 barboach
+species bayleef 153 grass - 60 62 80 63 80 60 overgrow - 158 - 1 bayleef
+species beautifly 267 bug flying 60 70 50 90 50 65 swarm - 284 - 4 beautifly
+species beedrill 15 bug poison 65 80 40 45 80 75 swarm - 295 - 4 beedrill
+species beldum 374 steel psychic 40 55 80 35 60 30 clearbody - 952 N 0 beldum
+species bellossom 182 grass - 75 80 85 90 100 50 chlorophyll - 58 - 4 bellossom
+species bellsprout 69 grass poison 50 75 35 70 30 40 chlorophyll - 40 - 4 bellsprout
+species blastoise 9 water - 79 83 100 85 105 78 torrent - 855 - 1 blastoise
+species blaziken 257 fire fighting 80 120 70 110 70 80 blaze - 520 - 1 blaziken
+species blissey 242 normal - 255 10 10 75 135 55 naturalcure serenegrace 468 F 8 blissey
+species breloom 286 grass fighting 60 130 80 60 60 70 effectspore - 392 - 4 breloom
+species bulbasaur 1 grass poison 45 49 49 65 65 45 overgrow - 69 - 1 bulbasaur
+species butterfree 12 bug flying 60 45 50 80 80 70 compoundeyes - 320 - 4 butterfree
+species cacnea 331 grass - 50 85 40 85 40 35 sandveil - 513 - 4 cacnea
+species cacturne 332 grass dark 70 115 60 115 60 55 sandveil - 774 - 4 cacturne
+species camerupt 323 fire ground 70 100 70 105 75 40 magmaarmor - 2200 - 4 camerupt
+species carvanha 318 water dark 45 90 20 65 20 65 roughskin - 208 - 4 carvanha
+species cascoon 268 bug - 50 35 55 25 25 15 shedskin - 115 - 4 cascoon
+species castform 351 normal - 70 70 70 70 70 70 forecast - 8 - 4 castform
+species castformrainy 351 water - 70 70 70 70 70 70 forecast - 8 - 4 castform
+species castformsnowy 351 ice - 70 70 70 70 70 70 forecast - 8 - 4 castform
+species castformsunny 351 fire - 70 70 70 70 70 70 forecast - 8 - 4 castform
+species caterpie 10 bug - 45 30 35 20 20 45 shielddust - 29 - 4 caterpie
+species celebi 251 psychic grass 100 100 100 100 100 100 naturalcure - 50 N 0 celebi
+species chansey 113 normal - 250 5 5 35 105 50 naturalcure serenegrace 346 F 8 chansey
+species charizard 6 fire flying 78 84 78 109 85 100 blaze - 905 - 1 charizard
+species charmander 4 fire - 39 52 43 60 50 65 blaze - 85 - 1 charmander
+species charmeleon 5 fire - 58 64 58 80 65 80 blaze - 190 - 1 charmeleon
+species chikorita 152 grass - 45 49 65 49 65 45 overgrow - 64 - 1 chikorita
+species chimecho 358 psychic - 65 50 70 95 80 65 levitate - 10 - 4 chimecho
+species chinchou 170 water electric 75 38 38 56 56 67 voltabsorb illuminate 120 - 4 chinchou
+species clamperl 366 water - 35 64 85 74 55 32 shellarmor - 525 - 4 clamperl
+species claydol 344 ground psychic 60 70 105 70 120 75 levitate - 1080 N 0 claydol
+species clefable 36 normal - 95 70 73 85 90 60 cutecharm - 400 - 6 clefable
+species clefairy 35 normal - 70 45 48 60 65 35 cutecharm - 75 - 6 clefairy
+species cleffa 173 normal - 50 25 28 45 55 15 cutecharm - 30 - 6 cleffa
+species cloyster 91 water ice 50 95 180 85 45 70 shellarmor - 1325 - 4 cloyster
+species combusken 256 fire fighting 60 85 60 85 60 55 blaze - 195 - 1 combusken
+species corphish 341 water - 43 80 65 50 35 35 hypercutter shellarmor 115 - 4 corphish
+species corsola 222 water rock 55 55 85 65 85 35 hustle naturalcure 50 - 6 corsola
+species cradily 346 rock grass 86 81 97 81 107 43 suctioncups - 604 - 1 cradily
+species crawdaunt 342 water dark 63 120 85 90 55 55 hypercutter shellarmor 328 - 4 crawdaunt
+species crobat 169 poison flying 85 90 80 70 80 130 innerfocus - 750 - 4 crobat
+species croconaw 159 water - 65 80 80 59 63 58 torrent - 250 - 1 croconaw
+species cubone 104 ground - 50 50 95 40 50 35 rockhead lightningrod 65 - 4 cubone
+species cyndaquil 155 fire - 39 52 43 60 50 65 blaze - 79 - 1 cyndaquil
+species delcatty 301 normal - 70 65 65 55 55 70 cutecharm - 326 - 6 delcatty
+species delibird 225 ice flying 45 55 45 65 45 75 vitalspirit hustle 160 - 4 delibird
+species deoxys 386 psychic - 50 150 50 150 50 150 pressure - 608 N 0 deoxys
+species deoxysattack 386 psychic - 50 180 20 180 20 150 pressure - 608 N 0 deoxys
+species deoxysdefense 386 psychic - 50 70 160 70 160 90 pressure - 608 N 0 deoxys
+species deoxysspeed 386 psychic - 50 95 90 95 90 180 pressure - 608 N 0 deoxys
+species dewgong 87 water ice 90 70 80 70 95 70 thickfat - 1200 - 4 dewgong
+species diglett 50 ground - 10 55 25 35 45 95 sandveil arenatrap 8 - 4 diglett
+species ditto 132 normal - 48 48 48 48 48 48 limber - 40 N 0 ditto
+species dodrio 85 normal flying 60 110 70 60 60 100 runaway earlybird 852 - 4 dodrio
+species doduo 84 normal flying 35 85 45 35 35 75 runaway earlybird 392 - 4 doduo
+species donphan 232 ground - 90 120 120 60 60 50 sturdy - 1200 - 4 donphan
+species dragonair 148 dragon - 61 84 65 70 70 70 shedskin - 165 - 4 dragonair
+species dragonite 149 dragon flying 91 134 95 100 100 80 innerfocus - 2100 - 4 dragonite
+species dratini 147 dragon - 41 64 45 50 50 50 shedskin - 33 - 4 dratini
+species drowzee 96 psychic - 60 48 45 43 90 42 insomnia - 324 - 4 drowzee
+species dugtrio 51 ground - 35 80 50 50 70 120 sandveil arenatrap 333 - 4 dugtrio
+species dunsparce 206 normal - 100 70 70 65 65 45 serenegrace runaway 140 - 4 dunsparce
+species dusclops 356 ghost - 40 70 130 60 130 25 pressure - 306 - 4 dusclops
+species duskull 355 ghost - 20 40 90 30 90 25 levitate - 150 - 4 duskull
+species dustox 269 bug poison 60 50 70 50 90 65 shielddust - 316 - 4 dustox
+species eevee 133 normal - 55 55 50 45 65 55 runaway - 65 - 1 eevee
+species ekans 23 poison - 35 60 44 40 54 55 intimidate shedskin 69 - 4 ekans
+species electabuzz 125 electric - 65 83 57 95 85 105 static - 300 - 2 electabuzz
+species electrike 309 electric - 40 45 40 65 40 65 static lightningrod 152 - 4 electrike
+species electrode 101 electric - 60 50 70 80 80 140 soundproof static 666 N 0 electrode
+species elekid 239 electric - 45 63 37 65 55 95 static - 235 - 2 elekid
+species entei 244 fire - 115 115 85 90 75 100 pressure - 1980 N 0 entei
+species espeon 196 psychic - 65 65 60 130 95 110 synchronize - 265 - 1 espeon
+species exeggcute 102 grass psychic 60 40 80 60 45 40 chlorophyll - 25 - 4 exeggcute
+species exeggutor 103 grass psychic 95 95 85 125 65 55 chlorophyll - 1200 - 4 exeggutor
+species exploud 295 normal - 104 91 63 91 63 68 soundproof - 840 - 4 exploud
+species farfetchd 83 normal flying 52 65 55 58 62 60 keeneye innerfocus 150 - 4 farfetchd
+species fearow 22 normal flying 65 90 65 61 61 100 keeneye - 380 - 4 fearow
+species feebas 349 water - 20 15 20 10 55 80 swiftswim - 74 - 4 feebas
+species feraligatr 160 water - 85 105 100 79 83 78 torrent - 888 - 1 feraligatr
+species flaaffy 180 electric - 70 55 55 80 60 45 static - 133 - 4 flaaffy
+species flareon 136 fire - 65 130 60 95 110 65 flashfire - 250 - 1 flareon
+species flygon 330 ground dragon 80 100 80 80 80 100 levitate - 820 - 4 flygon
+species forretress 205 bug steel 75 90 140 60 60 40 sturdy - 1258 - 4 forretress
+species furret 162 normal - 85 76 64 45 55 90 runaway keeneye 325 - 4 furret
+species gardevoir 282 psychic - 68 65 65 125 115 80 synchronize trace 484 - 4 gardevoir
+species gastly 92 ghost poison 30 35 30 100 35 80 levitate - 1 - 4 gastly
+species gengar 94 ghost poison 60 65 60 130 75 110 levitate - 405 - 4 gengar
+species geodude 74 rock ground 40 80 100 30 30 20 rockhead sturdy 200 - 4 geodude
+species girafarig 203 normal psychic 70 80 65 90 65 85 innerfocus earlybird 415 - 4 girafarig
+species glalie 362 ice - 80 80 80 80 80 80 innerfocus - 2565 - 4 glalie
+species gligar 207 ground flying 65 75 105 35 65 85 hypercutter sandveil 648 - 4 gligar
+species gloom 44 grass poison 60 65 70 85 75 40 chlorophyll - 86 - 4 gloom
+species golbat 42 poison flying 75 80 70 65 75 90 innerfocus - 550 - 4 golbat
+species goldeen 118 water - 45 67 60 35 50 63 swiftswim waterveil 150 - 4 goldeen
+species golduck 55 water - 80 82 78 95 80 85 damp cloudnine 766 - 4 golduck
+species golem 76 rock ground 80 110 130 55 65 45 rockhead sturdy 3000 - 4 golem
+species gorebyss 368 water - 55 84 105 114 75 52 swiftswim - 226 - 4 gorebyss
+species granbull 210 normal - 90 120 75 60 60 45 intimidate - 487 - 6 granbull
+species graveler 75 rock ground 55 95 115 45 45 35 rockhead sturdy 1050 - 4 graveler
+species grimer 88 poison - 80 80 50 40 50 25 stench stickyhold 300 - 4 grimer
+species groudon 383 ground - 100 150 140 100 90 90 drought - 9500 N 0 groudon
+species grovyle 253 grass - 50 65 45 85 65 95 overgrow - 216 - 1 grovyle
+species growlithe 58 fire - 55 70 45 70 50 60 intimidate flashfire 190 - 2 growlithe
+species grumpig 326 psychic - 80 45 65 90 110 80 thickfat owntempo 715 - 4 grumpig
+species gulpin 316 poison - 70 43 53 43 53 40 liquidooze stickyhold 103 - 4 gulpin
+species gyarados 130 water flying 95 125 79 60 100 81 intimidate - 2350 - 4 gyarados
+species hariyama 297 fighting - 144 120 60 40 60 50 thickfat guts 2538 - 2 hariyama
+species haunter 93 ghost poison 45 50 45 115 55 95 levitate - 1 - 4 haunter
+species heracross 214 bug fighting 80 125 75 40 95 85 swarm guts 540 - 4 heracross
+species hitmonchan 107 fighting - 50 105 79 35 110 76 keeneye - 502 M 0 hitmonchan
+species hitmonlee 106 fighting - 50 120 53 35 110 87 limber - 498 M 0 hitmonlee
+species hitmontop 237 fighting - 50 95 95 35 110 70 intimidate - 480 M 0 hitmontop
+species hooh 250 fire flying 106 130 90 110 154 90 pressure - 1990 N 0 hooh
+species hoothoot 163 normal flying 60 30 30 36 56 50 insomnia keeneye 212 - 4 hoothoot
+species hoppip 187 grass flying 35 35 40 35 55 50 chlorophyll - 5 - 4 hoppip
+species horsea 116 water - 30 40 70 70 25 60 swiftswim - 80 - 4 horsea
+species houndoom 229 dark fire 75 90 50 110 80 95 earlybird flashfire 350 - 4 houndoom
+species houndour 228 dark fire 45 60 30 80 50 65 earlybird flashfire 108 - 4 houndour
+species huntail 367 water - 55 104 105 94 75 52 swiftswim - 270 - 4 huntail
+species hypno 97 psychic - 85 73 70 73 115 67 insomnia - 756 - 4 hypno
+species igglybuff 174 normal - 90 30 15 40 20 15 cutecharm - 10 - 6 igglybuff
+species illumise 314 bug - 65 47 55 73 75 85 oblivious - 177 F 8 illumise
+species ivysaur 2 grass poison 60 62 63 80 80 60 overgrow - 130 - 1 ivysaur
+species jigglypuff 39 normal - 115 45 20 45 25 20 cutecharm - 55 - 6 jigglypuff
+species jirachi 385 steel psychic 100 100 100 100 100 100 serenegrace - 11 N 0 jirachi
+species jolteon 135 electric - 65 65 60 110 95 130 voltabsorb - 245 - 1 jolteon
+species jumpluff 189 grass flying 75 55 70 55 85 110 chlorophyll - 30 - 4 jumpluff
+species jynx 124 ice psychic 65 50 35 115 95 95 oblivious - 406 F 8 jynx
+species kabuto 140 rock water 30 80 90 55 45 55 swiftswim battlearmor 115 - 1 kabuto
+species kabutops 141 rock water 60 115 105 65 70 80 swiftswim battlearmor 405 - 1 kabutops
+species kadabra 64 psychic - 40 35 30 120 70 105 synchronize innerfocus 565 - 2 kadabra
+species kakuna 14 bug poison 45 25 50 25 25 35 shedskin - 100 - 4 kakuna
+species kangaskhan 115 normal - 105 95 80 40 80 90 earlybird - 800 F 8 kangaskhan
+species kecleon 352 normal - 60 90 70 60 120 40 colorchange - 220 - 4 kecleon
+species kingdra 230 water dragon 75 95 95 95 95 85 swiftswim - 1520 - 4 kingdra
+species kingler 99 water - 55 130 115 50 50 75 hypercutter shellarmor 600 - 4 kingler
+species kirlia 281 psychic - 38 35 35 65 55 50 synchronize trace 202 - 4 kirlia
+species koffing 109 poison - 40 65 95 60 45 35 levitate - 10 - 4 koffing
+species krabby 98 water - 30 105 90 25 25 50 hypercutter shellarmor 65 - 4 krabby
+species kyogre 382 water - 100 100 90 150 140 90 drizzle - 3520 N 0 kyogre
+species lairon 305 steel rock 60 90 140 50 50 40 sturdy rockhead 1200 - 4 lairon
+species lanturn 171 water electric 125 58 58 76 76 67 voltabsorb illuminate 225 - 4 lanturn
+species lapras 131 water ice 130 85 80 85 95 60 waterabsorb shellarmor 2200 - 4 lapras
+species larvitar 246 rock ground 50 64 50 45 50 41 guts - 720 - 4 larvitar
+species latias 380 dragon psychic 80 80 90 110 130 110 levitate - 400 F 8 latias
+species latios 381 dragon psychic 80 90 80 130 110 110 levitate - 600 M 0 latios
+species ledian 166 bug flying 55 35 50 55 110 85 swarm earlybird 356 - 4 ledian
+species ledyba 165 bug flying 40 20 30 40 80 55 swarm earlybird 108 - 4 ledyba
+species lickitung 108 normal - 90 55 75 60 75 30 owntempo oblivious 655 - 4 lickitung
+species lileep 345 rock grass 66 41 77 61 87 23 suctioncups - 238 - 1 lileep
+species linoone 264 normal - 78 70 61 50 61 100 pickup - 325 - 4 linoone
+species lombre 271 water grass 60 50 50 60 70 50 swiftswim raindish 325 - 4 lombre
+species lotad 270 water grass 40 30 30 40 50 30 swiftswim raindish 26 - 4 lotad
+species loudred 294 normal - 84 71 43 71 43 48 soundproof - 405 - 4 loudred
+species ludicolo 272 water grass 80 70 70 90 100 70 swiftswim raindish 550 - 4 ludicolo
+species lugia 249 psychic flying 106 90 130 90 154 110 pressure - 2160 N 0 lugia
+species lunatone 337 rock psychic 70 55 65 95 85 70 levitate - 1680 N 0 lunatone
+species luvdisc 370 water - 43 30 55 40 65 97 swiftswim - 87 - 6 luvdisc
+species machamp 68 fighting - 90 130 80 65 85 55 guts - 1300 - 2 machamp
+species machoke 67 fighting - 80 100 70 50 60 45 guts - 705 - 2 machoke
+species machop 66 fighting - 70 80 50 35 35 35 guts - 195 - 2 machop
+species magby 240 fire - 45 75 37 70 55 83 flamebody - 214 - 2 magby
+species magcargo 219 fire rock 50 50 120 80 80 30 magmaarmor flamebody 550 - 4 magcargo
+species magikarp 129 water - 20 10 55 15 20 80 swiftswim - 100 - 4 magikarp
+species magmar 126 fire - 65 95 57 100 85 93 flamebody - 445 - 2 magmar
+species magnemite 81 electric steel 25 35 70 95 55 45 magnetpull sturdy 60 N 0 magnemite
+species magneton 82 electric steel 50 60 95 120 70 70 magnetpull sturdy 600 N 0 magneton
+species makuhita 296 fighting - 72 60 30 20 30 25 thickfat guts 864 - 2 makuhita
+species manectric 310 electric - 70 75 60 105 60 105 static lightningrod 402 - 4 manectric
+species mankey 56 fighting - 40 80 35 35 45 70 vitalspirit - 280 - 4 mankey
+species mantine 226 water flying 65 40 70 80 140 70 swiftswim waterabsorb 2200 - 4 mantine
+species mareep 179 electric - 55 40 40 65 45 35 static - 78 - 4 mareep
+species marill 183 water - 70 20 50 20 50 40 thickfat hugepower 85 - 4 marill
+species marowak 105 ground - 60 80 110 50 80 45 rockhead lightningrod 450 - 4 marowak
+species marshtomp 259 water ground 70 85 70 60 70 50 torrent - 280 - 1 marshtomp
+species masquerain 284 bug flying 70 60 62 80 82 60 intimidate - 36 - 4 masquerain
+species mawile 303 steel - 50 85 85 55 55 50 hypercutter intimidate 115 - 4 mawile
+species medicham 308 fighting psychic 60 60 75 60 75 80 purepower - 315 - 4 medicham
+species meditite 307 fighting psychic 30 40 55 40 55 60 purepower - 112 - 4 meditite
+species meganium 154 grass - 80 82 100 83 100 80 overgrow - 1005 - 1 meganium
+species meowth 52 normal - 40 45 35 40 40 90 pickup - 42 - 4 meowth
+species metagross 376 steel psychic 80 135 130 95 90 70 clearbody - 5500 N 0 metagross
+species metang 375 steel psychic 60 75 100 55 80 50 clearbody - 2025 N 0 metang
+species metapod 11 bug - 50 20 55 25 25 30 shedskin - 99 - 4 metapod
+species mew 151 psychic - 100 100 100 100 100 100 synchronize - 40 N 0 mew
+species mewtwo 150 psychic - 106 110 90 154 90 130 pressure - 1220 N 0 mewtwo
+species mightyena 262 dark - 70 90 70 60 60 70 intimidate - 370 - 4 mightyena
+species milotic 350 water - 95 60 79 100 125 81 marvelscale - 1620 - 4 milotic
+species miltank 241 normal - 95 80 105 40 70 100 thickfat - 755 F 8 miltank
+species minun 312 electric - 60 40 50 75 85 95 minus - 42 - 4 minun
+species misdreavus 200 ghost - 60 60 60 85 85 85 levitate - 10 - 4 misdreavus
+species moltres 146 fire flying 90 100 90 125 85 90 pressure - 600 N 0 moltres
+species mrmime 122 psychic - 40 45 65 100 120 90 soundproof - 545 - 4 mrmime
+species mudkip 258 water - 50 70 50 50 50 40 torrent - 76 - 1 mudkip
+species muk 89 poison - 105 105 75 65 100 50 stench stickyhold 300 - 4 muk
+species murkrow 198 dark flying 60 85 42 85 42 91 insomnia - 21 - 4 murkrow
+species natu 177 psychic flying 40 50 45 70 45 70 synchronize earlybird 20 - 4 natu
+species nidoking 34 poison ground 81 92 77 85 75 85 poisonpoint - 620 M 0 nidoking
+species nidoqueen 31 poison ground 90 82 87 75 85 76 poisonpoint - 600 F 8 nidoqueen
+species nidoranf 29 poison - 55 47 52 40 40 41 poisonpoint - 70 F 8 nidoranf
+species nidoranm 32 poison - 46 57 40 40 40 50 poisonpoint - 90 M 0 nidoranm
+species nidorina 30 poison - 70 62 67 55 55 56 poisonpoint - 200 F 8 nidorina
+species nidorino 33 poison - 61 72 57 55 55 65 poisonpoint - 195 M 0 nidorino
+species nincada 290 bug ground 31 45 90 30 30 40 compoundeyes - 55 - 4 nincada
+species ninetales 38 fire - 73 76 75 81 100 100 flashfire - 199 - 6 ninetales
+species ninjask 291 bug flying 61 90 45 50 50 160 speedboost - 120 - 4 ninjask
+species noctowl 164 normal flying 100 50 50 76 96 70 insomnia keeneye 408 - 4 noctowl
+species nosepass 299 rock - 30 45 135 45 90 30 sturdy magnetpull 970 - 4 nosepass
+species numel 322 fire ground 60 60 40 65 45 35 oblivious - 240 - 4 numel
+species nuzleaf 274 grass dark 70 70 40 60 40 60 chlorophyll earlybird 280 - 4 nuzleaf
+species octillery 224 water - 75 105 75 105 75 45 suctioncups - 285 - 4 octillery
+species oddish 43 grass poison 45 50 55 75 65 30 chlorophyll - 54 - 4 oddish
+species omanyte 138 rock water 35 40 100 90 55 35 swiftswim shellarmor 75 - 1 omanyte
+species omastar 139 rock water 70 60 125 115 70 55 swiftswim shellarmor 350 - 1 omastar
+species onix 95 rock ground 35 45 160 30 45 70 rockhead sturdy 2100 - 4 onix
+species paras 46 bug grass 35 70 55 45 55 25 effectspore - 54 - 4 paras
+species parasect 47 bug grass 60 95 80 60 80 30 effectspore - 295 - 4 parasect
+species pelipper 279 water flying 60 50 100 85 70 65 keeneye - 280 - 4 pelipper
+species persian 53 normal - 65 70 60 65 65 115 limber - 320 - 4 persian
+species phanpy 231 ground - 90 60 60 40 40 40 pickup - 335 - 4 phanpy
+species pichu 172 electric - 20 40 15 35 35 60 static - 20 - 4 pichu
+species pidgeot 18 normal flying 83 80 75 70 70 91 keeneye - 395 - 4 pidgeot
+species pidgeotto 17 normal flying 63 60 55 50 50 71 keeneye - 300 - 4 pidgeotto
+species pidgey 16 normal flying 40 45 40 35 35 56 keeneye - 18 - 4 pidgey
+species pikachu 25 electric - 35 55 30 50 40 90 static - 60 - 4 pikachu
+species piloswine 221 ice ground 100 100 80 60 60 50 oblivious - 558 - 4 piloswine
+species pineco 204 bug - 50 65 90 35 35 15 sturdy - 72 - 4 pineco
+species pinsir 127 bug - 65 125 100 55 70 85 hypercutter - 550 - 4 pinsir
+species plusle 311 electric - 60 50 40 85 75 95 plus - 42 - 4 plusle
+species politoed 186 water - 90 75 75 90 100 70 waterabsorb damp 339 - 4 politoed
+species poliwag 60 water - 40 50 40 40 40 90 waterabsorb damp 124 - 4 poliwag
+species poliwhirl 61 water - 65 65 65 50 50 90 waterabsorb damp 200 - 4 poliwhirl
+species poliwrath 62 water fighting 90 85 95 70 90 70 waterabsorb damp 540 - 4 poliwrath
+species ponyta 77 fire - 50 85 55 65 65 90 runaway flashfire 300 - 4 ponyta
+species poochyena 261 dark - 35 55 35 30 30 35 runaway - 136 - 4 poochyena
+species porygon 137 normal - 65 60 70 85 75 40 trace - 365 N 0 porygon
+species porygon2 233 normal - 85 80 90 105 95 60 trace - 325 N 0 porygon2
+species primeape 57 fighting - 65 105 60 60 70 95 vitalspirit - 320 - 4 primeape
+species psyduck 54 water - 50 52 48 65 50 55 damp cloudnine 196 - 4 psyduck
+species pupitar 247 rock ground 70 84 70 65 70 51 shedskin - 1520 - 4 pupitar
+species quagsire 195 water ground 95 85 85 65 65 35 damp waterabsorb 750 - 4 quagsire
+species quilava 156 fire - 58 64 58 80 65 80 blaze - 190 - 1 quilava
+species qwilfish 211 water poison 65 95 75 55 55 85 poisonpoint swiftswim 39 - 4 qwilfish
+species raichu 26 electric - 60 90 55 90 80 100 static - 300 - 4 raichu
+species raikou 243 electric - 90 85 75 115 100 115 pressure - 1780 N 0 raikou
+species ralts 280 psychic - 28 25 25 45 35 40 synchronize trace 66 - 4 ralts
+species rapidash 78 fire - 65 100 70 80 80 105 runaway flashfire 950 - 4 rapidash
+species raticate 20 normal - 55 81 60 50 70 97 runaway guts 185 - 4 raticate
+species rattata 19 normal - 30 56 35 25 35 72 runaway guts 35 - 4 rattata
+species rayquaza 384 dragon flying 105 150 90 150 90 95 airlock - 2065 N 0 rayquaza
+species regice 378 ice - 80 50 100 100 200 50 clearbody - 1750 N 0 regice
+species regirock 377 rock - 80 100 200 50 100 50 clearbody - 2300 N 0 regirock
+species registeel 379 steel - 80 75 150 75 150 50 clearbody - 2050 N 0 registeel
+species relicanth 369 water rock 100 90 130 45 65 55 swiftswim rockhead 234 - 1 relicanth
+species remoraid 223 water - 35 65 35 65 35 65 hustle - 120 - 4 remoraid
+species rhydon 112 ground rock 105 130 120 45 45 40 lightningrod rockhead 1200 - 4 rhydon
+species rhyhorn 111 ground rock 80 85 95 30 30 25 lightningrod rockhead 1150 - 4 rhyhorn
+species roselia 315 grass poison 50 60 45 100 80 65 naturalcure poisonpoint 20 - 4 roselia
+species sableye 302 dark ghost 50 75 75 65 65 50 keeneye - 110 - 4 sableye
+species salamence 373 dragon flying 95 135 80 110 80 100 intimidate - 1026 - 4 salamence
+species sandshrew 27 ground - 50 75 85 20 30 40 sandveil - 120 - 4 sandshrew
+species sandslash 28 ground - 75 100 110 45 55 65 sandveil - 295 - 4 sandslash
+species sceptile 254 grass - 70 85 65 105 85 120 overgrow - 522 - 1 sceptile
+species scizor 212 bug steel 70 130 100 55 80 65 swarm - 1180 - 4 scizor
+species scyther 123 bug flying 70 110 80 55 80 105 swarm - 560 - 4 scyther
+species seadra 117 water - 55 65 95 95 45 85 poisonpoint - 250 - 4 seadra
+species seaking 119 water - 80 92 65 65 80 68 swiftswim waterveil 390 - 4 seaking
+species sealeo 364 ice water 90 60 70 75 70 45 thickfat - 876 - 4 sealeo
+species seedot 273 grass - 40 40 50 30 30 30 chlorophyll earlybird 40 - 4 seedot
+species seel 86 water - 65 45 55 45 70 45 thickfat - 900 - 4 seel
+species sentret 161 normal - 35 46 34 35 45 20 runaway keeneye 60 - 4 sentret
+species seviper 336 poison - 73 100 60 100 60 65 shedskin - 525 - 4 seviper
+species sharpedo 319 water dark 70 120 40 95 40 95 roughskin - 888 - 4 sharpedo
+species shedinja 292 bug ghost 1 90 45 30 30 40 wonderguard - 12 N 0 shedinja
+species shelgon 372 dragon - 65 95 100 60 50 50 rockhead - 1105 - 4 shelgon
+species shellder 90 water - 30 65 100 45 25 40 shellarmor - 40 - 4 shellder
+species shiftry 275 grass dark 90 100 60 90 60 80 chlorophyll earlybird 596 - 4 shiftry
+species shroomish 285 grass - 60 40 60 40 60 35 effectspore - 45 - 4 shroomish
+species shuckle 213 bug rock 20 10 230 10 230 5 sturdy - 205 - 4 shuckle
+species shuppet 353 ghost - 44 75 35 63 33 45 insomnia - 23 - 4 shuppet
+species silcoon 266 bug - 50 35 55 25 25 15 shedskin - 100 - 4 silcoon
+species skarmory 227 steel flying 65 80 140 40 70 70 keeneye sturdy 505 - 4 skarmory
+species skiploom 188 grass flying 55 45 50 45 65 80 chlorophyll - 10 - 4 skiploom
+species skitty 300 normal - 50 45 45 35 35 50 cutecharm - 110 - 6 skitty
+species slaking 289 normal - 150 160 100 95 65 100 truant - 1305 - 4 slaking
+species slakoth 287 normal - 60 60 60 35 35 30 truant - 240 - 4 slakoth
+species slowbro 80 water psychic 95 75 110 100 80 30 oblivious owntempo 785 - 4 slowbro
+species slowking 199 water psychic 95 75 80 100 110 30 oblivious owntempo 795 - 4 slowking
+species slowpoke 79 water psychic 90 65 65 40 40 15 oblivious owntempo 360 - 4 slowpoke
+species slugma 218 fire - 40 40 40 70 40 20 magmaarmor flamebody 350 - 4 slugma
+species smeargle 235 normal - 55 20 35 20 45 75 owntempo - 580 - 4 smeargle
+species smoochum 238 ice psychic 45 30 15 85 65 65 oblivious - 60 F 8 smoochum
+species sneasel 215 dark ice 55 95 55 35 75 115 innerfocus keeneye 280 - 4 sneasel
+species snorlax 143 normal - 160 110 65 65 110 30 immunity thickfat 4600 - 1 snorlax
+species snorunt 361 ice - 50 50 50 50 50 50 innerfocus - 168 - 4 snorunt
+species snubbull 209 normal - 60 80 50 40 40 30 intimidate runaway 78 - 6 snubbull
+species solrock 338 rock psychic 70 95 85 55 65 70 levitate - 1540 N 0 solrock
+species spearow 21 normal flying 40 60 30 31 31 70 keeneye - 20 - 4 spearow
+species spheal 363 ice water 70 40 50 55 50 25 thickfat - 395 - 4 spheal
+species spinarak 167 bug poison 40 60 40 40 40 30 swarm insomnia 85 - 4 spinarak
+species spinda 327 normal - 60 60 60 60 60 60 owntempo - 50 - 4 spinda
+species spoink 325 psychic - 60 25 35 70 80 60 thickfat owntempo 306 - 4 spoink
+species squirtle 7 water - 44 48 65 50 64 43 torrent - 90 - 1 squirtle
+species stantler 234 normal - 73 95 62 85 65 85 intimidate - 712 - 4 stantler
+species starmie 121 water psychic 60 75 85 100 85 115 illuminate naturalcure 800 N 0 starmie
+species staryu 120 water - 30 45 55 70 55 85 illuminate naturalcure 345 N 0 staryu
+species steelix 208 steel ground 75 85 200 55 65 30 rockhead sturdy 4000 - 4 steelix
+species sudowoodo 185 rock - 70 100 115 30 65 30 sturdy rockhead 380 - 4 sudowoodo
+species suicune 245 water - 100 75 115 90 115 85 pressure - 1870 N 0 suicune
+species sunflora 192 grass - 75 75 55 105 85 30 chlorophyll - 85 - 4 sunflora
+species sunkern 191 grass - 30 30 30 30 30 30 chlorophyll - 18 - 4 sunkern
+species surskit 283 bug water 40 30 32 50 52 65 swiftswim - 17 - 4 surskit
+species swablu 333 normal flying 45 40 60 40 75 50 naturalcure - 12 - 4 swablu
+species swalot 317 poison - 100 73 83 73 83 55 liquidooze stickyhold 800 - 4 swalot
+species swampert 260 water ground 100 110 90 85 90 60 torrent - 819 - 1 swampert
+species swellow 277 normal flying 60 85 60 50 50 125 guts - 198 - 4 swellow
+species swinub 220 ice ground 50 50 40 30 30 50 oblivious - 65 - 4 swinub
+species taillow 276 normal flying 40 55 30 30 30 85 guts - 23 - 4 taillow
+species tangela 114 grass - 65 55 115 100 40 60 chlorophyll - 350 - 4 tangela
+species tauros 128 normal - 75 100 95 40 70 110 intimidate - 884 M 0 tauros
+species teddiursa 216 normal - 60 80 50 50 50 40 pickup - 88 - 4 teddiursa
+species tentacool 72 water poison 40 40 35 50 100 70 clearbody liquidooze 455 - 4 tentacool
+species tentacruel 73 water poison 80 70 65 80 120 100 clearbody liquidooze 550 - 4 tentacruel
+species togepi 175 normal - 35 20 65 40 65 20 hustle serenegrace 15 - 1 togepi
+species togetic 176 normal flying 55 40 85 80 105 40 hustle serenegrace 32 - 1 togetic
+species torchic 255 fire - 45 60 40 70 50 45 blaze - 25 - 1 torchic
+species torkoal 324 fire - 70 85 140 85 70 20 whitesmoke - 804 - 4 torkoal
+species totodile 158 water - 50 65 64 44 48 43 torrent - 95 - 1 totodile
+species trapinch 328 ground - 45 100 45 45 45 10 hypercutter arenatrap 150 - 4 trapinch
+species treecko 252 grass - 40 45 35 65 55 70 overgrow - 50 - 1 treecko
+species tropius 357 grass flying 99 68 83 72 87 51 chlorophyll - 1000 - 4 tropius
+species typhlosion 157 fire - 78 84 78 109 85 100 blaze - 795 - 1 typhlosion
+species tyranitar 248 rock dark 100 134 110 95 100 61 sandstream - 2020 - 4 tyranitar
+species tyrogue 236 fighting - 35 35 35 35 35 35 guts - 210 M 0 tyrogue
+species umbreon 197 dark - 95 65 110 60 130 65 synchronize - 270 - 1 umbreon
+species unown 201 psychic - 48 72 48 72 48 48 levitate - 50 N 0 unown
+species ursaring 217 normal - 90 130 75 75 75 55 guts - 1258 - 4 ursaring
+species vaporeon 134 water - 130 65 60 110 95 65 waterabsorb - 290 - 1 vaporeon
+species venomoth 49 bug poison 70 65 60 90 75 90 shielddust - 125 - 4 venomoth
+species venonat 48 bug poison 60 55 50 40 55 45 compoundeyes - 300 - 4 venonat
+species venusaur 3 grass poison 80 82 83 100 100 80 overgrow - 1000 - 1 venusaur
+species vibrava 329 ground dragon 50 70 50 50 50 70 levitate - 153 - 4 vibrava
+species victreebel 71 grass poison 80 105 65 100 60 70 chlorophyll - 155 - 4 victreebel
+species vigoroth 288 normal - 80 80 80 55 55 90 vitalspirit - 465 - 4 vigoroth
+species vileplume 45 grass poison 75 80 85 100 90 50 chlorophyll - 186 - 4 vileplume
+species volbeat 313 bug - 65 73 55 47 75 85 illuminate swarm 177 M 0 volbeat
+species voltorb 100 electric - 40 30 50 55 55 100 soundproof static 104 N 0 voltorb
+species vulpix 37 fire - 38 41 40 50 65 65 flashfire - 99 - 6 vulpix
+species wailmer 320 water - 130 70 35 70 35 60 waterveil oblivious 1300 - 4 wailmer
+species wailord 321 water - 170 90 45 90 45 60 waterveil oblivious 3980 - 4 wailord
+species walrein 365 ice water 110 80 90 95 90 65 thickfat - 1506 - 4 walrein
+species wartortle 8 water - 59 63 80 65 80 58 torrent - 225 - 1 wartortle
+species weedle 13 bug poison 40 35 30 20 20 50 shielddust - 32 - 4 weedle
+species weepinbell 70 grass poison 65 90 50 85 45 55 chlorophyll - 64 - 4 weepinbell
+species weezing 110 poison - 65 90 120 85 70 60 levitate - 95 - 4 weezing
+species whiscash 340 water ground 110 78 73 76 71 60 oblivious - 236 - 4 whiscash
+species whismur 293 normal - 64 51 23 51 23 28 soundproof - 163 - 4 whismur
+species wigglytuff 40 normal - 140 70 45 75 50 45 cutecharm - 120 - 6 wigglytuff
+species wingull 278 water flying 40 30 30 55 30 85 keeneye - 95 - 4 wingull
+species wobbuffet 202 psychic - 190 33 58 33 58 33 shadowtag - 285 - 4 wobbuffet
+species wooper 194 water ground 55 45 45 25 25 15 damp waterabsorb 85 - 4 wooper
+species wurmple 265 bug - 45 45 35 20 30 20 shielddust - 36 - 4 wurmple
+species wynaut 360 psychic - 95 23 48 23 48 23 shadowtag - 140 - 4 wynaut
+species xatu 178 psychic flying 65 75 70 95 70 95 synchronize earlybird 150 - 4 xatu
+species yanma 193 bug flying 65 65 45 75 45 95 speedboost compoundeyes 380 - 4 yanma
+species zangoose 335 normal - 73 115 60 60 60 90 immunity - 403 - 4 zangoose
+species zapdos 145 electric flying 90 90 85 125 90 100 pressure - 526 N 0 zapdos
+species zigzagoon 263 normal - 38 30 41 30 41 60 pickup - 175 - 4 zigzagoon
+species zubat 41 poison flying 40 45 35 30 40 55 innerfocus - 75 - 4 zubat
