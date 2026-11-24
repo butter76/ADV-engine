@@ -135,7 +135,9 @@ What is tested today (`ctest`, no Node needed):
 | `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches, line for line until each ends or stops |
 | `replay_any` | 60 games of 12 turns with any choice at all, line for line until each ends or stops |
 | `replay_regressions` | two whole games that once differed |
-| `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
+| `replay_targeted` | 14 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`); all run to the end, line for line |
+| `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not; 3 run to the end and 21 stop at something unported, with no line different before |
+| `data` | the tables state the same 1,891 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
 
@@ -184,12 +186,36 @@ What is tested today (`ctest`, no Node needed):
       Counter and Mirror Coat, Endeavor, Perish Song, Thief, Covet, Psych
       Up, Trace, Cloud Nine and Air Lock, multi-hit moves, Reversal, Flail,
       Eruption, Low Kick, Facade, Smelling Salts.~~ Done.
-   4. Next, by games stopped of 1,000: Sleep Talk (117), Beat Up (74), Mean
-      Look (23), Encore (21), Solar Beam (16), Truant (20), Destiny Bond
-      (13), Curse from a Ghost (9), Mimic (7), Imprison (5), Struggle (5),
-      the statuses a contact ability gives (6). Then what OU teams rarely
-      carry: moves locked into, one-hit KOs, two-turn moves, Disable, Yawn,
-      Transform, Tri Attack, King's Rock, White Herb.
+   4. ~~Sleep Talk, Beat Up, Mean Look and its kind, Truant, Struggle,
+      Destiny Bond, the statuses a contact ability gives; Encore, Disable,
+      Yawn, Curse from a Ghost, Belly Drum, Pain Split, Fake Out; moves that
+      charge for a turn (Solar Beam, Fly, Dig, Dive, Bounce, Skull Bash,
+      Razor Wind, Sky Attack), moves locked into (Outrage, Thrash, Petal
+      Dance) and the turn to recharge; binding moves; Drizzle, Drought,
+      Forecast and Castform's forms, Rain Dish, Color Change, Damp; White
+      Herb, King's Rock, Focus Band, Lansat Berry, Mail; Stockpile, Swallow,
+      Spit Up, Spite, Magnitude, Present, Revenge, False Swipe, Psywave,
+      Super Fang, Dream Eater, Snore, the three weather heals, Pay Day,
+      Splash, Teleport; Lock-On, Mind Reader, Foresight, Odor Sleuth,
+      Nightmare, Imprison and the choices it has refused, Ingrain, Torment,
+      Rage, Grudge, Attract, Charge, Focus Energy, Mud Sport, Water Sport,
+      Minimize.~~ Done: 512 of the checklist's 653 callbacks are registered
+      (`tools/unported.cjs`). Compared and equal, none different:
+      1,860,399 lines over 1,000 OU games of up to 99 turns (990 run to the
+      end), 1,103,568 lines over 600 games between the targeted teams (599
+      run to the end), and 209,489 lines over 600 games between random
+      teams, of which 34 run to the end.
+   5. Next, by random games stopped of 600: one-hit KOs (78), Rollout and
+      Ice Ball (42), the moves that call another (Metronome, Mirror Move,
+      Nature Power, Assist, 52), Jump Kick's crash (36), Transform (22),
+      Conversion and Conversion 2 (32), Recycle, Trick, Skill Swap and Role
+      Play (67), Magic Coat and Snatch (33), Future Sight and Doom Desire
+      (31), Mimic and Sketch (32), Secret Power, Weather Ball, Camouflage,
+      Follow Me, Helping Hand, Tri Attack, Triple Kick, Uproar, Bide, Fury
+      Cutter, Memento, Lightning Rod's redirection. About 75 callbacks that
+      Gen 3 can reach are left; the other 66 unregistered are later
+      generations' conditions, the validator's rules, and berries with
+      nothing to do when eaten.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
 6. Olympus reads the engine's player stream (a separate change in olympus).
@@ -243,7 +269,9 @@ numbers are in `sim/` at the pinned commit.
   `turn`, rolls Quick Claw (`randomChance(1, 5)`) and makes the requests.
 - **A move request** (`pokemon.ts`, `getMoveRequestData`) runs `LockMove`,
   lists each slot's name, id, PP, target and `disabled`, and adds `trapped`
-  or `maybeTrapped`. Hidden Power is named with its type and power, Return
+  or `maybeTrapped`. A Pokémon locked into a move is shown that move alone,
+  as a name and an id (`Recharge` for the turn after Hyper Beam), and is
+  trapped. Hidden Power is named with its type and power, Return
   and Frustration with their power. A request has no `noCancel` in `gen3ou`,
   since Cancel Mod is on and both sides are asked.
 - **A log line with a function part is a split**: `|split|pN`, the line with
@@ -261,8 +289,18 @@ numbers are in `sim/` at the pinned commit.
   next, and anything past turn 100.
 - **Not modelled yet, and marked in the code:** the check that skips a
   handler whose effect was replaced after gathering (done for volatiles and
-  side conditions only), and the record of who attacked whom (`attackedBy`,
-  for Counter and its kind).
+  side conditions only).
+- **`attackedBy` is one record**, not a list: in singles every entry of
+  Showdown's list has the same source, so the last one answers for all.
+- **A locked move's target is not kept.** Showdown stores the slot a charging
+  or locked move was aimed at; in singles every case comes out as the foe.
+- **Random teams found nothing the targeted teams did not, but stop early.**
+  Every random game reaches an unported move within a few turns, so what
+  comes later in a game is compared only by the OU and targeted teams. The
+  targeted teams found five differences the OU teams could not: a Pokémon's
+  last move kept after it left, a refused volatile reported as a failure,
+  Nightmare outlasting sleep, and Imprison's two effects on choices (a
+  refused move, and Struggle when every move is secretly disabled).
 - **Shield Dust's filter is a stand-in.** `ModifySecondaries` passes a list
   in Showdown; the engine has one secondary a move, and the handler answers
   false for "only what has a `self` is kept".
@@ -274,9 +312,11 @@ numbers are in `sim/` at the pinned commit.
   `upkeep`), in 4 of 1,000 games of up to 99 turns. Both are fixed and kept
   as `tests/fixtures/regressions.trace`. Short games would not have shown
   them; the bar of millions of long games matters.
-- **No teams of its own.** The tools take `--teams DIR`; so far that has been
-  hoenn's `teams/ou`. The random-legal and random-anything environments do
-  not exist yet, and they are what will reach the 62% OU does not.
+- **Teams.** The tools take `--teams DIR` (hoenn's `teams/ou` so far, and
+  the repository's `tests/teams/targeted`) or `--teams random`, which makes
+  teams of anything Gen 3 has: any species, any four moves, any item, an
+  ability that three times in four is the species' own. Random legal teams
+  do not exist yet. Each batch adds a targeted team for what it ports.
 - **No script fetches Showdown.** `SHOWDOWN` must point at a built checkout.
 - **A full trace is about 475 KB a game**, nearly all of it requests. Millions
   of games have to be piped to the checker, not stored. `--brief 1` keeps
@@ -325,10 +365,11 @@ most need `--teams DIR`:
 
 | Tool | What it does |
 |---|---|
-| `tools/trace.cjs` | records games (`--games`, `--first`, `--out`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
+| `tools/trace.cjs` | records games (`--teams DIR` or `random`, `--games`, `--first`, `--out`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
 | `tools/coverage.cjs` | counts runs of each checklist function over the same games |
 | `tools/census.cjs` | events, sorts and draws per update, to `build/census.json` |
 | `tools/dump_dex.cjs` | the data as JSON and the checklist, to `build/dex/` |
+| `tools/unported.cjs` | the checklist's callbacks that `src/callbacks.hpp` does not register; `--show ID` prints Showdown's source for an effect's |
 | `tools/gen_tables.cjs` | writes `src/data/`; stops on a field it has no place for |
 | `tools/tables_ref.cjs` | writes `tests/fixtures/tables.txt` |
 | `tools/prng_ref.cjs` | prints the line `tests/prng_test.cpp` must print |

@@ -75,10 +75,21 @@ struct Stream {
     } else {
       unported("the choice \"" + std::string(text.substr(0, text.find(' '))) + "\"");
     }
+    if (battle.struggle_notice[size_t(side)]) {
+      // Side.chooseMove tells the side alone that it has no move left.
+      const Side& s = battle.sides[side];
+      lines.push_back("s " + side_id(side) + " |-activate|" + side_id(side) + "a: " + names.teams[side].names[s.active] + "|move: Struggle");
+      battle.struggle_notice[size_t(side)] = false;
+    }
     if (refusal != Refusal::None) {
       // Side.emitChoiceError (side.ts:527).
-      lines.push_back("s " + side_id(side) + " |error|[" + (refusal == Refusal::Unavailable ? "Unavailable" : "Invalid") +
-                      " choice] Can't switch: The active Pokémon is trapped");
+      std::string why = "Can't switch: The active Pokémon is trapped";
+      if (const Move refused = battle.refused_move[size_t(side)]; refused != Move::None) {
+        why = "Can't move: " + names.teams[side].names[battle.sides[side].active] + "'s " + std::string(MOVE_NAMES[uint16_t(refused)].name) +
+              " is disabled";
+        battle.refused_move[size_t(side)] = Move::None;
+      }
+      lines.push_back("s " + side_id(side) + " |error|[" + (refusal == Refusal::Unavailable ? "Unavailable" : "Invalid") + " choice] " + why);
       if (refusal == Refusal::Unavailable) send_request(side);
     }
     send_updates();

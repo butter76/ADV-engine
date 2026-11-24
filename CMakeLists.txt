@@ -50,6 +50,11 @@ add_test(NAME replay_any COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/any-6
 # Whole games that once differed: a fainted Pokémon's status, and a faint
 # resolved after an effect that only counts down.
 add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/regressions.trace)
+# Games between teams written to use particular moves (tests/teams/targeted),
+# and between teams of anything Gen 3 has, legal or not. The second kind
+# mostly stop at something not ported; what comes before must not differ.
+add_test(NAME replay_targeted COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-14.trace)
+add_test(NAME replay_random COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace)
 
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)

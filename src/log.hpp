@@ -30,6 +30,8 @@ struct Part {
     Item,     // an item's name
     Wisher,   // `[wisher] Name`
     From,     // `[from] ` and an effect's full name
+    Fullname, // an effect's full name: `move: Wrap`
+    Name,     // an effect's name: `Wrap`
     FromMove, // `[from] ` and a move's bare name
     Of,       // `[of] p1a: Name`
   } kind = Kind::Text;
@@ -67,6 +69,8 @@ constexpr Part move(adv::Move m) { return {.kind = Part::Kind::Move, .id = uint1
 constexpr Part item(adv::Item i) { return {.kind = Part::Kind::Item, .id = uint16_t(i)}; }
 constexpr Part wisher(Ref r) { return {.kind = Part::Kind::Wisher, .pokemon = r}; }
 constexpr Part from(Effect e) { return {.kind = Part::Kind::From, .id = e.id, .effect_kind = e.kind}; }
+constexpr Part fullname(Effect e) { return {.kind = Part::Kind::Fullname, .id = e.id, .effect_kind = e.kind}; }
+constexpr Part name(Effect e) { return {.kind = Part::Kind::Name, .id = e.id, .effect_kind = e.kind}; }
 constexpr Part from_ability(Ability a) { return from(effect(a)); }
 constexpr Part from_move(adv::Move m) { return {.kind = Part::Kind::FromMove, .id = uint16_t(m)}; }
 inline Part pokemon(const Battle& b, Ref r) {
@@ -83,7 +87,7 @@ inline Part details(const Battle& b, Ref r) {
   const Pokemon& p = b.at(r);
   Part d = health(b, r);
   d.kind = Part::Kind::Details;
-  d.species = p.species;
+  d.species = p.base_species; // Pokemon.details is not changed by a form taken in battle
   d.level = p.level;
   d.gender = p.gender;
   d.shiny = p.set.shiny;

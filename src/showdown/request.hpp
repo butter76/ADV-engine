@@ -37,9 +37,10 @@ inline std::string json(std::string_view text) {
   return out + "\"";
 }
 
-// Pokemon.details (getUpdatedDetails, pokemon.ts:557).
+// Pokemon.details (getUpdatedDetails, pokemon.ts:557): set once, from the
+// species the Pokémon came as.
 inline std::string details(const Pokemon& p) {
-  std::string out(SPECIES_NAMES[uint16_t(p.species)].name);
+  std::string out(SPECIES_NAMES[uint16_t(p.base_species)].name);
   if (p.level != 100) out += ", L" + std::to_string(p.level);
   if (p.gender == Gender::Male) out += ", M";
   if (p.gender == Gender::Female) out += ", F";

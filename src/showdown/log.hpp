@@ -50,18 +50,30 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
   case Part::Kind::FromMove: return "[from] " + std::string(MOVE_NAMES[p.id].name);
   case Part::Kind::Item: return std::string(ITEM_NAMES[p.id].name);
   case Part::Kind::Wisher: return "[wisher] " + names.teams[p.pokemon.side].names[p.pokemon.index];
-  case Part::Kind::From:
-    // An effect's fullname. Damage from `tox` is written as `psn`.
+  case Part::Kind::Name:
     switch (p.effect_kind) {
-    case EffectKind::Ability: return "[from] ability: " + std::string(ABILITY_NAMES[p.id].name);
-    case EffectKind::Item: return "[from] item: " + std::string(ITEM_NAMES[p.id].name);
-    case EffectKind::Move: return "[from] move: " + std::string(MOVE_NAMES[p.id].name);
-    case EffectKind::Condition: return "[from] " + std::string(CONDITION_NAMES[Condition(p.id) == Condition::Tox ? uint16_t(Condition::Psn) : p.id].name);
+    case EffectKind::Ability: return std::string(ABILITY_NAMES[p.id].name);
+    case EffectKind::Item: return std::string(ITEM_NAMES[p.id].name);
+    case EffectKind::Move: return std::string(MOVE_NAMES[p.id].name);
+    case EffectKind::Condition: return std::string(CONDITION_NAMES[p.id].name);
+    default: break;
+    }
+    return "?";
+  case Part::Kind::From:
+  case Part::Kind::Fullname: {
+    // An effect's fullname. Damage from `tox` is written as `psn`.
+    const std::string lead = p.kind == Part::Kind::From ? "[from] " : "";
+    switch (p.effect_kind) {
+    case EffectKind::Ability: return lead + "ability: " + std::string(ABILITY_NAMES[p.id].name);
+    case EffectKind::Item: return lead + "item: " + std::string(ITEM_NAMES[p.id].name);
+    case EffectKind::Move: return lead + "move: " + std::string(MOVE_NAMES[p.id].name);
+    case EffectKind::Condition: return lead + std::string(CONDITION_NAMES[Condition(p.id) == Condition::Tox ? uint16_t(Condition::Psn) : p.id].name);
     case EffectKind::Special:
-      return Special(p.id) == Special::Recoil ? "[from] Recoil" : Special(p.id) == Special::Drain ? "[from] drain" : "[from] confusion";
+      return lead + (Special(p.id) == Special::Recoil ? "Recoil" : Special(p.id) == Special::Drain ? "drain" : "confusion");
     case EffectKind::Rule: break;
     }
-    return "[from] ?";
+    return lead + "?";
+  }
   case Part::Kind::Of:
     return "[of] " + side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Health: return health_text(p, secret, b.report_percentages);
@@ -106,6 +118,12 @@ inline std::string request_json(const Battle& b, int side, const Names& names) {
   std::string out = "{\"active\":[{\"moves\":[";
   for (int i = 0; i < r.n_moves; i++) {
     const RequestMove& m = r.moves[i];
+    if (r.locked) {
+      // Pokemon.getMoves(lockedMove): the name and the id.
+      out += m.id == Move::None ? std::string("{\"move\":\"Recharge\",\"id\":\"recharge\"}")
+                                : "{\"move\":" + json(MOVE_NAMES[uint16_t(m.id)].name) + ",\"id\":" + json(MOVE_NAMES[uint16_t(m.id)].id) + "}";
+      continue;
+    }
     // Pokemon.getMoves (pokemon.ts:985): Hidden Power is named with its type
     // and power, Return and Frustration with their power.
     std::string name(MOVE_NAMES[uint16_t(m.id)].name);
@@ -113,8 +131,9 @@ inline std::string request_json(const Battle& b, int side, const Names& names) {
     if (m.id == Move::Return) name += " " + std::to_string(std::max(p.happiness * 10 / 25, 1));
     if (m.id == Move::Frustration) name += " " + std::to_string(std::max((255 - p.happiness) * 10 / 25, 1));
     out += std::string(i ? "," : "") + "{\"move\":" + json(name) + ",\"id\":" + json(MOVE_NAMES[uint16_t(m.id)].id) +
-           ",\"pp\":" + std::to_string(m.pp) + ",\"maxpp\":" + std::to_string(m.maxpp) +
-           ",\"target\":" + json(TARGET_NAMES[uint8_t(m.target)]) + ",\"disabled\":" + (m.disabled ? "true" : "false") + "}";
+           (r.struggle ? std::string() : ",\"pp\":" + std::to_string(m.pp) + ",\"maxpp\":" + std::to_string(m.maxpp)) +
+           ",\"target\":" + json(TARGET_NAMES[uint8_t(m.target)]) + ",\"disabled\":" + (m.disabled ? "true" : "false") +
+           (m.disabled_source ? ",\"disabledSource\":\"\"" : "") + "}";
   }
   out += "]";
   if (r.maybe_disabled) out += ",\"maybeDisabled\":true";

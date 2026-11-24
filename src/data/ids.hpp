@@ -1032,11 +1032,13 @@ enum class Condition : uint8_t {
   Zacian,
   Zamazenta,
   Rolloutstorage,
+  RazorWind,
   Fly,
   Disable,
   Mist,
   Counter,
   LeechSeed,
+  SolarBeam,
   Dig,
   Toxic,
   Rage,
@@ -1046,6 +1048,8 @@ enum class Condition : uint8_t {
   Reflect,
   FocusEnergy,
   Bide,
+  SkullBash,
+  SkyAttack,
   Substitute,
   Nightmare,
   Curse,
@@ -1087,7 +1091,7 @@ enum class Condition : uint8_t {
   FlashFire,
   Truant,
 };
-inline constexpr int CONDITIONS = 91;
+inline constexpr int CONDITIONS = 95;
 
 enum class Rule : uint8_t {
   None,

@@ -38,6 +38,46 @@ function loadTeams(Teams, dir) {
   return teams;
 }
 
+// A team of anything Gen 3 has, legal or not: six species, each with any four
+// moves, an ability (three times in four one of its own), any item or none,
+// and any level, nature, EVs and IVs. `rnd` is the game's generator.
+let pools = null;
+function randomTeam({Dex}, rnd) {
+  const dex = Dex.mod('gen3');
+  if (!pools) {
+    const here = e => e.exists && e.gen <= 3 && !e.isNonstandard;
+    pools = {
+      species: dex.species.all().filter(s => here(s) && s.num > 0),
+      moves: dex.moves.all().filter(m => here(m) && m.id !== 'struggle').map(m => m.name),
+      abilities: dex.abilities.all().filter(a => here(a) && a.id !== 'noability').map(a => a.name),
+      items: dex.items.all().filter(here).map(i => i.name),
+      natures: dex.natures.all().map(n => n.name),
+    };
+  }
+  const pick = list => list[rnd(list.length)];
+  const stats = each => ({hp: each(), atk: each(), def: each(), spa: each(), spd: each(), spe: each()});
+  const team = [];
+  while (team.length < 6) {
+    const species = pick(pools.species);
+    if (team.some(set => set.species === species.name)) continue;
+    const moves = [];
+    while (moves.length < 4) {
+      const move = pick(pools.moves);
+      if (!moves.includes(move)) moves.push(move);
+    }
+    const own = ['0', '1'].map(k => species.abilities[k]).filter(Boolean);
+    team.push({
+      name: species.baseSpecies, species: species.name, gender: '',
+      item: rnd(5) ? pick(pools.items) : '',
+      ability: rnd(4) ? pick(own) : pick(pools.abilities),
+      moves, nature: pick(pools.natures),
+      evs: stats(() => rnd(64) * 4), ivs: stats(() => rnd(4) ? 31 : rnd(32)),
+      level: rnd(2) ? 100 : 1 + rnd(100), shiny: !rnd(8), happiness: rnd(4) ? 255 : rnd(256),
+    });
+  }
+  return team;
+}
+
 // The driver's own generator, apart from the battle's, so that choices do not
 // depend on how many draws the battle made.
 function lcg(seed) {
@@ -223,4 +263,4 @@ function record({Battle, Teams, Dex}, {format, seed, teams, rnd, site, turns, ch
 
 const gen5 = n => 'gen5,' + BigInt(n).toString(16).padStart(16, '0');
 
-module.exports = {COMMIT, showdown, loadTeams, lcg, choose, play, record, gen5};
+module.exports = {COMMIT, showdown, loadTeams, randomTeam, lcg, choose, play, record, gen5};

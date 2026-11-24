@@ -1,0 +1,219 @@
+=== [gen3ou] locks a ===
+
+Salamence @ Leftovers
+Ability: Intimidate
+- Outrage
+- Fly
+- Hyper Beam
+- Earthquake
+
+Venusaur @ White Herb
+Ability: Overgrow
+- Solar Beam
+- Petal Dance
+- Sunny Day
+- Sleep Powder
+
+Dugtrio @ King's Rock
+Ability: Arena Trap
+- Dig
+- Earthquake
+- Rock Slide
+- Magnitude
+
+Gyarados @ Lum Berry
+Ability: Intimidate
+- Dive
+- Bounce
+- Thrash
+- Rain Dance
+
+Snorlax @ Chesto Berry
+Ability: Thick Fat
+- Skull Bash
+- Rest
+- Sleep Talk
+- Hyper Beam
+
+Aerodactyl @ Choice Band
+Ability: Pressure
+- Sky Attack
+- Razor Wind
+- Fly
+- Twister
+
+=== [gen3ou] locks b ===
+
+Blaziken @ Salac Berry
+Ability: Blaze
+- Blast Burn
+- Sky Uppercut
+- Swagger
+- Protect
+
+Swampert @ Focus Band
+Ability: Torrent
+- Surf
+- Earthquake
+- Whirlpool
+- Hydro Cannon
+
+Zapdos @ Lansat Berry
+Ability: Pressure
+- Thunder
+- Fly
+- Gust
+- Yawn
+
+Tauros @ Scope Lens
+Ability: Intimidate
+- Thrash
+- Hyper Beam
+- Pursuit
+- Disable
+
+Sceptile @ Leftovers
+Ability: Overgrow
+- Frenzy Plant
+- Solar Beam
+- Leech Seed
+- Substitute
+
+Flygon @ King's Rock
+Ability: Levitate
+- Dig
+- Outrage
+- Sand Tomb
+- Fire Blast
+
+=== [gen3ou] tricks ===
+
+Smeargle @ Salac Berry
+Ability: Own Tempo
+- Spore
+- Encore
+- Belly Drum
+- Baton Pass
+
+Wobbuffet @ Leftovers
+Ability: Shadow Tag
+- Counter
+- Mirror Coat
+- Destiny Bond
+- Encore
+
+Gengar @ Leftovers
+Ability: Levitate
+- Curse
+- Pain Split
+- Nightmare
+- Hypnosis
+
+Hariyama @ White Herb
+Ability: Thick Fat
+- Fake Out
+- Revenge
+- Whirlwind
+- Rest
+
+Medicham @ Mail
+Ability: Pure Power
+- Fake Out
+- Psywave
+- Super Fang
+- Lock-On
+
+Ludicolo @ Leftovers
+Ability: Rain Dish
+- Rain Dance
+- Synthesis
+- Ingrain
+- Thief
+
+=== [gen3ou] oddities ===
+
+Castform
+Ability: Forecast
+- Rain Dance
+- Sunny Day
+- Hail
+- Thunder
+
+Kecleon @ King's Rock
+Ability: Color Change
+- Spite
+- Magnitude
+- Present
+- False Swipe
+
+Swalot @ Leftovers
+Ability: Sticky Hold
+- Stockpile
+- Spit Up
+- Swallow
+- Yawn
+
+Mightyena @ Lansat Berry
+Ability: Intimidate
+- Torment
+- Roar
+- Attract
+- Mean Look
+
+Milotic @ Leftovers
+Ability: Marvel Scale
+- Attract
+- Wrap
+- Imprison
+- Mud Sport
+
+Kingdra @ White Herb
+Ability: Swift Swim
+- Water Sport
+- Foresight
+- Rage
+- Grudge
+
+=== [gen3ou] more ===
+
+Kyogre @ Leftovers
+Ability: Drizzle
+- Dive
+- Thunder
+- Charge
+- Snore
+
+Groudon @ Leftovers
+Ability: Drought
+- Solar Beam
+- Dig
+- Morning Sun
+- Mind Reader
+
+Vileplume @ Leftovers
+Ability: Chlorophyll
+- Moonlight
+- Petal Dance
+- Splash
+- Teleport
+
+Meowth @ King's Rock
+Ability: Pickup
+- Pay Day
+- Fake Out
+- Dream Eater
+- Hypnosis
+
+Raikou @ Leftovers
+Ability: Pressure
+- Charge
+- Thunderbolt
+- Odor Sleuth
+- Focus Energy
+
+Octillery @ Focus Band
+Ability: Suction Cups
+- Clamp
+- Fire Spin
+- Bind
+- Rapid Spin

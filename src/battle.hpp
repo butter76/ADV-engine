@@ -92,6 +92,10 @@ struct EffectState {
   bool has_slot = false;   // Counter, Mirror Coat: something hit that can be answered
   uint16_t damage = 0;     // and twice what it dealt
   bool ending = false;     // Cloud Nine, Air Lock: the ability is on its way out
+  // A volatile tied to one on another Pokémon (Mean Look's `trapped` and its
+  // user's `trapper`): when the other leaves, this one goes.
+  Ref linked;
+  Condition linked_status = Condition::None;
   uint8_t target_side = 0; // the target, when it is a side
 };
 
@@ -153,8 +157,18 @@ struct Pokemon {
   Move switch_flag_move = Move::None;
   bool skip_pursuit = false;
   bool pursuit_activated = false;
+  bool truant_turn = false;
   bool item_knocked_off = false;
   bool used_item_this_turn = false;
+  bool transformed = false;
+  // Pokemon.attackedBy: the last hit taken from a Pokémon still on the field.
+  // In singles every entry of Showdown's list has the one source.
+  struct AttackedBy {
+    Ref source;
+    Move move = Move::None;
+    uint16_t damage = 0;
+    bool this_turn = false;
+  } attacked_by;
   uint8_t active_turns = 0, previously_switched_in = 0;
   Move last_move = Move::None, move_this_turn = Move::None;
   uint16_t last_damage = 0;
@@ -232,6 +246,7 @@ struct RequestMove {
   uint8_t pp = 0, maxpp = 0;
   Target target = Target::Normal;
   bool disabled = false;
+  bool disabled_source = false; // a refused choice wrote an empty disabledSource on it
 };
 
 // What a side was asked (Battle.getRequests), kept because making it changes
@@ -242,6 +257,10 @@ struct Request {
   uint8_t n_moves = 0;
   bool trapped = false, maybe_trapped = false, maybe_disabled = false, maybe_locked = false;
   bool no_cancel = false;
+  bool struggle = false; // no move can be used: the one listed is Struggle
+  // The Pokémon is locked into the one move listed, which is named with
+  // nothing else; Move::None there is the turn spent recharging.
+  bool locked = false;
   bool update = false; // sent again after a refused choice changed it
 };
 
@@ -251,6 +270,7 @@ struct Battle {
   Field field;
   Queue queue;
   std::array<Request, 2> requests{};
+  std::array<Move, 2> refused_move{}; // the disabled move a side was just refused
   uint16_t turn = 0;
   uint32_t effect_order = 0;
   RequestState request_state = RequestState::None;
@@ -266,6 +286,9 @@ struct Battle {
   std::array<Faint, 4> faint_queue{};
   uint8_t faints = 0;
   bool sent_requests = true;
+  // Showdown told a side, and it alone, that its Pokémon will Struggle; whatever
+  // writes the sides' lines clears it.
+  std::array<bool, 2> struggle_notice{};
   // Battle.activeMove, activePokemon and activeTarget: the move in use, as a
   // copy that its use may change.
   struct ActiveMove {
@@ -286,8 +309,20 @@ struct Battle {
     int8_t self_boosts_first = -1; // the stat its self boosts list first, if not the usual order
     Condition volatile_status = Condition::None;
     bool on_hit = false; // it still has its onHit
+    uint8_t magnitude = 0;     // Magnitude: what it drew
+    bool heals = false;        // Present: it heals a quarter in place of damage
+    uint8_t flinch_chance = 0; // King's Rock: a second secondary, to flinch
+    Effect source_effect; // what the move was used from: a move that called it, or `lockedmove`
+    // Beat Up: the Pokémon that still have a hit to give, by team index, and
+    // how many hits the move has.
+    std::array<uint8_t, TEAM_SIZE> allies{};
+    uint8_t n_allies = 0;
+    uint8_t hits = 0; // 0: as the move's data says
   };
   ActiveMove active_move;
+  // The last move another move had used (Sleep Talk's pick): a move's
+  // AfterMove is run for it.
+  Move called_move = Move::None;
   bool has_active_move = false;
   Ref active_pokemon, active_target;
   int8_t winner = -1; // 0 or 1 once the battle ends with one; 2: a tie

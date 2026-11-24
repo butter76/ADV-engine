@@ -37,7 +37,7 @@ inline constexpr Callback ON_FOE_MAYBE_TRAP_POKEMON = callback("Foe", "MaybeTrap
 inline double get_stat_spe(Ctx& c, Ref r) {
   const Pokemon& p = c.b.at(r);
   double stat = p.stored_stats.spe;
-  run_event_without_handlers(c, events::MODIFY_BOOST, on(r));
+  run_event(c, events::MODIFY_BOOST, on(r), {}, {}, relay::boosts({})); // only evasion is ever changed
   static constexpr double BOOST_TABLE[] = {1, 1.5, 2, 2.5, 3, 3.5, 4};
   const int boost = std::clamp(int(p.boosts.spe), -6, 6);
   stat = boost >= 0 ? std::floor(stat * BOOST_TABLE[boost]) : std::floor(stat / BOOST_TABLE[-boost]);
@@ -143,7 +143,9 @@ inline void cancel_action(Queue& q, Ref r) {
 
 // Pokemon.clearVolatile (pokemon.ts:1530). Setting the species again puts the
 // stored stats back and the speed to the stored Speed.
-inline void clear_volatile(Pokemon& p, bool include_switch_flags = true) {
+inline void clear_volatile(Ctx& c, Ref r, bool include_switch_flags = true) {
+  Pokemon& p = c.b.at(r);
+  remove_linked_volatiles(c, r);
   p.boosts = Boosts{};
   p.ability = p.base_ability;
   p.n_volatiles = 0;
@@ -151,6 +153,9 @@ inline void clear_volatile(Pokemon& p, bool include_switch_flags = true) {
     p.switch_flag = p.force_switch_flag = false;
     p.switch_flag_move = Move::None;
   }
+  p.last_move = p.move_this_turn = Move::None;
+  p.last_damage = 0;
+  p.attacked_by = {};
   p.newly_switched = true;
   p.being_called_back = false;
   set_species(p, p.base_species);
@@ -202,7 +207,7 @@ inline bool resolve_faints(Ctx& c, bool win_check) {
     if (b.sides[f.target.side].pokemon_left) b.sides[f.target.side].pokemon_left--;
     single_event(c, events::ON_END, effect(p.ability), &p.ability_state, on(f.target));
     single_event(c, events::ON_END, effect(p.item), &p.item_state, on(f.target));
-    clear_volatile(p, false);
+    clear_volatile(c, f.target, false);
     p.fainted = true;
     p.is_active = false;
     p.is_started = false;
@@ -337,7 +342,7 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
         // Pokemon.copyVolatileFrom (pokemon.ts): the boosts, and every
         // volatile that can be copied, in their order. A copy's effect
         // order is 0, since the Pokémon it is made for is not active yet.
-        clear_volatile(p);
+        clear_volatile(c, r);
         p.boosts = old.boosts;
         for (int i = 0; i < old.n_volatiles; i++) {
           const Volatile& v = old.volatiles[i];
@@ -346,13 +351,20 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
           copy = v;
           copy.state.effect_order = 0;
           copy.state.target_pokemon = r;
+          // A tie goes with the copy: the other end now names this Pokémon,
+          // and the one left behind has none.
+          if (v.state.linked && v.state.linked_status != Condition::None) {
+            if (Volatile* theirs = volatile_of(c.b.at(v.state.linked), v.state.linked_status)) theirs->state.linked = r;
+            old.volatiles[i].state.linked = Ref{};
+            old.volatiles[i].state.linked_status = Condition::None;
+          }
         }
-        clear_volatile(old);
+        clear_volatile(c, old_ref);
         for (int i = 0; i < p.n_volatiles; i++) {
           if (has(effect(p.volatiles[i].id), callback("", "Copy"))) unported("a volatile's onCopy");
         }
       }
-      clear_volatile(old);
+      clear_volatile(c, old_ref);
       }
     }
     old.is_active = false;
@@ -369,6 +381,7 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
   p.is_active = true;
   side.active = r.index;
   p.active_turns = 0;
+  p.active_move_actions = 0;
   for (MoveSlot& slot : p.move_slots) slot.used = false;
   // In Gen 3 an item knocked off is lost again at every switch-in.
   if (p.item_knocked_off && p.item != Item::None) unported("a Pokémon that lost its item to Knock Off holding one again");
@@ -417,9 +430,15 @@ inline void run_switch(Ctx& c, Ref r) {
 inline Request get_move_request_data(Ctx& c, Ref r) {
   Pokemon& p = c.b.at(r);
   Request request{.kind = Request::Kind::Move};
-  // getLockedMove (pokemon.ts:970): a priority event, ended by any return.
-  if (run_event(c, events::LOCK_MOVE, on(r), {}, {}, relay::undefined, false, true) != relay::yes) {
-    unported("a locked move");
+  // A Pokémon locked into a move is shown that move alone, by name, and is
+  // trapped: the flag stays on it for the turn.
+  if (const LockedMove locked = get_locked_move(c, r); locked.locked) {
+    p.trapped = Trapped::Yes;
+    p.maybe_disabled = p.maybe_locked = p.maybe_trapped = false;
+    request.locked = request.trapped = true;
+    request.n_moves = 1;
+    request.moves[0] = {locked.move, 0, 0, Target::Normal, false};
+    return request;
   }
   const bool can_switch_in = can_switch(c.b, r.side) > 0;
   bool has_valid_move = false;
@@ -435,7 +454,12 @@ inline Request get_move_request_data(Ctx& c, Ref r) {
     has_valid_move |= !disabled;
     request.moves[request.n_moves++] = {slot.id, slot.pp, slot.maxpp, target, disabled};
   }
-  if (!has_valid_move) unported("a request with only Struggle");
+  if (!has_valid_move) {
+    // With nothing to use, the one move listed is Struggle.
+    request.n_moves = 1;
+    request.moves[0] = {Move::Struggle, 0, 0, Target::RandomNormal, false};
+    request.struggle = true;
+  }
   p.maybe_locked = p.maybe_locked || p.maybe_disabled;
   request.maybe_disabled = p.maybe_disabled;
   request.maybe_locked = p.maybe_locked;
@@ -559,6 +583,9 @@ inline void end_turn(Ctx& c) {
       }
     }
     if (p.fainted) continue;
+    // A hit is forgotten once the Pokémon that dealt it has left.
+    if (p.attacked_by.source && b.at(p.attacked_by.source).is_active) p.attacked_by.this_turn = false;
+    else p.attacked_by = {};
     p.active_turns++;
   }
   for (Side& side : b.sides) {
@@ -818,18 +845,54 @@ inline Refusal choose_move(Ctx& c, int s, int slot) {
   // chooseMove makes the request's data again, and asks twice more whether
   // the Pokémon is locked into a move.
   const Request request = get_move_request_data(c, r);
-  // A default choice is the first move that is not disabled.
+  // Pokemon.getMoves() with nothing held back: a move disabled in secret
+  // (Imprison) is disabled here, though the request did not say so.
+  Pokemon& p = b.at(r);
+  const auto usable = [&](Move id) {
+    for (int i = 0; i < p.moves; i++) {
+      if (p.move_slots[i].id == id) return p.move_slots[i].pp > 0 && p.move_slots[i].disabled == Disabled::No;
+    }
+    return false;
+  };
+  bool any_usable = false;
+  for (int i = 0; i < p.moves; i++) any_usable |= usable(p.move_slots[i].id);
+  // A default choice is the first move that is not disabled, in the request
+  // or in truth.
   for (int i = 0; slot < 0 && i < request.n_moves; i++) {
-    if (!request.moves[i].disabled) slot = i;
+    if (request.moves[i].disabled) continue;
+    if (any_usable && !request.locked && !request.struggle && !usable(request.moves[i].id)) continue;
+    slot = i;
   }
   if (slot < 0 || slot >= request.n_moves) unported("a move the Pokémon does not have");
-  for (int i = 0; i < 2; i++) {
-    if (run_event(c, events::LOCK_MOVE, on(r), {}, {}, relay::undefined, false, true) != relay::yes) unported("a locked move");
+  Move chosen = request.moves[slot].id;
+  bool struggle = request.struggle;
+  if (request.locked) {
+    // The locked move, whatever its PP.
+  } else if (!any_usable) {
+    // With nothing usable in truth the Pokémon struggles, and its side is
+    // told so.
+    chosen = Move::Struggle;
+    struggle = true;
+    if (p.maybe_locked) side.choice.cant_undo = true;
+  } else if (request.moves[slot].disabled) {
+    unported("a disabled move chosen");
+  } else if (!usable(chosen)) {
+    // Refused. The request is corrected (updateDisabledRequest and the
+    // move's own entry), and sent again if that changed anything.
+    Request& sent = b.requests[s];
+    bool updated = false;
+    if (p.maybe_locked) p.maybe_locked = sent.maybe_locked = false, updated = true;
+    if (!sent.moves[slot].disabled) sent.moves[slot].disabled = true, updated = true;
+    if (!sent.moves[slot].disabled_source) sent.moves[slot].disabled_source = true, updated = true;
+    if (updated) sent.update = true;
+    side.choice.error = true;
+    b.refused_move[size_t(s)] = chosen;
+    return updated ? Refusal::Unavailable : Refusal::Invalid;
   }
-  if (request.moves[slot].disabled) unported("a disabled move chosen");
   side.choice.action = ChoiceState::Kind::Move;
-  side.choice.move = request.moves[slot].id;
-  if (b.at(r).maybe_disabled) side.choice.cant_undo = true;
+  side.choice.move = chosen;
+  b.struggle_notice[size_t(s)] = struggle;
+  if (p.maybe_disabled) side.choice.cant_undo = true;
   if (is_choice_done(b, 0) && is_choice_done(b, 1)) commit_choices(c);
   return Refusal::None;
 }

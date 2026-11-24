@@ -1,9 +1,11 @@
 // Records seeded Showdown games for the engine to replay: every draw, every
 // choice, and everything Showdown sent (the format is in tools/lib.cjs).
 //
-// Usage: SHOWDOWN=... node tools/trace.cjs --teams DIR [--games N] [--first K]
+// Usage: SHOWDOWN=... node tools/trace.cjs --teams DIR|random [--games N] [--first K]
 //                                          [--format ID] [--out FILE] [--sites 1] [--brief 1]
 //
+// --teams random gives each side six Pokémon of anything Gen 3 has, legal or
+// not, in place of teams from files.
 // --brief 1 writes the games, teams, draws and choices alone, without what
 // Showdown sent: enough to replay the draws, and small enough to keep in git.
 // The digest is of the full trace either way.
@@ -19,7 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const {showdown, loadTeams, lcg, record, gen5, COMMIT} = require('./lib.cjs');
+const {showdown, loadTeams, randomTeam, lcg, record, gen5, COMMIT} = require('./lib.cjs');
 
 const opts = {games: 100, first: 1, format: 'gen3ou', out: '', sites: '', brief: '', opening: '', turns: 0, choices: ''};
 for (let i = 2; i < process.argv.length; i += 2) opts[process.argv[i].slice(2)] = process.argv[i + 1];
@@ -27,7 +29,7 @@ opts.games = +opts.games;
 opts.first = +opts.first;
 
 const S = showdown();
-const teams = loadTeams(S.Teams, opts.teams);
+const teams = opts.teams === 'random' ? null : loadTeams(S.Teams, opts.teams);
 
 // A draw's call site, for reading a trace by eye: the first frame above the PRNG.
 const site = () => {
@@ -55,7 +57,7 @@ let updates = 0, turns = 0, lines = 0, bytes = 0, draws = 0;
 for (let g = opts.first; g < opts.first + opts.games; g++) {
   // The seed of game g, and the generator its teams and choices come from.
   const rnd = lcg(Math.imul(g, 0x9E3779B1) ^ 0x2026);
-  const pair = [teams[rnd(teams.length)], teams[rnd(teams.length)]];
+  const pair = teams ? [teams[rnd(teams.length)], teams[rnd(teams.length)]] : [randomTeam(S, rnd), randomTeam(S, rnd)];
   const seed = gen5(BigInt.asUintN(64, BigInt(g) * 0x9E3779B97F4A7C15n));
   const game = record(S, {format: opts.format, seed, teams: pair, rnd, site: opts.sites ? site : null, turns: +opts.turns, choices: opts.choices});
   const text = game.lines.join('\n') + '\n';

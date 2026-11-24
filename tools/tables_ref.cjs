@@ -53,7 +53,9 @@ const condition = (cid, holder, c) => lines.push(['condition', cid, holder,
   holder === 'standalone' ? c.effectType.toLowerCase() : 'condition', c.duration || 0, c.counterMax || 0, bit(c.noCopy),
   bit(c.affectsFainted)].join(' '));
 for (const cid of Object.keys(dex.data.Conditions)) condition(cid, 'standalone', dex.conditions.get(cid));
-for (const m of dex.moves.all().filter(legal)) if (m.condition) condition(m.id, 'move', m.condition);
+// A move that charges has a volatile under its own id whether or not it has a
+// condition written out: the one that says it has charged.
+for (const m of dex.moves.all().filter(legal)) if (m.condition || m.flags.charge) condition(m.id, 'move', m.condition || {});
 for (const a of dex.abilities.all().filter(legal)) if (a.condition) condition(a.id, 'ability', a.condition);
 
 const types = dex.types.all().filter(t => t.exists && t.gen <= 3 && !t.isNonstandard);

@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "events.hpp"
+#include "setup.hpp"
 
 namespace adv {
 
@@ -230,8 +231,12 @@ inline Relay boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, Effect e
       success = true;
       if (effect) {
         if (effect.kind == EffectKind::Move) {
-          if (Move(effect.id) == Move::BellyDrum) unported("a boost from Belly Drum");
-          add(c, line);
+          if (Move(effect.id) == Move::BellyDrum) {
+            add(c, {part::text("-setboost"), part::pokemon(c.b, target), part::text("atk"), part::number(p.boosts.atk),
+                    part::from(effect)});
+          } else {
+            add(c, line);
+          }
         } else if (effect.kind == EffectKind::Item) {
           c.out.log.push_back(Line{});
           Line& l = c.out.log.back();
@@ -311,9 +316,14 @@ inline double damage(Ctx& c, double amount) {
     if (!p.hp) faint(c, target, source, effect);
   }
   if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Rule) unported("damage from a move outside its hit");
-  if (effect.kind == EffectKind::Condition &&
-      (Condition(effect.id) == Condition::Partiallytrapped || Condition(effect.id) == Condition::Confusion)) {
-    unported("damage from binding or confusion");
+  if (effect == adv::effect(Condition::Partiallytrapped)) {
+    // Named for the move that binds.
+    Effect by{};
+    for (int i = 0; i < p.n_volatiles; i++) {
+      if (p.volatiles[i].id == Condition::Partiallytrapped) by = p.volatiles[i].state.source_effect;
+    }
+    add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target), part::from(by), part::text("[partiallytrapped]")});
+    return dealt;
   }
   if (source && (source != target || effect.kind == EffectKind::Ability)) {
     add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target), part::from(effect), part::of(c.b, source)});
@@ -354,6 +364,15 @@ inline void direct_damage(Ctx& c, double amount) {
   p.hp = uint16_t(p.hp - dealt);
   if (!p.hp) faint(c, target, c.event.source, c.effect);
   add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target)});
+}
+
+// Battle.directDamage(amount, target, source) from a handler.
+inline void direct_damage(Ctx& c, double amount, Ref target, Ref source) {
+  const auto event = c.event;
+  c.event.target = on(target);
+  c.event.source = source;
+  direct_damage(c, amount);
+  c.event = event;
 }
 
 // Battle.heal (battle.ts) from a handler, with the same target, source and
@@ -416,19 +435,24 @@ inline void compact_volatiles(Pokemon& p) {
 
 // Pokemon.addVolatile(status) from a handler: the source is the event's, or
 // the Pokémon itself, and the source effect the handler's own.
-inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}, Effect source_effect = {}) {
+inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}, Effect source_effect = {}, Condition linked = Condition::None);
+// What Pokemon.addVolatile returned: a handler's null (an ability that
+// refuses the volatile) is not the false that makes a move fail.
+inline Relay add_volatile_result(Ctx& c, Ref r, Condition id, Ref source = {}, Effect source_effect = {}, Condition linked = Condition::None) {
   Pokemon& p = c.b.at(r);
-  if (!p.hp && !data(id).affects_fainted) return false;
+  if (!p.hp && !data(id).affects_fainted) return relay::no;
+  if (linked != Condition::None && source && !c.b.at(source).hp) return relay::no;
   if (!source) source = c.event.source;
   if (!source_effect) source_effect = c.effect;
   if (!source) source = r;
   if (Volatile* v = volatile_of(p, id)) {
-    if (!has(effect(id), ON_RESTART)) return false;
-    return single_event(c, ON_RESTART, effect(id), &v->state, on(r), source, source_effect).truthy();
+    if (!has(effect(id), ON_RESTART)) return relay::no;
+    return single_event(c, ON_RESTART, effect(id), &v->state, on(r), source, source_effect);
   }
-  if (!run_status_immunity(c, r, CONDITION_NAMES[uint8_t(id)].id)) return false;
-  if (!run_event(c, TRY_ADD_VOLATILE, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(id)].id)).truthy()) {
-    return false;
+  if (!run_status_immunity(c, r, CONDITION_NAMES[uint8_t(id)].id)) return relay::no;
+  if (const Relay tried = run_event(c, TRY_ADD_VOLATILE, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(id)].id));
+      !tried.truthy()) {
+    return tried;
   }
   if (p.n_volatiles == p.volatiles.size()) unported("more than eight volatiles");
   Volatile& v = p.volatiles[p.n_volatiles++];
@@ -441,22 +465,64 @@ inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}, Effect so
     // durationCallback(target, source, sourceEffect), which often draws.
     v.state.duration = uint8_t(call(c, {effect(id), Callback::durationCallback}, relay::undefined, on(r), source, source_effect).number);
   }
-  if (!single_event(c, ON_START, effect(id), &v.state, on(r), source, source_effect).truthy()) {
+  if (const Relay started = single_event(c, ON_START, effect(id), &v.state, on(r), source, source_effect); !started.truthy()) {
     if (Volatile* added = volatile_of(p, id)) added->id = Condition::None;
-    return false;
+    return started;
   }
-  return true;
+  // The source gets the linked volatile, and each names the other.
+  if (linked != Condition::None && source) {
+    if (!volatile_of(c.b.at(source), linked)) {
+      add_volatile(c, source, linked, r, source_effect);
+    } else {
+      unported("a second Pokémon linked to one volatile");
+    }
+    if (Volatile* theirs = volatile_of(c.b.at(source), linked)) {
+      theirs->state.linked = r;
+      theirs->state.linked_status = id;
+    }
+    if (Volatile* mine = volatile_of(c.b.at(r), id)) {
+      mine->state.linked = source;
+      mine->state.linked_status = linked;
+    }
+  }
+  return relay::yes;
+}
+// Pokemon.addVolatile(status) from a handler: the source is the event's, or
+// the Pokémon itself, and the source effect the handler's own.
+inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source, Effect source_effect, Condition linked) {
+  return add_volatile_result(c, r, id, source, source_effect, linked).truthy();
 }
 
-// Pokemon.removeVolatile.
+// Pokemon.removeVolatile, with removeLinkedVolatiles for what it was tied to.
 inline bool remove_volatile(Ctx& c, Ref r, Condition id) {
   Pokemon& p = c.b.at(r);
   if (!p.hp) return false;
   Volatile* v = volatile_of(p, id);
   if (!v) return false;
+  const Ref linked = v->state.linked;
+  const Condition linked_status = v->state.linked_status;
   single_event(c, ON_VOLATILE_END, effect(id), &v->state, on(r));
   if (Volatile* still = volatile_of(p, id)) still->id = Condition::None;
+  if (linked && linked_status != Condition::None) {
+    if (Volatile* theirs = volatile_of(c.b.at(linked), linked_status); theirs && theirs->state.linked == r) {
+      theirs->state.linked = Ref{};
+      remove_volatile(c, linked, linked_status);
+    }
+  }
   return true;
+}
+// What Pokemon.clearVolatile does first: the volatiles tied to this
+// Pokémon's are removed from the others.
+inline void remove_linked_volatiles(Ctx& c, Ref r) {
+  Pokemon& p = c.b.at(r);
+  for (int i = 0; i < p.n_volatiles; i++) {
+    const Volatile& v = p.volatiles[i];
+    if (v.id == Condition::None || !v.state.linked || v.state.linked_status == Condition::None) continue;
+    if (Volatile* theirs = volatile_of(c.b.at(v.state.linked), v.state.linked_status); theirs && theirs->state.linked == r) {
+      theirs->state.linked = Ref{};
+      remove_volatile(c, v.state.linked, v.state.linked_status);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +547,33 @@ inline bool eat_item(Ctx& c, Ref r) {
   p.item_state = EffectState{};
   p.used_item_this_turn = true;
   return true;
+}
+
+// Pokemon.useItem() from a handler: an item that is not eaten.
+inline bool use_item(Ctx& c, Ref r) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp || !p.is_active || p.item == Item::None) return false;
+  const Effect source_effect = c.effect;
+  const Ref source = c.event.target.kind == HolderKind::Pokemon ? c.event.target.pokemon : Ref{};
+  const Effect item = effect(p.item);
+  if (source_effect.kind == EffectKind::Item && source_effect && source_effect != item && source == r) return false;
+  // Nothing listens for UseItem or AfterUseItem in Gen 3, and no item has
+  // stat changes of its own.
+  add(c, {part::text("-enditem"), part::pokemon(c.b, r), part::item(p.item)});
+  single_event(c, callback("", "Use"), item, &p.item_state, on(r), source, source_effect);
+  p.item = Item::None;
+  p.item_state = EffectState{};
+  p.used_item_this_turn = true;
+  return true;
+}
+
+// Pokemon.formeChange (pokemon.ts:1449) by an ability, for the time being:
+// the species, its types and stats, and the line.
+inline void forme_change(Ctx& c, Ref r, Species species, Ability by) {
+  Pokemon& p = c.b.at(r);
+  set_species(p, species);
+  add(c, {part::text("-formechange"), part::pokemon(c.b, r), part::text(SPECIES_NAMES[uint16_t(species)].name), part::text("[msg]"),
+          part::from(effect(by))});
 }
 
 // ---------------------------------------------------------------------------
@@ -663,12 +756,19 @@ inline bool cure_status(Ctx& c, Ref r, bool silent = false) {
   if (!p.hp || p.status == Condition::None) return false;
   add(c, {part::text("-curestatus"), part::pokemon(c.b, r), part::text(CONDITION_NAMES[uint8_t(p.status)].id),
           part::text(silent ? "[silent]" : "[msg]")});
+  // Waking ends a Nightmare.
+  if (p.status == Condition::Slp && remove_volatile(c, r, Condition::Nightmare)) {
+    add(c, {part::text("-end"), part::pokemon(c.b, r), part::text("Nightmare"), part::text("[silent]")});
+  }
   set_status(c, r, Condition::None);
   return true;
 }
 inline bool clear_status(Ctx& c, Ref r) {
   Pokemon& p = c.b.at(r);
   if (!p.hp || p.status == Condition::None) return false;
+  if (p.status == Condition::Slp && remove_volatile(c, r, Condition::Nightmare)) {
+    add(c, {part::text("-end"), part::pokemon(c.b, r), part::text("Nightmare"), part::text("[silent]")});
+  }
   set_status(c, r, Condition::None);
   return true;
 }

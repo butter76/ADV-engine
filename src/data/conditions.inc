@@ -36,11 +36,13 @@
   {.holder = Holder::Standalone, .kind = ConditionKind::Condition}, // zacian
   {.holder = Holder::Standalone, .kind = ConditionKind::Condition}, // zamazenta
   {.holder = Holder::Standalone, .kind = ConditionKind::Condition, .duration = 2}, // rolloutstorage
+  {.holder = Holder::Move}, // razorwind
   {.holder = Holder::Move, .duration = 2}, // fly
   {.holder = Holder::Move, .no_copy = true}, // disable
   {.holder = Holder::Move, .duration = 5}, // mist
   {.holder = Holder::Move, .duration = 1, .no_copy = true}, // counter
   {.holder = Holder::Move}, // leechseed
+  {.holder = Holder::Move}, // solarbeam
   {.holder = Holder::Move, .duration = 2}, // dig
   {.holder = Holder::Move, .duration = 1, .no_copy = true}, // toxic
   {.holder = Holder::Move}, // rage
@@ -50,6 +52,8 @@
   {.holder = Holder::Move, .duration = 5}, // reflect
   {.holder = Holder::Move}, // focusenergy
   {.holder = Holder::Move, .duration = 3}, // bide
+  {.holder = Holder::Move}, // skullbash
+  {.holder = Holder::Move}, // skyattack
   {.holder = Holder::Move}, // substitute
   {.holder = Holder::Move, .no_copy = true}, // nightmare
   {.holder = Holder::Move}, // curse

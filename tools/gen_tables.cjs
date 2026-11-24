@@ -47,11 +47,13 @@ const typeNames = [...new Set([...plain.type.map(t => t.name), ...moves.map(m =>
 const types = typeNames.map(name => ({id: toID(name) || 'unknown', name, ident: ident(name)}));
 
 // Conditions: the standalone ones, then those a move or an ability carries
-// under its own id.
+// under its own id. A move that charges has one with nothing in it: the
+// volatile that says it has charged.
 const conditions = plain.condition.map(c => ({...c, ident: ident(c.id), holder: 'Standalone'}));
 for (const [kind, list] of [['Move', moves], ['Ability', abilities]]) {
   for (const e of list) {
-    if (!e.condition && !callbacks.some(c => c.kind === kind.toLowerCase() && c.id === e.id && c.path.startsWith('condition.'))) continue;
+    const charges = kind === 'Move' && e.flags && e.flags.charge;
+    if (!e.condition && !charges && !callbacks.some(c => c.kind === kind.toLowerCase() && c.id === e.id && c.path.startsWith('condition.'))) continue;
     conditions.push({...(e.condition || {}), id: e.id, name: e.name, ident: ident(e.name), holder: kind});
   }
 }
