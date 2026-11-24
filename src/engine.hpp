@@ -75,6 +75,11 @@ inline Action resolve_action(Ctx& c, Action a) {
     // Battle.getActionSpeed for a move: its priority, which no plain move
     // and nothing in Gen 3 changes (ModifyPriority, FractionalPriority).
     if (has(effect(a.move), callback("", "ModifyPriority"))) unported("a move's onModifyPriority");
+    // A move with a beforeTurnCallback or a priorityChargeCallback queues an
+    // action of its own ahead of the turn's moves.
+    if (has(effect(a.move), Callback::beforeTurnCallback)) {
+      unported("a move that acts before the turn: " + std::string(MOVE_NAMES[uint16_t(a.move)].id));
+    }
     a.priority = data(a.move).priority;
     break;
   }
@@ -208,11 +213,7 @@ inline bool resolve_faints(Ctx& c) {
 inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> targets = {}) {
   const bool residual = e.id == "Residual", switch_in = e.id == "SwitchIn";
   Listeners handlers;
-  const int first_field = handlers.n;
-  find_field_event_handlers(c, e.field, handlers);
-  if (residual && c.b.field.weather_state.duration && handlers.n == first_field) {
-    unported("a weather's duration running down");
-  }
+  find_field_event_handlers(c, e.field, handlers, FIELD, residual);
   for (uint8_t s = 0; s < 2; s++) {
     // The side's conditions under onSide<Event> would be gathered here.
     const Side& side = c.b.sides[s];
@@ -220,7 +221,7 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
     const Ref active{s, side.active};
     if (switch_in) find_pokemon_event_handlers(c, active, e.any, handlers);
     if (!targets.empty() && std::find(targets.begin(), targets.end(), active) == targets.end()) continue;
-    find_pokemon_event_handlers(c, active, e.on, handlers);
+    find_pokemon_event_handlers(c, active, e.on, handlers, {}, residual);
     // Then the side's conditions under on<Event>, held by the Pokémon.
     find_field_event_handlers(c, e.on, handlers, on(active));
     find_battle_event_handlers(c, e.on, handlers, on(active));
@@ -229,9 +230,31 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
   for (int i = 0; i < handlers.n; i++) {
     const Listener& h = handlers.list[i];
     if (h.holder.kind == HolderKind::Pokemon && c.b.at(h.holder.pokemon).fainted) continue;
-    if (residual && h.state && h.state->duration) unported("an effect's duration running down");
-    // Showdown skips a handler whose effect was replaced since the handlers
-    // were gathered; nothing replaces an ability or an item yet.
+    const Effect he = h.callback.effect;
+    if (residual && h.ends && h.state && h.state->duration) {
+      h.state->duration--;
+      if (!h.state->duration) {
+        // The effect ends: a volatile is removed, the weather cleared.
+        if (h.is_volatile) {
+          if (Volatile* v = volatile_of(c.b.at(h.holder.pokemon), Condition(he.id)); v && &v->state == h.state) {
+            remove_volatile(c, h.holder.pokemon, Condition(he.id));
+          }
+        } else if (h.state == &c.b.field.weather_state) {
+          clear_weather(c);
+        } else {
+          unported("an effect other than a volatile or the weather running out");
+        }
+        if (c.b.ended) return;
+        continue;
+      }
+    }
+    // A handler whose effect is gone since the handlers were gathered is
+    // skipped. Only volatiles are removed so far.
+    if (h.is_volatile) {
+      const Volatile* v = volatile_of(c.b.at(h.holder.pokemon), Condition(he.id));
+      if (!v || &v->state != h.state) continue;
+    }
+    if (!h.callback) continue;
     Callback name = e.on;
     if (h.holder.kind == HolderKind::Side) name = e.side;
     if (h.holder.kind == HolderKind::Field) name = e.field;
@@ -477,6 +500,9 @@ inline void end_turn(Ctx& c) {
     if (p.fainted) continue;
     p.active_turns++;
   }
+  for (Side& side : b.sides) {
+    for (int i = 0; i < side.size; i++) compact_volatiles(side.pokemon[i]);
+  }
   // maybeTriggerEndlessBattleClause (battle.ts) does nothing through turn 100.
   if (b.turn > 100) unported("turn 101");
   add(c, {part::text("turn"), part::number(b.turn)});
@@ -492,12 +518,13 @@ inline void check_fainted(Ctx& c) {
     if (side.active == 0xFF || !can_switch(c.b, s)) continue;
     Pokemon& p = side.pokemon[side.active];
     if (!p.fainted) continue;
+    // One whose switch is already queued is left alone.
+    bool queued = false;
     for (int i = 0; i < c.b.queue.size; i++) {
       const Action& a = c.b.queue.list[i];
-      if ((a.choice == Choice::Switch || a.choice == Choice::InstaSwitch) && a.pokemon == Ref{uint8_t(s), side.active}) {
-        unported("a fainted Pokémon with a switch still queued");
-      }
+      queued |= (a.choice == Choice::Switch || a.choice == Choice::InstaSwitch) && a.pokemon == Ref{uint8_t(s), side.active};
     }
+    if (queued) continue;
     p.status_fnt = true;
     p.switch_flag = true;
   }

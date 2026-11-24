@@ -45,6 +45,8 @@ add_test(NAME replay_openings COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/
 add_test(NAME replay_switches COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/switch-30.trace)
 # 20 games of 40 turns in which both players use only plain damaging moves, or switch.
 add_test(NAME replay_plain_moves COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/plain-20.trace)
+# 60 games of 12 turns with any choice at all; most stop at a move not ported yet.
+add_test(NAME replay_any COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/any-60.trace)
 
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)

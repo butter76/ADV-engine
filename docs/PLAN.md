@@ -6,11 +6,13 @@ pkmn.ai's ladder runs). Given the same seed, teams and choices it must make
 the same random draws in the same order and write the same log and the same
 requests, bugs included.
 
-Status (2026-11-23): step 1 of "Order of work" is done, and step 2: a
-skeleton plays whole games on a restricted set. Both players can switch and
-use the 44 plain damaging moves (power, a type, one target, nothing else),
-with the abilities and items that take part in a hit. Step 3, widening the
-set to every move, is next.
+Status (2026-11-23): steps 1 and 2 of "Order of work" are done and step 3,
+widening to every move, is under way. A move on one target, on its user or
+on the field can be used, with its own handlers, its secondary effect, and
+the stat changes, healing, status and weather it gives. The six statuses and
+flinching are in. Over 500 recorded games with any choice at all, 70,570
+lines compare equal and none differ; 8 run their 20 turns and the rest stop
+at something not ported.
 
 ## What was measured
 
@@ -133,6 +135,7 @@ What is tested today (`ctest`, no Node needed):
 | `replay_openings` | 200 games up to the first choice, line for line |
 | `replay_switches` | 30 games of 30 turns in which both players switch whenever they can; 9 run to the end and 21 stop at something unported, with no line different before |
 | `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches, line for line until each ends or stops |
+| `replay_any` | 60 games of 12 turns with any choice at all, line for line until each ends or stops |
 | `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
@@ -166,7 +169,17 @@ What is tested today (`ctest`, no Node needed):
       games of up to 99 turns, 334,838 lines compared and equal, none
       different; 117 run to the end and the rest stop where a Pokémon has
       only an unported move left.
-3. Widen the set by how often things occur, to the whole checklist.
+3. Widen the set by how often things occur, to the whole checklist. In
+   batches, by what stops the most recorded games:
+   1. ~~Moves with handlers of their own, secondary effects and what a move
+      does to its user, the statuses, flinching, Hidden Power, stat-changing
+      and healing moves, recoil, draining, fixed damage, Explosion, Rest,
+      Refresh, Curse without a Ghost, the weather moves.~~ Done.
+   2. Next, by games stopped of 500: Roar (70), Focus Punch (60),
+      Substitute (36), Protect (36), Spikes (35), Brick Break (34), Rapid
+      Spin (30), Baton Pass (29), Leech Seed (22), Pursuit (22), Wish (19).
+      They need forced switches, actions before the turn's moves, side
+      conditions, and Substitute.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
 6. Olympus reads the engine's player stream (a separate change in olympus).
@@ -234,17 +247,19 @@ numbers are in `sim/` at the pinned commit.
 - **A test passes when no line differs**, however early its games stop. The
   count of games that run to the end is printed, not required; that has to
   change once moves are in.
-- **Unported and reached by the recorded games:** every move that is not
-  plain, Struggle, Trace, Cloud Nine, Truant, King's Rock, eating a berry,
-  the statuses a contact ability gives, anything past turn 100.
-- **Not modelled yet, and marked in the code:** side conditions, statuses,
-  the check that skips a handler whose effect was replaced after gathering,
-  effects whose duration counts down, and the record of who attacked whom
-  (`attackedBy`, for Counter and its kind).
-- **A plain move skips its own handlers.** `useMoveInner` and `tryMoveHit`
-  call the move's own `onModifyMove`, `onTryMove`, `onPrepareHit`, `onTry`,
-  `onTryHit`, `onHit` and so on; a plain move has none, so those calls are
-  comments in `src/moves.hpp` until moves with handlers are ported.
+- **Unported and reached by the recorded games:** the moves listed under
+  step 3, Struggle, confusion, Trace, Cloud Nine, Truant, King's Rock,
+  eating a berry, anything past turn 100.
+- **Not modelled yet, and marked in the code:** side conditions, the check
+  that skips a handler whose effect was replaced after gathering (done for
+  volatiles only), and the record of who attacked whom (`attackedBy`, for
+  Counter and its kind).
+- **Shield Dust's filter is a stand-in.** `ModifySecondaries` passes a list
+  in Showdown; the engine has one secondary a move, and the handler answers
+  false for "only what has a `self` is kept".
+- **A handler in a move's secondary is not reachable.** Three moves have one
+  (Rapid Spin, Baton Pass, Tri Attack); they are refused until the handler
+  table carries them.
 - **No teams of its own.** The tools take `--teams DIR`; so far that has been
   hoenn's `teams/ou`. The random-legal and random-anything environments do
   not exist yet, and they are what will reach the 62% OU does not.

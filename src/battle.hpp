@@ -67,6 +67,7 @@ constexpr Effect effect(Ability a) { return {EffectKind::Ability, uint16_t(a)}; 
 constexpr Effect effect(Item i) { return {EffectKind::Item, uint16_t(i)}; }
 constexpr Effect effect(Condition c) { return {EffectKind::Condition, uint16_t(c)}; }
 constexpr Effect effect(Rule r) { return {EffectKind::Rule, uint16_t(r)}; }
+constexpr Effect effect(Special s) { return {EffectKind::Special, uint16_t(s)}; }
 
 // What an effect's state is the state of, once it has run a handler
 // (runEvent sets `effectState.target` to the handler's holder).
@@ -81,6 +82,9 @@ struct EffectState {
   Ref source;
   Effect source_effect;
   Move move = Move::None; // Choice lock: the move locked into
+  int8_t time = 0;         // sleep, confusion: turns left
+  int8_t skipped_time = 0; // sleep: turns slept through with a move usable asleep
+  int8_t stage = 0;        // toxic poison: sixteenths of damage
 };
 
 // A volatile of a Pokémon (Pokemon.volatiles), kept in the order they were
@@ -248,6 +252,13 @@ struct Battle {
     bool crit = false;   // moveHitData of the one target
     int8_t type_mod = 0;
     uint16_t total_damage = 0;
+    bool self_dropped = false; // its stat changes to its user were applied
+    // What a handler may change of the move's data.
+    uint8_t secondary_chance = 0;
+    Boosts self_boosts;
+    int8_t self_boosts_first = -1; // the stat its self boosts list first, if not the usual order
+    Condition volatile_status = Condition::None;
+    bool on_hit = false; // it still has its onHit
   };
   ActiveMove active_move;
   bool has_active_move = false;

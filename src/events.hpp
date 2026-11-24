@@ -36,6 +36,13 @@ inline constexpr std::string_view BOOST_NAMES[BOOST_STATS] = {"atk", "def", "spa
 struct SparseBoosts {
   std::array<int8_t, BOOST_STATS> value{};
   uint8_t present = 0;
+  // A stat that comes before the others (Curse lists Speed first); -1: none.
+  int8_t first = -1;
+  // The stat in place i of the table's order.
+  constexpr int at(int i) const {
+    if (first < 0) return i;
+    return i == 0 ? first : i <= first ? i - 1 : i;
+  }
   constexpr bool has(int stat) const { return present >> stat & 1; }
   constexpr void set(int stat, int v) { value[size_t(stat)] = int8_t(v), present |= uint8_t(1 << stat); }
   constexpr void remove(int stat) { value[size_t(stat)] = 0, present &= uint8_t(~(1 << stat)); }
@@ -197,6 +204,7 @@ inline bool suppressing_weather(const Battle& b) {
 inline Relay call(Ctx& c, Found f, Relay value, Subject t, Ref source, Effect source_effect) {
   const detail::Entry* entry = detail::entry(f.effect, f.actual);
   if (!entry || !entry->fn) {
+    if (f.effect.kind == EffectKind::Special) unported("a handler of a made-up effect");
     static constexpr const Name* NAMES[] = {MOVE_NAMES, ABILITY_NAMES, ITEM_NAMES, CONDITION_NAMES, RULE_NAMES};
     static constexpr const char* KIND[] = {"move", "ability", "item", "condition", "rule"};
     unported(std::string(KIND[uint8_t(f.effect.kind)]) + " " +
@@ -214,6 +222,7 @@ constexpr EffectType type_of(Effect e) {
   case EffectKind::Ability: return EffectType::Ability;
   case EffectKind::Item: return EffectType::Item;
   case EffectKind::Rule: return EffectType::Rule;
+  case EffectKind::Special: return EffectType::Condition;
   case EffectKind::Condition: break;
   }
   switch (CONDITION_DATA[e.id].kind) {
@@ -234,6 +243,8 @@ struct Listener {
   double speed = 0;
   int32_t sub_order = 0;
   uint32_t effect_order = 0;
+  bool ends = false;      // Showdown's `end`: the effect can be ended when its duration runs out
+  bool is_volatile = false;
 };
 struct Listeners {
   std::array<Listener, 24> list;
@@ -334,29 +345,42 @@ inline Listener resolve_priority(Ctx& c, Listener l, Callback name) {
 // Battle.findPokemonEventHandlers (battle.ts:1111): the status, the
 // volatiles in the order they were added, the ability, the item, the
 // species, the slot conditions.
-inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners& out, Subject holder = {}) {
+// With `by_duration` (fieldEvent's Residual) an effect that has a duration is
+// gathered whether or not it has the handler.
+inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners& out, Subject holder = {},
+                                        bool by_duration = false) {
   if (name == NO_CALLBACK) return;
   Pokemon& p = c.b.at(r);
   if (holder.kind == HolderKind::None) holder = on(r);
-  const auto add = [&](Effect e, EffectState* state) {
-    if (const Found f = get_callback(c.b, true, e, name)) out.push(resolve_priority(c, {f, state, holder}, name));
+  const auto add = [&](Effect e, EffectState* state, bool is_volatile) {
+    if (!e) return; // none, or a volatile that was removed
+    const Found f = get_callback(c.b, true, e, name);
+    if (!f && !(by_duration && state->duration)) return;
+    Listener l = resolve_priority(c, {{e, f.actual}, state, holder}, name);
+    l.ends = true;
+    l.is_volatile = is_volatile;
+    out.push(l);
   };
-  add(effect(p.status), &p.status_state);
-  for (int i = 0; i < p.n_volatiles; i++) add(effect(p.volatiles[i].id), &p.volatiles[i].state);
-  add(effect(p.ability), &p.ability_state);
-  add(effect(p.item), &p.item_state);
+  add(effect(p.status), &p.status_state, false);
+  for (int i = 0; i < p.n_volatiles; i++) add(effect(p.volatiles[i].id), &p.volatiles[i].state, true);
+  add(effect(p.ability), &p.ability_state, false);
+  add(effect(p.item), &p.item_state, false);
 }
 
 // Battle.findFieldEventHandlers (battle.ts:1195): the pseudo-weathers, the weather.
-inline void find_field_event_handlers(Ctx& c, Callback name, Listeners& out, Subject holder = FIELD) {
+inline void find_field_event_handlers(Ctx& c, Callback name, Listeners& out, Subject holder = FIELD,
+                                      bool by_duration = false) {
   if (name == NO_CALLBACK) return;
-  for (int i = 0; i < c.b.field.pseudo_weathers; i++) {
-    PseudoWeather& w = c.b.field.pseudo_weather[i];
-    if (const Found f = get_callback(c.b, false, w.effect, name)) out.push(resolve_priority(c, {f, &w.state, holder}, name));
-  }
-  if (const Found f = get_callback(c.b, false, effect(c.b.field.weather), name)) {
-    out.push(resolve_priority(c, {f, &c.b.field.weather_state, holder}, name));
-  }
+  const auto add = [&](Effect e, EffectState* state) {
+    if (!e) return;
+    const Found f = get_callback(c.b, false, e, name);
+    if (!f && !(by_duration && state->duration)) return;
+    Listener l = resolve_priority(c, {{e, f.actual}, state, holder}, name);
+    l.ends = holder.kind == HolderKind::Field;
+    out.push(l);
+  };
+  for (int i = 0; i < c.b.field.pseudo_weathers; i++) add(c.b.field.pseudo_weather[i].effect, &c.b.field.pseudo_weather[i].state);
+  add(effect(c.b.field.weather), &c.b.field.weather_state);
 }
 
 // Battle.findBattleEventHandlers (battle.ts:1172): the format.

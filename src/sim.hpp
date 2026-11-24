@@ -129,6 +129,7 @@ inline bool try_trap(Ctx& c, Ref r, bool hidden = false) {
 inline SparseBoosts get_capped_boost(const Pokemon& p, const SparseBoosts& boosts) {
   const int8_t* current = &p.boosts.atk;
   SparseBoosts capped;
+  capped.first = boosts.first;
   for (int stat = 0; stat < BOOST_STATS; stat++) {
     if (!boosts.has(stat) || !boosts.value[size_t(stat)]) continue;
     capped.set(stat, std::clamp(current[stat] + boosts.value[size_t(stat)], -6, 6) - current[stat]);
@@ -147,10 +148,8 @@ inline Condition effective_weather(const Battle& b) {
 
 // Field.setWeather (field.ts) from a handler: the source is the event's
 // target and the source effect the handler's own effect.
-inline bool set_weather(Ctx& c, Condition weather) {
+inline bool set_weather(Ctx& c, Condition weather, Ref source, Effect source_effect) {
   Field& f = c.b.field;
-  const Effect source_effect = c.effect;
-  const Ref source = c.event.target.kind == HolderKind::Pokemon ? c.event.target.pokemon : Ref{};
   if (f.weather == weather) {
     // Weather an ability set has no duration and is not set again; any
     // other is not replaced by itself either.
@@ -178,14 +177,32 @@ inline bool set_weather(Ctx& c, Condition weather) {
   each_event(c, WEATHER_CHANGE, source_effect);
   return true;
 }
+// From a handler: the source is the event's target and the source effect the
+// handler's own effect.
+inline bool set_weather(Ctx& c, Condition weather) {
+  return set_weather(c, weather, c.event.target.kind == HolderKind::Pokemon ? c.event.target.pokemon : Ref{}, c.effect);
+}
+// Field.clearWeather (field.ts:91).
+inline bool clear_weather(Ctx& c) {
+  Field& f = c.b.field;
+  if (f.weather == Condition::None) return false;
+  single_event(c, callback("", "FieldEnd"), effect(f.weather), &f.weather_state, FIELD);
+  f.weather = Condition::None;
+  f.weather_state = EffectState{};
+  each_event(c, WEATHER_CHANGE);
+  return true;
+}
 
 // ---------------------------------------------------------------------------
-// Battle.boost (battle.ts): from a handler, so the effect is the handler's.
+// Battle.boost (battle.ts). It returns Showdown's result: true when a stage
+// changed, null when none did, 0 for a target with no HP and false for one
+// that is not active.
 // ---------------------------------------------------------------------------
-inline void boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, bool is_secondary = false, bool is_self = false) {
-  const Effect effect = c.effect;
+inline Relay boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, Effect effect, bool is_secondary = false,
+                   bool is_self = false) {
   Pokemon& p = c.b.at(target);
-  if (!p.hp || !p.is_active) return;
+  if (!p.hp) return relay::number(0);
+  if (!p.is_active) return relay::no;
   // Nothing listens for ChangeBoost in Gen 3.
   boosts = get_capped_boost(p, boosts);
   const Relay tried = run_event(c, TRY_BOOST, on(target), source, effect, relay::boosts(boosts));
@@ -194,7 +211,8 @@ inline void boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, bool is_s
   bool success = false;
   bool boosted = is_secondary;
   int8_t* stage = &p.boosts.atk;
-  for (int stat = 0; stat < BOOST_STATS; stat++) {
+  for (int place = 0; place < BOOST_STATS; place++) {
+    const int stat = boosts.at(place);
     if (!boosts.has(stat)) continue;
     // boostBy: the change, capped again, is applied.
     SparseBoosts one;
@@ -210,13 +228,23 @@ inline void boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, bool is_s
                                               part::text(BOOST_NAMES[stat]), part::number(by)};
     if (by) {
       success = true;
-      if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Item) unported("a boost from a move or an item");
       if (effect) {
-        if (effect.kind == EffectKind::Ability && !boosted) {
-          add(c, {part::text("-ability"), part::pokemon(c.b, target), part::ability(Ability(effect.id)), part::text("boost")});
-          boosted = true;
+        if (effect.kind == EffectKind::Move) {
+          if (Move(effect.id) == Move::BellyDrum) unported("a boost from Belly Drum");
+          add(c, line);
+        } else if (effect.kind == EffectKind::Item) {
+          c.out.log.push_back(Line{});
+          Line& l = c.out.log.back();
+          for (const Part& part_ : line) l.parts[l.n++] = part_;
+          l.parts[l.n++] = part::from(effect);
+          c.out.log_lines++;
+        } else {
+          if (effect.kind == EffectKind::Ability && !boosted) {
+            add(c, {part::text("-ability"), part::pokemon(c.b, target), part::ability(Ability(effect.id)), part::text("boost")});
+            boosted = true;
+          }
+          add(c, line);
         }
-        add(c, line);
       }
       // Nothing listens for AfterEachBoost in Gen 3.
     } else if (effect.kind == EffectKind::Ability && effect) {
@@ -232,6 +260,11 @@ inline void boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, bool is_s
       if (boosts.has(stat) && boosts.value[size_t(stat)] < 0) p.stats_lowered_this_turn = true;
     }
   }
+  return success ? relay::yes : relay::null;
+}
+// From a handler: the effect is the handler's own.
+inline Relay boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, bool is_secondary = false, bool is_self = false) {
+  return boost(c, boosts, target, source, c.effect, is_secondary, is_self);
 }
 
 // ---------------------------------------------------------------------------
@@ -276,7 +309,7 @@ inline void damage(Ctx& c, double amount) {
     p.hp = uint16_t(p.hp - d);
     if (!p.hp) faint(c, target, source, effect);
   }
-  if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Rule) unported("damage from a move");
+  if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Rule) unported("damage from a move outside its hit");
   if (effect.kind == EffectKind::Condition &&
       (Condition(effect.id) == Condition::Partiallytrapped || Condition(effect.id) == Condition::Confusion)) {
     unported("damage from binding or confusion");
@@ -297,14 +330,17 @@ inline void damage(Ctx& c, double amount, Ref target, Ref source) {
   damage(c, amount);
   c.event = event;
 }
+// And with the effect given (a move's recoil).
+inline void damage(Ctx& c, double amount, Ref target, Ref source, Effect effect) {
+  const Effect current = c.effect;
+  c.effect = effect;
+  damage(c, amount, target, source);
+  c.effect = current;
+}
 
 // Battle.heal (battle.ts) from a handler, with the same target, source and
 // effect as damage. It returns what was healed, 0 when nothing was.
-inline double heal(Ctx& c, double amount) {
-  if (c.event.target.kind != HolderKind::Pokemon) unported("healing with no Pokémon target");
-  const Ref target = c.event.target.pokemon;
-  const Ref source = c.event.source;
-  const Effect effect = c.effect;
+inline double heal(Ctx& c, double amount, Ref target, Ref source, Effect effect) {
   if (amount && amount <= 1) amount = 1;
   amount = std::floor(amount);
   const Relay tried = run_event(c, TRY_HEAL, on(target), source, effect, relay::number(amount));
@@ -314,14 +350,26 @@ inline double heal(Ctx& c, double amount) {
   if (!p.hp || !p.is_active || p.hp >= p.maxhp) return 0;
   const uint16_t before = p.hp;
   p.hp = uint16_t(std::min<double>(p.hp + amount, p.maxhp)); // Pokemon.heal
-  if (effect.kind == EffectKind::Move) unported("healing from a move");
-  if (source && source != target) {
+  if (effect.kind == EffectKind::Move && (Move(effect.id) == Move::LeechSeed || Move(effect.id) == Move::Wish)) {
+    unported("healing from Leech Seed or Wish");
+  }
+  if (effect == adv::effect(Move::Rest)) {
+    add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target), part::text("[silent]")});
+  } else if (effect.kind == EffectKind::Move) {
+    add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target)});
+  } else if (source && (source != target || effect == adv::effect(Special::Drain))) {
     add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target), part::from(effect), part::of(c.b, source)});
   } else {
     add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target), part::from(effect)});
   }
   // Nothing listens for Heal in Gen 3.
   return p.hp - before;
+}
+// From a handler: the target and the source are the event's and the effect
+// the handler's own.
+inline double heal(Ctx& c, double amount) {
+  if (c.event.target.kind != HolderKind::Pokemon) unported("healing with no Pokémon target");
+  return heal(c, amount, c.event.target.pokemon, c.event.source, c.effect);
 }
 
 // ---------------------------------------------------------------------------
@@ -331,11 +379,22 @@ inline constexpr EventNames TRY_ADD_VOLATILE = event("TryAddVolatile");
 inline constexpr Callback ON_RESTART = callback("", "Restart");
 inline constexpr Callback ON_VOLATILE_END = callback("", "End");
 
+// A removed volatile leaves its slot behind with no id until the turn ends,
+// so that a handler gathered before the removal still has its state, as
+// Showdown's still holds the object.
 inline Volatile* volatile_of(Pokemon& p, Condition id) {
+  if (id == Condition::None) return nullptr;
   for (int i = 0; i < p.n_volatiles; i++) {
     if (p.volatiles[i].id == id) return &p.volatiles[i];
   }
   return nullptr;
+}
+inline void compact_volatiles(Pokemon& p) {
+  int kept = 0;
+  for (int i = 0; i < p.n_volatiles; i++) {
+    if (p.volatiles[i].id != Condition::None) p.volatiles[kept++] = p.volatiles[i];
+  }
+  p.n_volatiles = uint8_t(kept);
 }
 
 // Pokemon.addVolatile(status) from a handler: the source is the event's, or
@@ -363,14 +422,7 @@ inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}) {
   v.state.duration = data(id).duration;
   if (has(effect(id), Callback::durationCallback)) unported("a volatile with a durationCallback");
   if (!single_event(c, ON_START, effect(id), &v.state, on(r), source, source_effect).truthy()) {
-    // The volatile is taken off again; it is the last unless its onStart
-    // added another.
-    for (int i = 0; i < p.n_volatiles; i++) {
-      if (p.volatiles[i].id != id) continue;
-      for (int k = i + 1; k < p.n_volatiles; k++) p.volatiles[k - 1] = p.volatiles[k];
-      p.n_volatiles--;
-      break;
-    }
+    if (Volatile* added = volatile_of(p, id)) added->id = Condition::None;
     return false;
   }
   return true;
@@ -383,12 +435,96 @@ inline bool remove_volatile(Ctx& c, Ref r, Condition id) {
   Volatile* v = volatile_of(p, id);
   if (!v) return false;
   single_event(c, ON_VOLATILE_END, effect(id), &v->state, on(r));
-  for (int i = 0; i < p.n_volatiles; i++) {
-    if (p.volatiles[i].id != id) continue;
-    for (int k = i + 1; k < p.n_volatiles; k++) p.volatiles[k - 1] = p.volatiles[k];
-    p.n_volatiles--;
-    break;
+  if (Volatile* still = volatile_of(p, id)) still->id = Condition::None;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Statuses (pokemon.ts).
+// ---------------------------------------------------------------------------
+inline constexpr EventNames SET_STATUS = event("SetStatus");
+inline constexpr EventNames AFTER_SET_STATUS = event("AfterSetStatus");
+
+inline void attr_last_move(Ctx& c, std::string_view attribute); // moves.hpp
+
+inline Immunity status_immunity(Condition status) {
+  switch (status) {
+  case Condition::Brn: return Immunity::Brn;
+  case Condition::Frz: return Immunity::Frz;
+  case Condition::Psn: return Immunity::Psn;
+  case Condition::Tox: return Immunity::Tox;
+  default: return Immunity(0xFF);
   }
+}
+
+// Pokemon.setStatus(status, source, sourceEffect). `status` None clears it.
+// With no source it is the event's or the Pokémon itself; with no source
+// effect, the current effect.
+inline bool set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {}) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp) return false;
+  if (!p.is_active && status != Condition::None) return false;
+  if (!source) source = c.event.source;
+  if (!source_effect) source_effect = c.effect;
+  if (!source) source = r;
+  const bool from_status_move = source_effect.kind == EffectKind::Move && source_effect &&
+                                data(Move(source_effect.id)).status != Condition::None;
+  if (p.status == status && !p.status_fnt) {
+    if (status == Condition::None) return false;
+    if (from_status_move && data(Move(source_effect.id)).status == p.status) {
+      add(c, {part::text("-fail"), part::pokemon(c.b, r), part::text(CONDITION_NAMES[uint8_t(p.status)].id)});
+    } else if (from_status_move) {
+      add(c, {part::text("-fail"), part::pokemon(c.b, source)});
+      attr_last_move(c, "[still]");
+    }
+    return false;
+  }
+  if (status != Condition::None) {
+    // Toxic poison is immune to what poison is.
+    const Condition as = status == Condition::Tox ? Condition::Psn : status;
+    const Immunity to = status_immunity(as);
+    const bool natural = to == Immunity(0xFF) || get_immunity(p, to);
+    if (!run_status_immunity(c, r, CONDITION_NAMES[uint8_t(as)].id, natural)) {
+      if (from_status_move) add(c, {part::text("-immune"), part::pokemon(c.b, r)});
+      return false;
+    }
+    if (!run_event(c, SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id)).truthy()) {
+      return false;
+    }
+  }
+  const Condition previous = p.status;
+  const EffectState previous_state = p.status_state;
+  p.status = status;
+  p.status_fnt = false;
+  p.status_state = status == Condition::None ? EffectState{} : init_effect_state(c.b, true, r);
+  p.status_state.source = source;
+  if (status == Condition::None) return true;
+  if (!single_event(c, ON_START, effect(status), &p.status_state, on(r), source, source_effect).truthy()) {
+    p.status = previous;
+    p.status_state = previous_state;
+    return false;
+  }
+  return run_event(c, AFTER_SET_STATUS, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(status)].id)).truthy();
+}
+// Pokemon.trySetStatus: the status it has, if it has one, is "set" again.
+inline bool try_set_status(Ctx& c, Ref r, Condition status, Ref source = {}, Effect source_effect = {}) {
+  const Pokemon& p = c.b.at(r);
+  return set_status(c, r, p.status != Condition::None ? p.status : status, source, source_effect);
+}
+// Pokemon.cureStatus and clearStatus. Nightmare, which sleep carries, is not
+// ported.
+inline bool cure_status(Ctx& c, Ref r, bool silent = false) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp || p.status == Condition::None) return false;
+  add(c, {part::text("-curestatus"), part::pokemon(c.b, r), part::text(CONDITION_NAMES[uint8_t(p.status)].id),
+          part::text(silent ? "[silent]" : "[msg]")});
+  set_status(c, r, Condition::None);
+  return true;
+}
+inline bool clear_status(Ctx& c, Ref r) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp || p.status == Condition::None) return false;
+  set_status(c, r, Condition::None);
   return true;
 }
 

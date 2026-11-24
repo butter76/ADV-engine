@@ -53,6 +53,7 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
     case EffectKind::Item: return "[from] item: " + std::string(ITEM_NAMES[p.id].name);
     case EffectKind::Move: return "[from] move: " + std::string(MOVE_NAMES[p.id].name);
     case EffectKind::Condition: return "[from] " + std::string(CONDITION_NAMES[Condition(p.id) == Condition::Tox ? uint16_t(Condition::Psn) : p.id].name);
+    case EffectKind::Special: return Special(p.id) == Special::Recoil ? "[from] Recoil" : "[from] drain";
     case EffectKind::Rule: break;
     }
     return "[from] ?";

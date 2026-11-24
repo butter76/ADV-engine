@@ -121,17 +121,32 @@ ADV_HANDLER(shedskin_onResidual) {
   ADV_UNUSED;
   const Pokemon& p = c.b.at(t.pokemon);
   // The draw is made only for a Pokémon with HP and a status.
-  if (p.hp && p.status != Condition::None) unported("ability shedskin onResidual with a status");
+  if (p.hp && p.status != Condition::None && random(c.b, c.out, 100) < 33) {
+    add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("ability: Shed Skin")});
+    cure_status(c, t.pokemon);
+  }
   return relay::undefined;
 }
 ADV_HANDLER(naturalcure_onSwitchOut) {
   ADV_UNUSED;
-  if (c.b.at(t.pokemon).status != Condition::None) unported("ability naturalcure onSwitchOut with a status");
+  const Pokemon& p = c.b.at(t.pokemon);
+  if (p.status == Condition::None || p.status_fnt) return relay::undefined;
+  add(c, {part::text("-curestatus"), part::pokemon(c.b, t.pokemon), part::text(CONDITION_NAMES[uint8_t(p.status)].id),
+          part::from(effect(Ability::NaturalCure)), part::text("[silent]")});
+  clear_status(c, t.pokemon);
   return relay::undefined;
 }
 ADV_HANDLER(rockhead_onDamage) {
   ADV_UNUSED;
-  // Only recoil, which is not a condition the engine has yet, is refused.
+  // Recoil is refused, but for Struggle's.
+  if (source_effect == effect(Special::Recoil) && c.b.active_move.id != Move::Struggle) return relay::null;
+  return relay::undefined;
+}
+ADV_HANDLER(liquidooze_onSourceTryHeal) {
+  ADV_UNUSED;
+  if (source_effect == effect(Special::Drain) || source_effect == effect(Move::LeechSeed)) {
+    unported("ability liquidooze against a draining move");
+  }
   return relay::undefined;
 }
 
@@ -212,35 +227,112 @@ ADV_HANDLER(chlorophyll_onModifySpe) {
   return relay::undefined;
 }
 // The abilities that cure a status as soon as their Pokémon has it.
-#define ADV_CURE_ON_UPDATE(name, cures, what)                             \
-  ADV_HANDLER(name) {                                                     \
-    ADV_UNUSED;                                                           \
-    const Condition status = c.b.at(t.pokemon).status;                    \
-    if (cures) unported(what " onUpdate with the status it cures");       \
-    return relay::undefined;                                              \
+#define ADV_CURE_ON_UPDATE(name, cures, text_)                                              \
+  ADV_HANDLER(name) {                                                                       \
+    ADV_UNUSED;                                                                             \
+    const Condition status = c.b.at(t.pokemon).status;                                      \
+    if (cures) {                                                                            \
+      add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text(text_)});  \
+      cure_status(c, t.pokemon);                                                            \
+    }                                                                                       \
+    return relay::undefined;                                                                \
   }
-ADV_CURE_ON_UPDATE(insomnia_onUpdate, status == Condition::Slp, "ability insomnia")
-ADV_CURE_ON_UPDATE(vitalspirit_onUpdate, status == Condition::Slp, "ability vitalspirit")
-ADV_CURE_ON_UPDATE(immunity_onUpdate, status == Condition::Psn || status == Condition::Tox, "ability immunity")
-ADV_CURE_ON_UPDATE(limber_onUpdate, status == Condition::Par, "ability limber")
-ADV_CURE_ON_UPDATE(magmaarmor_onUpdate, status == Condition::Frz, "ability magmaarmor")
-ADV_CURE_ON_UPDATE(waterveil_onUpdate, status == Condition::Brn, "ability waterveil")
-// Oblivious and Own Tempo end a volatile; there are no volatiles yet.
-ADV_CURE_ON_UPDATE(oblivious_onUpdate, (void(status), false), "ability oblivious")
-ADV_CURE_ON_UPDATE(owntempo_onUpdate, (void(status), false), "ability owntempo")
+ADV_CURE_ON_UPDATE(insomnia_onUpdate, status == Condition::Slp, "ability: Insomnia")
+ADV_CURE_ON_UPDATE(vitalspirit_onUpdate, status == Condition::Slp, "ability: Vital Spirit")
+ADV_CURE_ON_UPDATE(immunity_onUpdate, status == Condition::Psn || status == Condition::Tox, "ability: Immunity")
+ADV_CURE_ON_UPDATE(limber_onUpdate, status == Condition::Par, "ability: Limber")
+ADV_CURE_ON_UPDATE(magmaarmor_onUpdate, status == Condition::Frz, "ability: Magma Armor")
+ADV_CURE_ON_UPDATE(waterveil_onUpdate, status == Condition::Brn, "ability: Water Veil")
+#undef ADV_CURE_ON_UPDATE
+// Oblivious and Own Tempo end a volatile that is not ported yet.
+ADV_HANDLER(oblivious_onUpdate) {
+  ADV_UNUSED;
+  if (volatile_of(c.b.at(t.pokemon), Condition::Attract)) unported("ability oblivious ending Attract");
+  return relay::undefined;
+}
+ADV_HANDLER(owntempo_onUpdate) {
+  ADV_UNUSED;
+  if (volatile_of(c.b.at(t.pokemon), Condition::Confusion)) unported("ability owntempo ending confusion");
+  return relay::undefined;
+}
+// onSetStatus(status, target, source, effect): the status is refused, with a
+// line when a status move tried it.
+#define ADV_REFUSE_STATUS(name, ability, refuses)                                                       \
+  ADV_HANDLER(name) {                                                                                   \
+    ADV_UNUSED;                                                                                         \
+    const std::string_view status = value.text;                                                         \
+    if (!(refuses)) return relay::undefined;                                                            \
+    if (source_effect.kind == EffectKind::Move && source_effect && data(Move(source_effect.id)).status != Condition::None) { \
+      add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::ability))}); \
+    }                                                                                                   \
+    return relay::no;                                                                                   \
+  }
+ADV_REFUSE_STATUS(insomnia_onSetStatus, Insomnia, status == "slp")
+ADV_REFUSE_STATUS(vitalspirit_onSetStatus, VitalSpirit, status == "slp")
+ADV_REFUSE_STATUS(immunity_onSetStatus, Immunity, status == "psn" || status == "tox")
+ADV_REFUSE_STATUS(limber_onSetStatus, Limber, status == "par")
+ADV_REFUSE_STATUS(waterveil_onSetStatus, WaterVeil, status == "brn")
+#undef ADV_REFUSE_STATUS
+inline Condition status_of(std::string_view id) {
+  for (const Condition status : {Condition::Slp, Condition::Frz, Condition::Brn, Condition::Par, Condition::Psn, Condition::Tox}) {
+    if (CONDITION_NAMES[uint8_t(status)].id == id) return status;
+  }
+  return Condition::None;
+}
+ADV_HANDLER(synchronize_onAfterSetStatus) {
+  ADV_UNUSED;
+  if (!source || source == t.pokemon) return relay::undefined;
+  Condition status = status_of(value.text);
+  if (status == Condition::Slp || status == Condition::Frz) return relay::undefined;
+  if (status == Condition::Tox) status = Condition::Psn;
+  try_set_status(c, source, status, t.pokemon);
+  return relay::undefined;
+}
+// onModifySecondaries: only the effects with a `self` are kept. The engine
+// has one secondary a move, so "false" stands for the filtered list.
+ADV_HANDLER(shielddust_onModifySecondaries) {
+  ADV_UNUSED;
+  return relay::no;
+}
+ADV_HANDLER(innerfocus_onTryAddVolatile) {
+  ADV_UNUSED;
+  return value.text == "flinch" ? relay::null : relay::undefined;
+}
+ADV_HANDLER(owntempo_onTryAddVolatile) {
+  ADV_UNUSED;
+  return value.text == "confusion" ? relay::null : relay::undefined;
+}
+ADV_HANDLER(insomnia_onTryAddVolatile) {
+  ADV_UNUSED;
+  if (value.text == "yawn") unported("ability insomnia against Yawn");
+  return relay::undefined;
+}
+ADV_HANDLER(vitalspirit_onTryAddVolatile) {
+  ADV_UNUSED;
+  if (value.text == "yawn") unported("ability vitalspirit against Yawn");
+  return relay::undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Items (data/items.ts, data/mods/gen3/items.ts). The berries eat themselves
 // on the status they cure.
 // ---------------------------------------------------------------------------
-ADV_CURE_ON_UPDATE(aspearberry_onUpdate, status == Condition::Frz, "item aspearberry")
-ADV_CURE_ON_UPDATE(cheriberry_onUpdate, status == Condition::Par, "item cheriberry")
-ADV_CURE_ON_UPDATE(chestoberry_onUpdate, status == Condition::Slp, "item chestoberry")
-ADV_CURE_ON_UPDATE(lumberry_onUpdate, status != Condition::None, "item lumberry")
-ADV_CURE_ON_UPDATE(pechaberry_onUpdate, status == Condition::Psn || status == Condition::Tox, "item pechaberry")
-ADV_CURE_ON_UPDATE(rawstberry_onUpdate, status == Condition::Brn, "item rawstberry")
-ADV_CURE_ON_UPDATE(persimberry_onUpdate, (void(status), false), "item persimberry")
-ADV_CURE_ON_UPDATE(mentalherb_onUpdate, (void(status), false), "item mentalherb")
+// Eating a berry is not ported.
+#define ADV_BERRY_ON_UPDATE(name, cures, what)                          \
+  ADV_HANDLER(name) {                                                   \
+    ADV_UNUSED;                                                         \
+    const Condition status = c.b.at(t.pokemon).status;                  \
+    if (cures) unported(what " eaten");                                 \
+    return relay::undefined;                                            \
+  }
+ADV_BERRY_ON_UPDATE(aspearberry_onUpdate, status == Condition::Frz, "item aspearberry")
+ADV_BERRY_ON_UPDATE(cheriberry_onUpdate, status == Condition::Par, "item cheriberry")
+ADV_BERRY_ON_UPDATE(chestoberry_onUpdate, status == Condition::Slp, "item chestoberry")
+ADV_BERRY_ON_UPDATE(lumberry_onUpdate, status != Condition::None, "item lumberry")
+ADV_BERRY_ON_UPDATE(pechaberry_onUpdate, status == Condition::Psn || status == Condition::Tox, "item pechaberry")
+ADV_BERRY_ON_UPDATE(rawstberry_onUpdate, status == Condition::Brn, "item rawstberry")
+ADV_BERRY_ON_UPDATE(persimberry_onUpdate, (void(status), false), "item persimberry")
+ADV_BERRY_ON_UPDATE(mentalherb_onUpdate, (void(status), false), "item mentalherb")
 ADV_HANDLER(leftovers_onResidual) {
   ADV_UNUSED;
   heal(c, double(c.b.at(t.pokemon).base_maxhp) / 16);
@@ -297,6 +389,256 @@ ADV_HANDLER(machobrace_onModifySpe) {
 // ---------------------------------------------------------------------------
 // Conditions (data/conditions.ts, data/mods/gen3/conditions.ts).
 // ---------------------------------------------------------------------------
+// onStart(target, source, sourceEffect) of a status: its line, which names
+// the ability that gave it.
+inline void status_line(Ctx& c, Ref target, Ref source, Effect source_effect, std::string_view status) {
+  if (source_effect.kind == EffectKind::Ability && source_effect) {
+    add(c, {part::text("-status"), part::pokemon(c.b, target), part::text(status), part::from(source_effect), part::of(c.b, source)});
+  } else {
+    add(c, {part::text("-status"), part::pokemon(c.b, target), part::text(status)});
+  }
+}
+#define ADV_STATUS_START(name, status)                          \
+  ADV_HANDLER(name) {                                           \
+    ADV_UNUSED;                                                 \
+    status_line(c, t.pokemon, source, source_effect, status);   \
+    return relay::undefined;                                    \
+  }
+ADV_STATUS_START(par_onStart, "par")
+ADV_STATUS_START(brn_onStart, "brn")
+ADV_STATUS_START(psn_onStart, "psn")
+ADV_STATUS_START(frz_onStart, "frz")
+#undef ADV_STATUS_START
+ADV_HANDLER(tox_onStart) {
+  ADV_UNUSED;
+  c.effect_state->stage = 0;
+  status_line(c, t.pokemon, source, source_effect, "tox");
+  return relay::undefined;
+}
+ADV_HANDLER(tox_onSwitchIn) {
+  ADV_UNUSED;
+  c.effect_state->stage = 0;
+  return relay::undefined;
+}
+ADV_HANDLER(slp_onStart) {
+  ADV_UNUSED;
+  if (source_effect.kind == EffectKind::Move && source_effect) {
+    add(c, {part::text("-status"), part::pokemon(c.b, t.pokemon), part::text("slp"), part::from(source_effect)});
+  } else {
+    add(c, {part::text("-status"), part::pokemon(c.b, t.pokemon), part::text("slp")});
+  }
+  c.effect_state->time = int8_t(random(c.b, c.out, 2, 6));
+  c.effect_state->skipped_time = 0;
+  return relay::undefined; // Nightmare, which it would end, is not ported
+}
+ADV_HANDLER(slp_onSwitchOut) {
+  ADV_UNUSED;
+  c.effect_state->time = int8_t(c.effect_state->time + c.effect_state->skipped_time);
+  c.effect_state->skipped_time = 0;
+  return relay::undefined;
+}
+ADV_HANDLER(slp_onBeforeMove) {
+  ADV_UNUSED;
+  Pokemon& p = c.b.at(t.pokemon);
+  if (p.ability == Ability::EarlyBird) p.status_state.time--;
+  p.status_state.time--;
+  if (p.status_state.time <= 0) {
+    cure_status(c, t.pokemon);
+    return relay::undefined;
+  }
+  add(c, {part::text("cant"), part::pokemon(c.b, t.pokemon), part::text("slp")});
+  if (data(Move(source_effect.id)).sleep_usable) {
+    c.effect_state->skipped_time++;
+    return relay::undefined;
+  }
+  c.effect_state->skipped_time = 0;
+  return relay::no;
+}
+ADV_HANDLER(par_onBeforeMove) {
+  ADV_UNUSED;
+  if (random(c.b, c.out, 4) < 1) { // randomChance(1, 4)
+    add(c, {part::text("cant"), part::pokemon(c.b, t.pokemon), part::text("par")});
+    return relay::no;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(frz_onBeforeMove) {
+  ADV_UNUSED;
+  if (random(c.b, c.out, 5) < 1) { // randomChance(1, 5)
+    cure_status(c, t.pokemon);
+    return relay::undefined;
+  }
+  if (data(Move(source_effect.id)).flags & flag(MoveFlag::Defrost)) return relay::undefined;
+  add(c, {part::text("cant"), part::pokemon(c.b, t.pokemon), part::text("frz")});
+  return relay::no;
+}
+ADV_HANDLER(frz_onModifyMove) {
+  ADV_UNUSED;
+  if (data(c.b.active_move.id).flags & flag(MoveFlag::Defrost)) {
+    add(c, {part::text("-curestatus"), part::pokemon(c.b, t.pokemon), part::text("frz"), part::from(effect(c.b.active_move.id))});
+    clear_status(c, t.pokemon);
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(frz_onAfterMoveSecondary) {
+  ADV_UNUSED;
+  return relay::undefined; // no move of Gen 3 has thawsTarget
+}
+ADV_HANDLER(frz_onDamagingHit) {
+  ADV_UNUSED;
+  // The move's own type, not what it was changed to.
+  const MoveData& m = data(Move(source_effect.id));
+  if (m.type == Type::Fire && c.b.active_move.category != Category::Status) cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(brn_onResidual) {
+  ADV_UNUSED;
+  damage(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  return relay::undefined;
+}
+ADV_HANDLER(psn_onResidual) {
+  ADV_UNUSED;
+  damage(c, double(c.b.at(t.pokemon).base_maxhp) / 8);
+  return relay::undefined;
+}
+ADV_HANDLER(tox_onResidual) {
+  ADV_UNUSED;
+  if (c.effect_state->stage < 15) c.effect_state->stage++;
+  const double sixteenth = std::max(std::floor(double(c.b.at(t.pokemon).base_maxhp) / 16), 1.0);
+  damage(c, sixteenth * c.effect_state->stage);
+  return relay::undefined;
+}
+ADV_HANDLER(flinch_onBeforeMove) {
+  ADV_UNUSED;
+  add(c, {part::text("cant"), part::pokemon(c.b, t.pokemon), part::text("flinch")});
+  return relay::no; // nothing listens for Flinch in Gen 3
+}
+
+// ---------------------------------------------------------------------------
+// Moves (data/moves.ts, data/mods/gen3/moves.ts).
+// ---------------------------------------------------------------------------
+ADV_HANDLER(rest_onTry) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  if (p.status == Condition::Slp) return relay::no;
+  if (p.hp == p.maxhp) {
+    add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon), part::text("heal")});
+    return relay::null;
+  }
+  if (p.ability == Ability::Insomnia || p.ability == Ability::VitalSpirit) {
+    add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon), part::from(effect(p.ability)), part::of(c.b, t.pokemon)});
+    return relay::null;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(rest_onHit) {
+  ADV_UNUSED;
+  if (!set_status(c, t.pokemon, Condition::Slp, source, effect(Move::Rest))) return relay::no;
+  Pokemon& p = c.b.at(t.pokemon);
+  p.status_state.time = 3;
+  heal(c, p.maxhp);
+  return relay::undefined;
+}
+ADV_HANDLER(refresh_onHit) {
+  ADV_UNUSED;
+  const Condition status = c.b.at(t.pokemon).status;
+  if (status == Condition::None || status == Condition::Slp || status == Condition::Frz) return relay::no;
+  cure_status(c, t.pokemon);
+  return relay::undefined;
+}
+ADV_HANDLER(thunder_onModifyMove) {
+  ADV_UNUSED;
+  const Condition weather = effective_weather(c.b);
+  if (weather == Condition::Raindance || weather == Condition::Primordialsea) c.b.active_move.accuracy = 0;
+  if (weather == Condition::Sunnyday || weather == Condition::Desolateland) c.b.active_move.accuracy = 50;
+  return relay::undefined;
+}
+// Curse from a Pokémon that is no Ghost raises its own stats. Both handlers
+// set that, and the second lists Speed first.
+ADV_HANDLER(curse_onModifyMove) {
+  ADV_UNUSED;
+  Battle::ActiveMove& move = c.b.active_move;
+  if (has_type(c.b.at(t.pokemon), Type::Ghost)) return relay::undefined; // a Substitute would matter here
+  move.volatile_status = Condition::None;
+  move.on_hit = false;
+  move.self_boosts = {.atk = 1, .def = 1, .spe = -1};
+  move.target = Target::Self;
+  return relay::undefined;
+}
+ADV_HANDLER(curse_onTryHit) {
+  ADV_UNUSED;
+  Battle::ActiveMove& move = c.b.active_move;
+  if (!has_type(c.b.at(source), Type::Ghost)) {
+    move.volatile_status = Condition::None;
+    move.on_hit = false;
+    move.self_boosts = {.atk = 1, .def = 1, .spe = -1};
+    move.self_boosts_first = 4; // spe
+  } else if (move.volatile_status != Condition::None && volatile_of(c.b.at(t.pokemon), Condition::Curse)) {
+    return relay::no;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(hiddenpower_onModifyMove) {
+  ADV_UNUSED;
+  Battle::ActiveMove& move = c.b.active_move;
+  move.type = c.b.at(t.pokemon).hp_type;
+  // Gen 3's special types.
+  const Type type = move.type;
+  const bool special = type == Type::Fire || type == Type::Water || type == Type::Grass || type == Type::Ice ||
+                       type == Type::Electric || type == Type::Dark || type == Type::Psychic || type == Type::Dragon;
+  move.category = special ? Category::Special : Category::Physical;
+  return relay::undefined;
+}
+ADV_HANDLER(hiddenpower_onModifyType) {
+  ADV_UNUSED;
+  c.b.active_move.type = c.b.at(t.pokemon).hp_type;
+  return relay::undefined;
+}
+ADV_HANDLER(hiddenpower_basePowerCallback) {
+  ADV_UNUSED;
+  return relay::number(c.b.at(t.pokemon).hp_power);
+}
+ADV_HANDLER(return_basePowerCallback) {
+  ADV_UNUSED;
+  return relay::number(std::max(c.b.at(t.pokemon).happiness * 10 / 25, 1));
+}
+ADV_HANDLER(frustration_basePowerCallback) {
+  ADV_UNUSED;
+  return relay::number(std::max((255 - c.b.at(t.pokemon).happiness) * 10 / 25, 1));
+}
+
+// ---------------------------------------------------------------------------
+// The clauses that refuse a status (data/rulesets.ts).
+// ---------------------------------------------------------------------------
+ADV_HANDLER(sleepclausemod_onSetStatus) {
+  ADV_UNUSED;
+  if (source && source.side == t.pokemon.side) return relay::undefined;
+  if (value.text != "slp") return relay::undefined;
+  const Side& side = c.b.sides[t.pokemon.side];
+  for (int position = 0; position < side.size; position++) {
+    const Pokemon& p = side.pokemon[index_at(side, position)];
+    if (!p.hp || p.status != Condition::Slp) continue;
+    // Asleep by a foe's doing.
+    if (p.status_state.source && p.status_state.source.side == t.pokemon.side) continue;
+    add(c, {part::text("-message"), part::text("Sleep Clause Mod activated.")});
+    add(c, {part::text("-hint"), part::text("Sleep Clause Mod prevents players from putting more than one of their opponent's Pokemon to sleep at a time")});
+    return relay::no;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(freezeclausemod_onSetStatus) {
+  ADV_UNUSED;
+  if (source && source.side == t.pokemon.side) return relay::undefined;
+  if (value.text != "frz") return relay::undefined;
+  const Side& side = c.b.sides[t.pokemon.side];
+  for (int position = 0; position < side.size; position++) {
+    if (side.pokemon[index_at(side, position)].status != Condition::Frz) continue;
+    add(c, {part::text("-message"), part::text("Freeze Clause activated.")});
+    return relay::no;
+  }
+  return relay::undefined;
+}
+
 ADV_HANDLER(par_onModifySpe) {
   ADV_UNUSED;
   chain_modify(c, 0.25); // Quick Feet is not Gen 3's
@@ -328,6 +670,76 @@ ADV_HANDLER(sandstorm_onFieldResidual) {
 ADV_HANDLER(sandstorm_onWeather) {
   ADV_UNUSED;
   damage(c, double(c.b.at(t.pokemon).base_maxhp) / 16);
+  return relay::undefined;
+}
+ADV_HANDLER(sandstorm_onFieldEnd) {
+  ADV_UNUSED;
+  add(c, {part::text("-weather"), part::text("none")});
+  return relay::undefined;
+}
+// Rain, sun and hail (data/conditions.ts). No rock lengthens them in Gen 3.
+#define ADV_WEATHER(id, shown)                                                                       \
+  ADV_HANDLER(id##_durationCallback) {                                                               \
+    ADV_UNUSED;                                                                                      \
+    return relay::number(5);                                                                         \
+  }                                                                                                  \
+  ADV_HANDLER(id##_onFieldStart) {                                                                   \
+    ADV_UNUSED;                                                                                      \
+    if (source_effect.kind == EffectKind::Ability && source_effect) {                                \
+      c.effect_state->duration = 0;                                                                  \
+      add(c, {part::text("-weather"), part::text(shown), part::from(source_effect), part::of(c.b, source)}); \
+    } else {                                                                                         \
+      add(c, {part::text("-weather"), part::text(shown)});                                           \
+    }                                                                                                \
+    return relay::undefined;                                                                         \
+  }                                                                                                  \
+  ADV_HANDLER(id##_onFieldEnd) {                                                                     \
+    ADV_UNUSED;                                                                                      \
+    add(c, {part::text("-weather"), part::text("none")});                                            \
+    return relay::undefined;                                                                         \
+  }
+ADV_WEATHER(raindance, "RainDance")
+ADV_WEATHER(sunnyday, "SunnyDay")
+ADV_WEATHER(hail, "Hail")
+#undef ADV_WEATHER
+ADV_HANDLER(raindance_onFieldResidual) {
+  ADV_UNUSED;
+  add(c, {part::text("-weather"), part::text("RainDance"), part::text("[upkeep]")});
+  each_event(c, WEATHER);
+  return relay::undefined;
+}
+ADV_HANDLER(sunnyday_onFieldResidual) {
+  ADV_UNUSED;
+  add(c, {part::text("-weather"), part::text("SunnyDay"), part::text("[upkeep]")});
+  each_event(c, WEATHER);
+  return relay::undefined;
+}
+ADV_HANDLER(hail_onFieldResidual) {
+  ADV_UNUSED;
+  add(c, {part::text("-weather"), part::text("Hail"), part::text("[upkeep]")});
+  if (effective_weather(c.b) == Condition::Hail) each_event(c, WEATHER);
+  return relay::undefined;
+}
+ADV_HANDLER(hail_onWeather) {
+  ADV_UNUSED;
+  damage(c, double(c.b.at(t.pokemon).base_maxhp) / 16);
+  return relay::undefined;
+}
+// onWeatherModifyDamage(damage, attacker, defender, move).
+ADV_HANDLER(raindance_onWeatherModifyDamage) {
+  ADV_UNUSED;
+  if (effective_weather(c.b) != Condition::Raindance) return relay::undefined;
+  const Type type = c.b.active_move.type;
+  if (type == Type::Water) chain_modify(c, 1.5);
+  else if (type == Type::Fire) chain_modify(c, 0.5);
+  return relay::undefined;
+}
+ADV_HANDLER(sunnyday_onWeatherModifyDamage) {
+  ADV_UNUSED;
+  if (effective_weather(c.b) != Condition::Sunnyday) return relay::undefined;
+  const Type type = c.b.active_move.type;
+  if (type == Type::Fire) chain_modify(c, 1.5);
+  else if (type == Type::Water) chain_modify(c, 0.5);
   return relay::undefined;
 }
 ADV_HANDLER(sunnyday_onImmunity) {
@@ -520,7 +932,7 @@ ADV_HANDLER(colorchange_onDamagingHit) {
 }
 ADV_HANDLER(serenegrace_onModifyMove) {
   ADV_UNUSED;
-  if (data(c.b.active_move.id).secondary.chance) unported("ability serenegrace with a secondary effect");
+  c.b.active_move.secondary_chance = uint8_t(std::min(c.b.active_move.secondary_chance * 2, 255));
   return relay::undefined;
 }
 ADV_HANDLER(damp_onAnyTryMove) {
@@ -628,7 +1040,7 @@ ADV_HANDLER(choicelock_onDisableMove) {
 #undef ADV_HANDLER
 #undef ADV_UNUSED
 #undef ADV_RULE_BEGIN
-#undef ADV_CURE_ON_UPDATE
+#undef ADV_BERRY_ON_UPDATE
 
 inline constexpr Ported PORTED[] = {
 #define R(rule, cb, fn) {effect(Rule::rule), Callback::cb, &fn}
@@ -668,6 +1080,7 @@ inline constexpr Ported PORTED[] = {
     A(ShedSkin, onResidual, shedskin_onResidual),
     A(NaturalCure, onSwitchOut, naturalcure_onSwitchOut),
     A(RockHead, onDamage, rockhead_onDamage),
+    A(LiquidOoze, onSourceTryHeal, liquidooze_onSourceTryHeal),
     A(Oblivious, onImmunity, oblivious_onImmunity),
     A(MagmaArmor, onImmunity, magmaarmor_onImmunity),
     A(SwiftSwim, onModifySpe, swiftswim_onModifySpe),
@@ -706,6 +1119,17 @@ inline constexpr Ported PORTED[] = {
     I(PetayaBerry, onResidual, petayaberry_onResidual),
     I(SalacBerry, onResidual, salacberry_onResidual),
     I(StarfBerry, onResidual, starfberry_onResidual),
+    A(Insomnia, onSetStatus, insomnia_onSetStatus),
+    A(VitalSpirit, onSetStatus, vitalspirit_onSetStatus),
+    A(Immunity, onSetStatus, immunity_onSetStatus),
+    A(Limber, onSetStatus, limber_onSetStatus),
+    A(WaterVeil, onSetStatus, waterveil_onSetStatus),
+    A(Synchronize, onAfterSetStatus, synchronize_onAfterSetStatus),
+    A(ShieldDust, onModifySecondaries, shielddust_onModifySecondaries),
+    A(InnerFocus, onTryAddVolatile, innerfocus_onTryAddVolatile),
+    A(OwnTempo, onTryAddVolatile, owntempo_onTryAddVolatile),
+    A(Insomnia, onTryAddVolatile, insomnia_onTryAddVolatile),
+    A(VitalSpirit, onTryAddVolatile, vitalspirit_onTryAddVolatile),
     A(Pressure, onDeductPP, pressure_onDeductPP),
     A(Hustle, onModifyAtk, hustle_onModifyAtk),
     A(Hustle, onSourceModifyAccuracy, hustle_onSourceModifyAccuracy),
@@ -781,6 +1205,53 @@ inline constexpr Ported PORTED[] = {
     C(Choicelock, onStart, choicelock_onStart),
     C(Choicelock, onDisableMove, choicelock_onDisableMove),
     C(Par, onModifySpe, par_onModifySpe),
+    C(Par, onStart, par_onStart),
+    C(Par, onBeforeMove, par_onBeforeMove),
+    C(Brn, onStart, brn_onStart),
+    C(Brn, onResidual, brn_onResidual),
+    C(Psn, onStart, psn_onStart),
+    C(Psn, onResidual, psn_onResidual),
+    C(Tox, onStart, tox_onStart),
+    C(Tox, onSwitchIn, tox_onSwitchIn),
+    C(Tox, onResidual, tox_onResidual),
+    C(Slp, onStart, slp_onStart),
+    C(Slp, onSwitchOut, slp_onSwitchOut),
+    C(Slp, onBeforeMove, slp_onBeforeMove),
+    C(Frz, onStart, frz_onStart),
+    C(Frz, onBeforeMove, frz_onBeforeMove),
+    C(Frz, onModifyMove, frz_onModifyMove),
+    C(Frz, onAfterMoveSecondary, frz_onAfterMoveSecondary),
+    C(Frz, onDamagingHit, frz_onDamagingHit),
+    C(Flinch, onBeforeMove, flinch_onBeforeMove),
+    {effect(Move::Rest), Callback::onTry, &rest_onTry},
+    {effect(Move::Rest), Callback::onHit, &rest_onHit},
+    {effect(Move::Refresh), Callback::onHit, &refresh_onHit},
+    {effect(Move::Thunder), Callback::onModifyMove, &thunder_onModifyMove},
+    {effect(Move::Curse), Callback::onModifyMove, &curse_onModifyMove},
+    {effect(Move::Curse), Callback::onTryHit, &curse_onTryHit},
+    C(Sandstorm, onFieldEnd, sandstorm_onFieldEnd),
+    C(Raindance, durationCallback, raindance_durationCallback),
+    C(Raindance, onFieldStart, raindance_onFieldStart),
+    C(Raindance, onFieldEnd, raindance_onFieldEnd),
+    C(Raindance, onFieldResidual, raindance_onFieldResidual),
+    C(Raindance, onWeatherModifyDamage, raindance_onWeatherModifyDamage),
+    C(Sunnyday, durationCallback, sunnyday_durationCallback),
+    C(Sunnyday, onFieldStart, sunnyday_onFieldStart),
+    C(Sunnyday, onFieldEnd, sunnyday_onFieldEnd),
+    C(Sunnyday, onFieldResidual, sunnyday_onFieldResidual),
+    C(Sunnyday, onWeatherModifyDamage, sunnyday_onWeatherModifyDamage),
+    C(Hail, durationCallback, hail_durationCallback),
+    C(Hail, onFieldStart, hail_onFieldStart),
+    C(Hail, onFieldEnd, hail_onFieldEnd),
+    C(Hail, onFieldResidual, hail_onFieldResidual),
+    C(Hail, onWeather, hail_onWeather),
+    {effect(Move::HiddenPower), Callback::onModifyMove, &hiddenpower_onModifyMove},
+    {effect(Move::HiddenPower), Callback::onModifyType, &hiddenpower_onModifyType},
+    {effect(Move::HiddenPower), Callback::basePowerCallback, &hiddenpower_basePowerCallback},
+    {effect(Move::Return), Callback::basePowerCallback, &return_basePowerCallback},
+    {effect(Move::Frustration), Callback::basePowerCallback, &frustration_basePowerCallback},
+    R(SleepClauseMod, onSetStatus, sleepclausemod_onSetStatus),
+    R(FreezeClauseMod, onSetStatus, freezeclausemod_onSetStatus),
     C(Sandstorm, durationCallback, sandstorm_durationCallback),
     C(Sandstorm, onFieldStart, sandstorm_onFieldStart),
     C(Sandstorm, onFieldResidual, sandstorm_onFieldResidual),

@@ -2,10 +2,9 @@
 // 3's useMoveInner, tryMoveHit and modifyDamage (data/mods/gen3/scripts.ts),
 // and the hit itself (moveHit, spreadMoveHit, getDamage).
 //
-// So far only a plain damaging move can be used: one with power, a type, one
-// target, no secondary effect and no handler of its own (is_plain). Every
-// event of the pipeline is run all the same, so that abilities and items
-// take their part and the handlers are gathered and sorted as Showdown's.
+// A move on one target or on its user can be used, with its own handlers,
+// its secondary effect, and the stat changes, healing and status it gives.
+// What the pipeline does not act on yet is listed in unsupported().
 
 #pragma once
 
@@ -52,31 +51,26 @@ inline constexpr EventNames UPDATE_AFTER_HIT = event("Update");
 inline constexpr EventNames MODIFY_BOOST_OF = event("ModifyBoost");
 } // namespace events
 
-// Whether the engine can use a move yet: power, a type, one target, and
-// nothing else. tools/lib.cjs has the same test for the recorder.
-inline bool is_plain(Move move) {
-  static const std::array<bool, MOVES> plain = [] {
-    std::array<bool, MOVES> table{};
-    for (int i = 1; i < MOVES; i++) {
-      const MoveData& m = MOVE_DATA[i];
-      bool ok = m.category != Category::Status && m.base_power && m.type != Type::Unknown && m.real_move == Move::None &&
-                (m.target == Target::Normal || m.target == Target::Any || m.target == Target::AllAdjacent ||
-                 m.target == Target::AllAdjacentFoes) &&
-                !m.secondary.chance && !m.drain && !m.recoil && !m.heal && !m.multihit[1] && !m.ohko && !m.damage &&
-                !m.damage_level && m.selfdestruct == SelfDestruct::None && m.self_switch == SelfSwitch::None &&
-                !m.force_switch && m.status == Condition::None && m.volatile_status == Condition::None &&
-                m.side_condition == Condition::None && m.slot_condition == Condition::None &&
-                m.weather == Condition::None && m.boosts == Boosts{} && m.self_boosts == Boosts{} &&
-                m.self_volatile_status == Condition::None && !m.sleep_usable && !m.stalling_move && !m.calls_move &&
-                !m.has_crash_damage && !m.multiaccuracy && !m.ignore_immunity;
-      // No handler of its own, and no condition of its own.
-      for (const Handler& h : HANDLERS) ok &= !(h.kind == EffectKind::Move && h.id == i);
-      for (int k = 1; k < CONDITIONS; k++) ok &= CONDITION_NAMES[k].id != MOVE_NAMES[i].id;
-      table[size_t(i)] = ok;
-    }
-    return table;
-  }();
-  return plain[uint16_t(move)];
+// Whether the pipeline below can run a move yet. A move's own handlers are
+// not part of the test: reaching one that is not ported stops the replay by
+// itself. What is tested is the data the pipeline does not act on yet.
+inline const char* unsupported(Move move) {
+  const MoveData& m = data(move);
+  if (m.type == Type::Unknown && m.category != Category::Status) return "a typeless move that does damage";
+  if (m.target != Target::Normal && m.target != Target::Any && m.target != Target::AllAdjacent &&
+      m.target != Target::AllAdjacentFoes && m.target != Target::Self && m.target != Target::All) {
+    return "a move on a side or a random target";
+  }
+  if (m.multihit[1]) return "a move that hits more than once";
+  if (m.ohko) return "a one-hit KO move";
+  if (m.selfdestruct == SelfDestruct::IfHit) return "a move that faints its user if it hits";
+  if (m.self_switch != SelfSwitch::None) return "a move that switches its user out";
+  if (m.force_switch) return "a move that forces a switch";
+  if (m.side_condition != Condition::None || m.slot_condition != Condition::None) return "a move that sets a side condition";
+  if (m.sleep_usable || m.calls_move || m.stalling_move || m.has_crash_damage || m.multiaccuracy) return "a move of a special kind";
+  if (m.self_volatile_status != Condition::None) return "a move that gives its user a volatile";
+  if (move == Move::RapidSpin || move == Move::BatonPass || move == Move::TriAttack) return "a move with a handler in its secondary";
+  return nullptr;
 }
 
 // Battle.trunc of a number that is not negative: JavaScript's `>>> 0`.
@@ -116,6 +110,8 @@ inline int deduct_pp(Pokemon& p, Move move, int amount = 1) {
 inline bool run_immunity(Ctx& c, Ref target, bool message) {
   const Type type = c.b.active_move.type;
   const Pokemon& p = c.b.at(target);
+  // A move that ignores immunity, as every status move does by default.
+  if (data(c.b.active_move.id).ignore_immunity) return true;
   if (type == Type::None || type == Type::Unknown) return true;
   const bool negate = !run_event(c, events::NEGATE_IMMUNITY, on(target)).truthy();
   bool levitating = false, not_immune;
@@ -193,14 +189,105 @@ inline double modify_damage(Ctx& c, double base_damage, Ref source, Ref target) 
   return std::floor(base_damage) ? std::floor(base_damage) : 1;
 }
 
-// BattleActions.getDamage (battle-actions.ts) for a plain move. False when
-// the target is immune; otherwise the damage.
+// Showdown's result of a hit: a number of damage, undefined for a hit that
+// did something else, false for one that failed, null for one that failed
+// and has said so.
+inline int result_rank(const Relay& r) {
+  switch (r.kind) {
+  case Relay::Kind::Undefined: return 0;
+  case Relay::Kind::Null: return 2;
+  case Relay::Kind::False:
+  case Relay::Kind::True: return 3;
+  default: return 4;
+  }
+}
+// BattleActions.combineResults (battle-actions.ts).
+inline Relay combine_results(const Relay& left, const Relay& right) {
+  if (result_rank(left) > result_rank(right)) return left;
+  if (left.truthy() && !right.truthy() && !(right.kind == Relay::Kind::Number)) return left;
+  if (left.kind == Relay::Kind::Number && right.kind == Relay::Kind::Number) return relay::number(left.number + right.number);
+  return right;
+}
+inline Relay as_result(bool b) { return b ? relay::yes : relay::no; }
+
+// Which of a move's effects a hit applies (the `moveData` of moveHit): the
+// move itself, its secondary effect, what it does to its user, or what its
+// secondary effect does to its user.
+enum class HitEffect : uint8_t { Move, Secondary, Self, SecondarySelf };
+
+struct HitData {
+  SparseBoosts boosts;
+  Condition status = Condition::None, volatile_status = Condition::None;
+  Fraction heal;
+  bool has_self = false; // the effect has a `self` of its own
+};
+inline SparseBoosts sparse(const Boosts& b) {
+  SparseBoosts out;
+  const int8_t* v = &b.atk;
+  for (int i = 0; i < BOOST_STATS; i++) {
+    if (v[i]) out.set(i, v[i]);
+  }
+  return out;
+}
+inline HitData hit_data(const Battle::ActiveMove& active, HitEffect effect_) {
+  const MoveData& m = data(active.id);
+  switch (effect_) {
+  case HitEffect::Move:
+    return {sparse(m.boosts), m.status, active.volatile_status, m.heal, !(active.self_boosts == Boosts{})};
+  case HitEffect::Secondary:
+    return {sparse(m.secondary.boosts), m.secondary.status, m.secondary.volatile_status, {},
+            !(m.secondary.self_boosts == Boosts{})};
+  case HitEffect::Self: {
+    SparseBoosts self = sparse(active.self_boosts);
+    self.first = active.self_boosts_first;
+    return {self, Condition::None, Condition::None, {}, false};
+  }
+  case HitEffect::SecondarySelf: return {sparse(m.secondary.self_boosts), Condition::None, Condition::None, {}, false};
+  }
+  return {};
+}
+
+// A move's own handler, when it has one (singleEvent on the move).
+inline Relay move_event(Ctx& c, Callback name, Ref holder, Ref source, Relay value = relay::undefined) {
+  const Effect me = effect(c.b.active_move.id);
+  return single_event(c, name, me, nullptr, on(holder), source, me, value);
+}
+namespace events {
+inline constexpr Callback ON_MODIFY_MOVE = callback("", "ModifyMove");
+inline constexpr Callback ON_TRY_MOVE = callback("", "TryMove");
+inline constexpr Callback ON_USE_MOVE_MESSAGE = callback("", "UseMoveMessage");
+inline constexpr Callback ON_PREPARE_HIT = callback("", "PrepareHit");
+inline constexpr Callback ON_TRY = callback("", "Try");
+inline constexpr Callback ON_TRY_IMMUNITY = callback("", "TryImmunity");
+inline constexpr Callback ON_TRY_HIT = callback("", "TryHit");
+inline constexpr Callback ON_HIT = callback("", "Hit");
+inline constexpr Callback ON_AFTER_HIT = callback("", "AfterHit");
+inline constexpr Callback ON_MOVE_FAIL = callback("", "MoveFail");
+inline constexpr Callback ON_AFTER_MOVE = callback("", "AfterMove");
+inline constexpr Callback ON_AFTER_MOVE_SECONDARY = callback("", "AfterMoveSecondary");
+inline constexpr Callback ON_AFTER_MOVE_SECONDARY_SELF = callback("", "AfterMoveSecondarySelf");
+inline constexpr Callback ON_EFFECTIVENESS = callback("", "Effectiveness");
+inline constexpr EventNames MODIFY_SECONDARIES = event("ModifySecondaries");
+} // namespace events
+
+// BattleActions.getDamage (battle-actions.ts) for the move itself. Undefined
+// for a move with no power, false when the target is immune.
 inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   Battle& b = c.b;
   Battle::ActiveMove& move = b.active_move;
   const Effect me = effect(move.id);
   if (!run_immunity(c, target, true)) return relay::no;
+  if (has(me, Callback::damageCallback)) unported("a move with a damageCallback");
+  if (data(move.id).damage_level) return relay::number(b.at(source).level);
+  if (data(move.id).damage) return relay::number(data(move.id).damage);
   double base_power = move.base_power;
+  if (has(me, Callback::basePowerCallback)) {
+    const Relay called = call(c, {me, Callback::basePowerCallback}, relay::undefined, on(source), target, me);
+    if (called.kind != Relay::Kind::Number) unported("a basePowerCallback that returns no number");
+    base_power = called.number;
+  }
+  if (!base_power) return relay::undefined;
+  base_power = std::max(std::floor(base_power), 1.0);
   int crit_ratio = int(run_event(c, events::MODIFY_CRIT_RATIO, on(source), target, me, relay::number(move.crit_ratio)).number);
   crit_ratio = std::clamp(crit_ratio, 0, 5);
   static constexpr uint32_t CRIT_MULT[] = {0, 16, 8, 4, 3, 2};
@@ -223,20 +310,23 @@ inline Relay get_damage(Ctx& c, Ref source, Ref target) {
   double defense = calculate_stat(c, target, physical ? defender.stored_stats.def : defender.stored_stats.spd, def_boosts);
   attack = run_event(c, physical ? events::MODIFY_ATK : events::MODIFY_SPA, on(source), target, me, relay::number(attack)).number;
   defense = run_event(c, physical ? events::MODIFY_DEF : events::MODIFY_SPD, on(target), source, me, relay::number(defense)).number;
+  // Explosion and Self-Destruct halve the target's Defense.
+  if ((move.id == Move::Explosion || move.id == Move::SelfDestruct) && physical) defense = std::max(std::floor(defense / 2), 1.0);
   const double level = attacker.level;
   const double base_damage = trunc(trunc(trunc(trunc(2 * level / 5 + 2) * base_power * attack) / defense) / 50);
   return relay::number(modify_damage(c, base_damage, source, target));
 }
 
 // Battle.spreadDamage (battle.ts) for a move's damage on its one target.
-inline double move_damage(Ctx& c, double amount, Ref target, Ref source) {
+inline Relay move_damage(Ctx& c, double amount, Ref target, Ref source) {
   Battle& b = c.b;
   const Effect me = effect(b.active_move.id);
   Pokemon& p = b.at(target);
-  if (!p.hp || !p.is_active) return 0;
+  if (!p.hp) return relay::number(0);
+  if (!p.is_active) return relay::no;
   if (amount != 0) amount = std::max(std::floor(amount), 1.0);
   const Relay after = run_event(c, DAMAGE, on(target), source, me, relay::number(amount), true);
-  if (after.kind != Relay::Kind::Number) unported("a move's damage refused by the Damage event");
+  if (after.kind != Relay::Kind::Number) return after;
   amount = after.number;
   if (amount != 0) amount = std::max(std::floor(amount), 1.0);
   // Pokemon.damage (pokemon.ts).
@@ -245,62 +335,220 @@ inline double move_damage(Ctx& c, double amount, Ref target, Ref source) {
   if (!p.hp) faint(c, target, source, me);
   b.at(source).last_damage = dealt;
   add(c, {part::text("-damage"), part::pokemon(b, target), part::health(b, target)});
-  return dealt;
-}
-
-// BattleActions.moveHit (battle-actions.ts), which is spreadMoveHit for one
-// target and the move itself. False when the hit failed.
-inline Relay move_hit(Ctx& c, Ref target, Ref source) {
-  Battle& b = c.b;
-  const Effect me = effect(b.active_move.id);
-  // singleEvent('TryHit', move): no plain move has the handler.
-  if (!run_event(c, events::TRY_PRIMARY_HIT, on(target), source, me).truthy()) {
-    unported("a hit stopped by TryPrimaryHit");
+  // A draining move heals its user by a part of what it dealt.
+  if (const Fraction drain = data(b.active_move.id).drain; dealt && drain) {
+    heal(c, std::max(std::floor(double(dealt) * drain.num / drain.den), 1.0), source, target, effect(Special::Drain));
   }
-  b.active_target = target;
-  const Relay calculated = get_damage(c, source, target);
-  if (calculated.kind != Relay::Kind::Number) return relay::no;
-  const double dealt = move_damage(c, calculated.number, target, source);
-  // runMoveEffects: a plain move has no effect of its own; Hit is run.
-  run_event(c, events::HIT, on(target), source, me);
-  // Nothing of a plain move drops its user's stats, has a secondary effect
-  // or forces a switch.
-  run_event(c, events::DAMAGING_HIT, on(target), source, me, relay::number(dealt));
-  // Nothing listens for EmergencyExit in Gen 3.
   return relay::number(dealt);
 }
 
+inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which = HitEffect::Move);
+
+// BattleActions.runMoveEffects (battle-actions.ts) for one target: what the
+// effect does besides damage. `hit` says whether the target is still a
+// target; the result replaces `damage`.
+inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref source, HitEffect which) {
+  Battle& b = c.b;
+  const Move id = b.active_move.id;
+  const Effect me = effect(id);
+  const HitData d = hit_data(b.active_move, which);
+  const bool is_secondary = which == HitEffect::Secondary || which == HitEffect::SecondarySelf;
+  const bool is_self = which == HitEffect::Self || which == HitEffect::SecondarySelf;
+  const bool on_field = data(id).target == Target::All && !is_self;
+  Relay did_anything = damage;
+  if (hit) {
+    Relay did_something = relay::undefined;
+    bool stop = false;
+    if (d.boosts.present && !b.at(target).fainted) {
+      did_something = combine_results(did_something, boost(c, d.boosts, target, source, me, is_secondary, is_self));
+    }
+    if (d.heal && !b.at(target).fainted) {
+      Pokemon& p = b.at(target);
+      if (p.hp >= p.maxhp) {
+        add(c, {part::text("-fail"), part::pokemon(b, target), part::text("heal")});
+        attr_last_move(c, "[still]");
+        damage = combine_results(damage, relay::no);
+        did_anything = combine_results(did_anything, relay::null);
+        stop = true;
+      } else {
+        // Battle.heal(amount, target, source, move), amount floored.
+        const double amount = std::floor(double(p.base_maxhp) * d.heal.num / d.heal.den);
+        const Relay tried = run_event(c, TRY_HEAL, on(target), source, me, relay::number(std::max(amount, amount ? 1.0 : 0.0)));
+        if (!tried.truthy()) unported("a healing move stopped by TryHeal");
+        p.hp = uint16_t(std::min<double>(p.hp + tried.number, p.maxhp));
+        add(c, {part::text("-heal"), part::pokemon(b, target), part::health(b, target)});
+        did_something = relay::yes;
+      }
+    }
+    if (!stop && d.status != Condition::None) {
+      const bool set = try_set_status(c, target, d.status, source, me);
+      if (!set && data(id).status != Condition::None) {
+        damage = combine_results(damage, relay::no);
+        did_anything = combine_results(did_anything, relay::null);
+        stop = true;
+      } else {
+        did_something = combine_results(did_something, as_result(set));
+      }
+    }
+    if (!stop && d.volatile_status != Condition::None) {
+      const auto parent = c.effect;
+      c.effect = me; // addVolatile(status, source, move)
+      const bool added = add_volatile(c, target, d.volatile_status, source);
+      c.effect = parent;
+      did_something = combine_results(did_something, as_result(added));
+    }
+    if (!stop && which == HitEffect::Move && data(id).weather != Condition::None) {
+      did_something = combine_results(did_something, as_result(set_weather(c, data(id).weather, source, me)));
+    }
+    if (!stop) {
+      if (on_field) {
+        if (has(me, callback("", "HitField"))) unported("a move's onHitField");
+      } else {
+        if (which == HitEffect::Move && b.active_move.on_hit && has(me, events::ON_HIT)) {
+          const Relay result = move_event(c, events::ON_HIT, target, source);
+          did_something = combine_results(did_something, result);
+        }
+        if (!is_self && !is_secondary) run_event(c, events::HIT, on(target), source, me);
+      }
+      if (did_something.undefined()) did_something = relay::yes;
+      damage = combine_results(damage, did_something.kind == Relay::Kind::Null ? relay::no : did_something);
+      did_anything = combine_results(did_anything, did_something);
+    }
+  }
+  if (!did_anything.truthy() && did_anything.kind != Relay::Kind::Number && !d.has_self) {
+    if (!is_self && !is_secondary && did_anything == relay::no) {
+      add(c, {part::text("-fail"), part::pokemon(b, source)});
+      attr_last_move(c, "[still]");
+    }
+  }
+  return damage;
+}
+
+// BattleActions.moveHit (battle-actions.ts), which is spreadMoveHit for one
+// target. Showdown's `true` comes back as undefined.
+inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
+  Battle& b = c.b;
+  const Move id = b.active_move.id;
+  const Effect me = effect(id);
+  const MoveData& m = data(id);
+  const bool is_secondary = which == HitEffect::Secondary || which == HitEffect::SecondarySelf;
+  const bool is_self = which == HitEffect::Self || which == HitEffect::SecondarySelf;
+  const HitData d = hit_data(b.active_move, which);
+  const bool on_field = m.target == Target::All && !is_self;
+  Relay damage = relay::yes;
+  bool hit = true;
+  if (on_field) {
+    if (has(me, callback("", "TryHitField"))) unported("a move's onTryHitField");
+  } else if (which == HitEffect::Move && has(me, events::ON_TRY_HIT)) {
+    const Relay tried = move_event(c, events::ON_TRY_HIT, target, source);
+    if (!tried.truthy()) {
+      if (tried == relay::no) {
+        add(c, {part::text("-fail"), part::pokemon(b, source)});
+        attr_last_move(c, "[still]");
+      }
+      return relay::no;
+    }
+  }
+  if (!is_secondary && !is_self && !on_field) {
+    damage = run_event(c, events::TRY_PRIMARY_HIT, on(target), source, me);
+    if (damage.kind == Relay::Kind::Number) unported("a hit taken by a Substitute");
+  }
+  if (is_secondary && !d.has_self) damage = relay::yes;
+  if (!damage.truthy()) hit = false;
+
+  // getSpreadDamage, then spreadDamage.
+  if (hit) {
+    b.active_target = target;
+    damage = which == HitEffect::Move ? get_damage(c, source, target) : relay::undefined;
+    if (damage == relay::no || damage.kind == Relay::Kind::Null) {
+      damage = relay::no;
+      hit = false;
+    }
+  }
+  if (hit && damage.kind == Relay::Kind::Number) {
+    damage = move_damage(c, damage.number, target, source);
+    if (damage == relay::no) hit = false;
+  }
+  damage = run_move_effects(c, damage, hit, target, source, which);
+  if (!damage.truthy() && damage.kind != Relay::Kind::Number) hit = false;
+
+  // selfDrops: what the effect does to the user. A move's own stat changes
+  // are drawn for, though they have no chance to miss.
+  if (d.has_self && hit) {
+    if (which == HitEffect::Move) {
+      if (!b.active_move.self_dropped) {
+        random(b, c.out, 100);
+        move_hit(c, source, source, HitEffect::Self);
+        b.active_move.self_dropped = true;
+      }
+    } else {
+      move_hit(c, source, source, HitEffect::SecondarySelf);
+    }
+  }
+  // secondaries: each is drawn for. A chance on a stat change is taken
+  // modulo 256, as the games overflow it.
+  if (which == HitEffect::Move && b.active_move.secondary_chance && hit) {
+    const Relay kept = run_event(c, events::MODIFY_SECONDARIES, on(target), source, me, relay::yes);
+    const bool own_only = kept == relay::no; // Shield Dust keeps only what has a `self`
+    if (!own_only || !(m.secondary.self_boosts == Boosts{})) {
+      const uint32_t roll = random(b, c.out, 100);
+      const bool overflow = !(m.secondary.boosts == Boosts{}) || !(m.secondary.self_boosts == Boosts{});
+      if (roll < uint32_t(overflow ? b.active_move.secondary_chance % 256 : b.active_move.secondary_chance)) {
+        move_hit(c, target, source, HitEffect::Secondary);
+      }
+    }
+  }
+  if (!damage.truthy() && damage.kind != Relay::Kind::Number) hit = false;
+  if (hit && damage.kind == Relay::Kind::Number && !is_secondary && !is_self) {
+    if (has(me, events::ON_AFTER_HIT) && b.at(source).hp) move_event(c, events::ON_AFTER_HIT, target, source);
+    run_event(c, events::DAMAGING_HIT, on(target), source, me, damage);
+    // Nothing listens for EmergencyExit in Gen 3.
+  }
+  return damage == relay::yes ? relay::undefined : damage;
+}
+
 // Gen 3's BattleActions.tryMoveHit (data/mods/gen3/scripts.ts:232) on one
-// Pokémon. False when the move did not hit.
+// Pokémon. False or null when the move did not hit.
 inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   Battle& b = c.b;
   Battle::ActiveMove& move = b.active_move;
   const Effect me = effect(move.id);
   set_active_move(b, source, target);
-  // singleEvent('PrepareHit', move) and singleEvent('Try', move): no plain
-  // move has the handlers.
-  const Relay prepared = run_event(c, events::PREPARE_HIT, on(source), target, me);
-  if (!prepared.truthy()) unported("a hit stopped by PrepareHit");
+  Relay prepared = move_event(c, events::ON_PREPARE_HIT, target, source);
+  if (prepared.truthy()) prepared = run_event(c, events::PREPARE_HIT, on(source), target, me);
+  if (!prepared.truthy()) {
+    if (prepared == relay::no) {
+      add(c, {part::text("-fail"), part::pokemon(b, source)});
+      attr_last_move(c, "[still]");
+    }
+    return relay::no;
+  }
+  if (!move_event(c, events::ON_TRY, source, target).truthy()) return relay::no;
+  if (data(move.id).target == Target::All) {
+    // Nothing listens for TryHitField in Gen 3.
+    return move_hit(c, target, source);
+  }
   if (run_event(c, events::INVULNERABILITY, on(target), source, me) == relay::no) {
     attr_last_move(c, "[miss]");
     add(c, {part::text("-miss"), part::pokemon(b, source), part::pokemon(b, target)});
     return relay::no;
   }
-  // singleEvent('TryImmunity', move) has no handler either.
-  const bool natural_immunity = !run_immunity(c, target, false);
+  bool natural_immunity = false;
+  if (!run_immunity(c, target, false)) natural_immunity = true;
+  else if (move_event(c, events::ON_TRY_IMMUNITY, target, source) == relay::no) natural_immunity = true;
 
   Relay accuracy = move.accuracy ? relay::number(move.accuracy) : relay::yes;
   if (accuracy.kind == Relay::Kind::Number) {
     // Accuracy and evasion stages are thirds, not halves.
     static constexpr double BOOST_TABLE[] = {1, 4.0 / 3, 5.0 / 3, 2, 7.0 / 3, 8.0 / 3, 3};
     run_event_without_handlers(c, events::MODIFY_BOOST_OF, on(source));
-    int boost = std::clamp(int(b.at(source).boosts.accuracy), -6, 6);
-    if (boost > 0) accuracy.number *= BOOST_TABLE[boost];
-    else accuracy.number /= BOOST_TABLE[-boost];
+    int boost_ = std::clamp(int(b.at(source).boosts.accuracy), -6, 6);
+    if (boost_ > 0) accuracy.number *= BOOST_TABLE[boost_];
+    else accuracy.number /= BOOST_TABLE[-boost_];
     run_event_without_handlers(c, events::MODIFY_BOOST_OF, on(target));
-    boost = std::clamp(int(b.at(target).boosts.evasion), -6, 6);
-    if (boost > 0) accuracy.number /= BOOST_TABLE[boost];
-    else if (boost < 0) accuracy.number *= BOOST_TABLE[-boost];
+    boost_ = std::clamp(int(b.at(target).boosts.evasion), -6, 6);
+    if (boost_ > 0) accuracy.number /= BOOST_TABLE[boost_];
+    else if (boost_ < 0) accuracy.number *= BOOST_TABLE[-boost_];
   }
   accuracy = run_event(c, events::MODIFY_ACCURACY, on(target), source, me, accuracy);
   accuracy = run_event(c, events::ACCURACY, on(target), source, me, accuracy);
@@ -336,11 +584,18 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   b.at(source).last_damage = 0;
   const Relay damage = move_hit(c, target, source);
   move.total_damage = damage.kind == Relay::Kind::Number ? uint16_t(damage.number) : 0;
-  // applyRecoilDamage: a plain move has no recoil. gotAttacked records the
-  // hit for Counter and its kind, which are not ported.
+  // applyRecoilDamage (data/mods/gen4/scripts.ts:179): a part of the damage
+  // dealt, at least 1, as damage from `recoil`.
+  if (const Fraction recoil = data(move.id).recoil; move.total_damage && recoil) {
+    const double amount = std::max(std::floor(double(move.total_damage) * recoil.num / recoil.den), 1.0);
+    adv::damage(c, amount, source, source, effect(Special::Recoil));
+  }
+  // gotAttacked records the hit for Counter and its kind, which are not
+  // ported.
+  // A hit that dealt no damage, a status move's included, ends here.
   if (damage.kind != Relay::Kind::Number) return damage;
   each_event(c, events::UPDATE_AFTER_HIT);
-  // singleEvent('AfterMoveSecondary', move) has no handler.
+  move_event(c, events::ON_AFTER_MOVE_SECONDARY, target, source);
   run_event(c, events::AFTER_MOVE_SECONDARY, on(target), source, me);
   return damage;
 }
@@ -350,38 +605,64 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
   Battle& b = c.b;
   const MoveData& m = data(id);
   b.active_move = {.id = id, .type = m.type, .category = m.category, .base_power = m.base_power,
-                   .accuracy = m.accuracy, .target = m.target, .crit_ratio = m.crit_ratio};
+                   .accuracy = m.accuracy, .target = m.target, .crit_ratio = m.crit_ratio,
+                   .secondary_chance = m.secondary.chance, .self_boosts = m.self_boosts,
+                   .volatile_status = m.volatile_status, .on_hit = true};
   const Effect me = effect(id);
   Pokemon& p = b.at(user);
+  const auto self_targeted = [&] { return b.active_move.target == Target::Self || b.active_move.target == Target::All; };
+  if (self_targeted()) target = user;
   set_active_move(b, user, target);
-  // singleEvent('ModifyMove', move): no plain move has the handler.
+  // The move's own onModifyMove, then everyone's; they change the active
+  // move in place.
+  move_event(c, events::ON_MODIFY_MOVE, user, target);
   if (!run_event(c, events::MODIFY_MOVE, on(user), target, me, relay::yes).truthy()) return false;
+  // A handler may have changed the move's target (Curse without a Ghost).
+  if (b.active_move.target != m.target) target = self_targeted() ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (p.fainted) return false;
   c.out.last_move_line = int32_t(c.out.log.size());
   add(c, {part::text("move"), part::pokemon(b, user), part::move(id), part::pokemon(b, target)});
 
-  // Pokemon.getMoveTargets (pokemon.ts) in singles: the foe, unless it has
-  // fainted (a move on one target) or has no HP (a move on all adjacent).
-  const Pokemon& foe = b.at(target);
-  const bool spread = m.target == Target::AllAdjacent || m.target == Target::AllAdjacentFoes;
-  const bool has_target = spread ? foe.hp != 0 : !foe.fainted;
-  if (has_target) {
-    // Pressure: each target may make the move cost more.
-    const Relay drop = run_event(c, events::DEDUCT_PP, on(target), user, me);
-    if (drop.kind == Relay::Kind::Number && drop.number > 0) deduct_pp(p, id, int(drop.number));
+  // Pokemon.getMoveTargets (pokemon.ts) in singles: the target, unless it
+  // has fainted (a move on one target) or has no HP (a move on all adjacent).
+  const Pokemon& aimed = b.at(target);
+  const Target aim = b.active_move.target;
+  const bool spread = aim == Target::AllAdjacent || aim == Target::AllAdjacentFoes;
+  const bool has_target = spread ? aimed.hp != 0 : !aimed.fainted;
+  // Pressure: each target may make the move cost more. A move on the field
+  // has every Pokémon for a target, the user first.
+  int extra_pp = 0;
+  const auto pressure = [&](Ref on_) {
+    const Relay drop = run_event(c, events::DEDUCT_PP, on(on_), user, me);
+    if (drop.kind == Relay::Kind::Number) extra_pp += int(drop.number);
+  };
+  if (aim == Target::All) {
+    pressure(user);
+    if (b.sides[user.side ^ 1].active != 0xFF) pressure({uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active});
+  } else if (has_target) {
+    pressure(target);
   }
-  // singleEvent('TryMove', move) has no handler.
-  if (!run_event(c, events::TRY_MOVE, on(user), target, me).truthy()) return false;
-  if (!has_target || (!spread && !is_adjacent(b, target, user))) {
+  if (extra_pp > 0) deduct_pp(p, id, extra_pp);
+  if (!move_event(c, events::ON_TRY_MOVE, user, target).truthy() ||
+      !run_event(c, events::TRY_MOVE, on(user), target, me).truthy()) {
+    return false;
+  }
+  move_event(c, events::ON_USE_MOVE_MESSAGE, user, target);
+  if (m.selfdestruct == SelfDestruct::Always) faint(c, user, user, me);
+  const bool aimed_at_foe = aim == Target::Normal;
+  if (!has_target || (aimed_at_foe && !is_adjacent(b, target, user))) {
     attr_last_move(c, "[notarget]");
     add(c, {part::text("-notarget"), part::pokemon(b, user)});
     return false;
   }
   const Relay damage = try_move_hit(c, target, user);
-  const bool result = damage.kind == Relay::Kind::Number;
+  const bool result = damage.kind == Relay::Kind::Number || damage.undefined() || damage.truthy();
   if (!p.hp) faint(c, user, user, me);
-  if (!result) return false; // singleEvent('MoveFail', move) has no handler
-  // singleEvent('AfterMoveSecondarySelf', move) has no handler.
+  if (!result) {
+    move_event(c, events::ON_MOVE_FAIL, target, user);
+    return false;
+  }
+  move_event(c, events::ON_AFTER_MOVE_SECONDARY_SELF, user, target);
   run_event(c, events::AFTER_MOVE_SECONDARY_SELF, on(user), target, me);
   return true;
 }
@@ -389,14 +670,16 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
 // BattleActions.runMove (battle-actions.ts) for a move the Pokémon chose.
 inline void run_move(Ctx& c, Move id, Ref user) {
   Battle& b = c.b;
-  if (!is_plain(id)) unported("move " + std::string(MOVE_NAMES[uint16_t(id)].id));
+  if (const char* why = unsupported(id)) unported(std::string(why) + ": " + std::string(MOVE_NAMES[uint16_t(id)].id));
   Pokemon& p = b.at(user);
   const Effect me = effect(id);
   p.active_move_actions++;
-  // Battle.getTarget (battle.ts) in singles: the foe's active Pokémon,
-  // fainted or not.
-  const Ref target{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
+  // Battle.getTarget (battle.ts) in singles: the user for a move on itself,
+  // else the foe's active Pokémon, fainted or not.
+  const bool on_self = data(id).target == Target::Self || data(id).target == Target::All;
+  const Ref target = on_self ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (run_event(c, events::OVERRIDE_ACTION, on(user), target, me) != relay::yes) unported("a move overridden");
+  b.active_move = {.id = id, .type = data(id).type, .category = data(id).category};
   set_active_move(b, user, target);
   const Relay will_try = run_event(c, events::BEFORE_MOVE, on(user), target, me);
   if (!will_try.truthy()) {
@@ -404,6 +687,7 @@ inline void run_move(Ctx& c, Move id, Ref user) {
     b.has_active_move = false;
     return;
   }
+  if (has(me, Callback::beforeMoveCallback)) unported("a move with a beforeMoveCallback");
   p.last_damage = 0;
   // getLockedMove: nothing locks a move yet.
   if (run_event(c, event("LockMove"), on(user), {}, {}, relay::undefined, false, true) != relay::yes) unported("a locked move");
@@ -411,7 +695,7 @@ inline void run_move(Ctx& c, Move id, Ref user) {
   p.last_move = id;
   p.move_this_turn = id;
   use_move(c, id, user, target);
-  // singleEvent('AfterMove', move) has no handler.
+  move_event(c, events::ON_AFTER_MOVE, user, target);
   run_event(c, events::AFTER_MOVE, on(user), target, me);
   // In Gen 3 a move runs the Faint event for what it made faint.
   for (int i = 0; i < b.faints; i++) {

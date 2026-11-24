@@ -121,7 +121,9 @@ struct NatureData {
 };
 
 // Which table an effect's id is an index of.
-enum class EffectKind : uint8_t { Move, Ability, Item, Condition, Rule };
+enum class EffectKind : uint8_t { Move, Ability, Item, Condition, Rule, Special };
+// Effects Showdown makes up by name where one is needed and none exists.
+enum class Special : uint16_t { None, Recoil, Drain };
 
 // One handler as Showdown gathers it: who answers to which name, and the
 // `Order`, `Priority` and `SubOrder` it is sorted by. `handled` is false for
