@@ -20,12 +20,15 @@ struct Part {
     Text,     // a literal of Showdown's source
     Number,
     Side,     // `p1`
+    SideName, // a side as text: `p1: Name`
     Player,   // the player's name
     Pokemon,  // `p1a: Name` when active, `p1: Name` when not
     Details,  // getFullDetails: details and health, split by viewer
     Health,   // getHealth: split by viewer
     Ability,  // an ability's name
     Move,     // a move's name
+    Item,     // an item's name
+    Wisher,   // `[wisher] Name`
     From,     // `[from] ` and an effect's full name
     Of,       // `[of] p1a: Name`
   } kind = Kind::Text;
@@ -57,8 +60,11 @@ constexpr Part text(std::string_view t) { return {.kind = Part::Kind::Text, .tex
 constexpr Part number(int32_t v) { return {.kind = Part::Kind::Number, .number = v}; }
 constexpr Part side(int s) { return {.kind = Part::Kind::Side, .number = s}; }
 constexpr Part player(int s) { return {.kind = Part::Kind::Player, .number = s}; }
+constexpr Part side_name(int s) { return {.kind = Part::Kind::SideName, .number = s}; }
 constexpr Part ability(Ability a) { return {.kind = Part::Kind::Ability, .id = uint16_t(a)}; }
 constexpr Part move(adv::Move m) { return {.kind = Part::Kind::Move, .id = uint16_t(m)}; }
+constexpr Part item(adv::Item i) { return {.kind = Part::Kind::Item, .id = uint16_t(i)}; }
+constexpr Part wisher(Ref r) { return {.kind = Part::Kind::Wisher, .pokemon = r}; }
 constexpr Part from(Effect e) { return {.kind = Part::Kind::From, .id = e.id, .effect_kind = e.kind}; }
 constexpr Part from_ability(Ability a) { return from(effect(a)); }
 inline Part pokemon(const Battle& b, Ref r) {

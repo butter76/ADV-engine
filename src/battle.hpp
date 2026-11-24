@@ -85,6 +85,11 @@ struct EffectState {
   int8_t time = 0;         // sleep, confusion: turns left
   int8_t skipped_time = 0; // sleep: turns slept through with a move usable asleep
   int8_t stage = 0;        // toxic poison: sixteenths of damage
+  uint8_t layers = 0;      // Spikes
+  uint16_t counter = 0;    // stall: one in this many that Protect works again
+  uint16_t hp = 0;         // a Substitute's
+  bool lost_focus = false; // Focus Punch: its user was hit
+  uint8_t target_side = 0; // the target, when it is a side
 };
 
 // A volatile of a Pokémon (Pokemon.volatiles), kept in the order they were
@@ -140,6 +145,7 @@ struct Pokemon {
   bool stats_raised_this_turn = false, stats_lowered_this_turn = false;
   bool known_type = true, newly_switched = false;
   bool switch_flag = false, force_switch_flag = false;
+  bool item_knocked_off = false;
   uint8_t active_turns = 0, previously_switched_in = 0;
   Move last_move = Move::None, move_this_turn = Move::None;
   uint16_t last_damage = 0;
@@ -156,8 +162,20 @@ struct ChoiceState {
   Move move = Move::None;
 };
 
+// A condition of a side (Side.sideConditions), in the order they were added.
+struct SideCondition {
+  Condition id = Condition::None;
+  EffectState state;
+};
+// Wish is a condition of the side's one slot (Side.slotConditions): it is
+// gathered with the active Pokémon's handlers and outlasts a faint.
+
 struct Side {
   std::array<Pokemon, TEAM_SIZE> pokemon{};
+  std::array<SideCondition, 6> side_conditions{};
+  uint8_t n_side_conditions = 0;
+  std::array<SideCondition, 2> slot_conditions{};
+  uint8_t n_slot_conditions = 0;
   uint8_t size = 0;
   uint8_t pokemon_left = 0;
   uint8_t active = 0xFF; // the team index of the Pokémon out, or none
@@ -178,7 +196,7 @@ struct Field {
   EffectState weather_state;
 };
 
-enum class Choice : uint8_t { Start, BeforeTurn, RunSwitch, Switch, InstaSwitch, Move, Residual };
+enum class Choice : uint8_t { Start, BeforeTurn, BeforeTurnMove, RunSwitch, Switch, InstaSwitch, Move, Residual };
 
 // An action of the queue (battle-queue.ts). A missing order sorts last, as
 // Showdown's `order || 4294967296`.

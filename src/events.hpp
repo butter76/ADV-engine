@@ -3,8 +3,8 @@
 // gathered in, the sort and its shuffle of ties are all part of what a
 // battle's draws depend on, so each function here follows the one it ports.
 //
-// Not yet: side conditions and slot conditions are not in the state, so
-// nothing is gathered from them. Speed is not what this is
+// Not yet: slot conditions are not in the state, so nothing is gathered
+// from them. Speed is not what this is
 // written for; the listener masks of docs/PLAN.md come later.
 
 #pragma once
@@ -79,6 +79,7 @@ struct Subject {
   constexpr bool operator==(const Subject&) const = default;
 };
 constexpr Subject on(Ref r) { return {HolderKind::Pokemon, r, r.side}; }
+constexpr Subject on_side(int side) { return {HolderKind::Side, {}, uint8_t(side)}; }
 inline constexpr Subject FIELD{HolderKind::Field, {}, 0};
 inline constexpr Subject BATTLE{HolderKind::Battle, {}, 0};
 
@@ -245,6 +246,9 @@ struct Listener {
   uint32_t effect_order = 0;
   bool ends = false;      // Showdown's `end`: the effect can be ended when its duration runs out
   bool is_volatile = false;
+  bool is_side_condition = false;
+  bool is_slot_condition = false;
+  uint8_t side = 0; // of a side or slot condition
 };
 struct Listeners {
   std::array<Listener, 24> list;
@@ -365,6 +369,41 @@ inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners&
   for (int i = 0; i < p.n_volatiles; i++) add(effect(p.volatiles[i].id), &p.volatiles[i].state, true);
   add(effect(p.ability), &p.ability_state, false);
   add(effect(p.item), &p.item_state, false);
+  // The conditions of the Pokémon's slot, held by the Pokémon.
+  Side& side = c.b.sides[r.side];
+  for (int i = 0; p.position == 0 && i < side.n_slot_conditions; i++) {
+    SideCondition& sc = side.slot_conditions[i];
+    if (sc.id == Condition::None) continue;
+    const Found f = get_callback(c.b, true, effect(sc.id), name);
+    if (!f && !(by_duration && sc.state.duration)) continue;
+    Listener l = resolve_priority(c, {{effect(sc.id), f.actual}, &sc.state, holder}, name);
+    if (!l.sub_order || l.sub_order == 4) l.sub_order = 3;
+    l.ends = true;
+    l.is_slot_condition = true;
+    l.side = r.side;
+    out.push(l);
+  }
+}
+
+// Battle.findSideEventHandlers (battle.ts:1230): the side's conditions, in
+// the order they were added.
+inline void find_side_event_handlers(Ctx& c, int side, Callback name, Listeners& out, Subject holder = {},
+                                     bool by_duration = false) {
+  if (name == NO_CALLBACK) return;
+  const bool own = holder.kind == HolderKind::None;
+  if (own) holder = on_side(side);
+  Side& s = c.b.sides[side];
+  for (int i = 0; i < s.n_side_conditions; i++) {
+    SideCondition& sc = s.side_conditions[i];
+    if (sc.id == Condition::None) continue; // removed
+    const Found f = get_callback(c.b, false, effect(sc.id), name);
+    if (!f && !(by_duration && sc.state.duration)) continue;
+    Listener l = resolve_priority(c, {{effect(sc.id), f.actual}, &sc.state, holder}, name);
+    l.ends = own;
+    l.is_side_condition = true;
+    l.side = uint8_t(side);
+    out.push(l);
+  }
 }
 
 // Battle.findFieldEventHandlers (battle.ts:1195): the pseudo-weathers, the weather.
@@ -395,6 +434,7 @@ inline void find_battle_event_handlers(Ctx& c, Callback name, Listeners& out, Su
 // prefixed names.
 inline void find_event_handlers(Ctx& c, Subject t, const EventNames& e, Ref source, Listeners& out) {
   const bool prefixed = e.id != "BeforeTurn" && e.id != "Update" && e.id != "Weather" && e.id != "WeatherChange";
+  int target_side = -1;
   if (t.kind == HolderKind::Pokemon && (c.b.at(t.pokemon).is_active || (source && c.b.at(source).is_active))) {
     const Ref self = t.pokemon;
     find_pokemon_event_handlers(c, self, e.on, out);
@@ -412,12 +452,18 @@ inline void find_event_handlers(Ctx& c, Subject t, const EventNames& e, Ref sour
         find_pokemon_event_handlers(c, foe, e.any, out);
       }
     }
-    // The sides' conditions would be gathered here: on<Event> of its own
-    // side's, onFoe<Event> and onAny<Event> of the other's.
+    target_side = self.side;
   } else if (t.kind != HolderKind::Battle && t.kind != HolderKind::Pokemon) {
     unported("an event on a side or the field");
   }
   if (source && prefixed) find_pokemon_event_handlers(c, source, e.source, out);
+  // The sides' conditions, p1's then p2's: on<Event> of the target's own
+  // side, onFoe<Event> of the other, and onAny<Event> of both.
+  for (int side = 0; target_side >= 0 && side < 2; side++) {
+    if (side == target_side) find_side_event_handlers(c, side, e.on, out);
+    else if (prefixed) find_side_event_handlers(c, side, e.foe, out);
+    if (prefixed) find_side_event_handlers(c, side, e.any, out);
+  }
   find_field_event_handlers(c, e.on, out);
   find_battle_event_handlers(c, e.on, out);
 }
@@ -534,6 +580,7 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
     c.effect_state = h.state ? h.state : &fresh;
     c.effect_state->target = h.holder.kind;
     c.effect_state->target_pokemon = h.holder.pokemon;
+    if (h.holder.kind == HolderKind::Side) c.effect_state->target_side = h.holder.side;
     const Relay returned = call(c, h.callback, has_relay ? value : relay::undefined, t, source, source_effect);
     c.effect = parent_effect;
     c.effect_state = parent_state;

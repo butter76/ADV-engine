@@ -287,26 +287,27 @@ inline void faint(Ctx& c, Ref r, Ref source, Effect effect) {
 // Battle.damage (battle.ts) from a handler, which is spreadDamage for one
 // target: the target is the event's, the source the event's, and the effect
 // the handler's. The amount is Showdown's number, floored to at least 1.
-inline void damage(Ctx& c, double amount) {
+inline double damage(Ctx& c, double amount) {
   if (c.event.target.kind != HolderKind::Pokemon) unported("damage with no Pokémon target");
   const Ref target = c.event.target.pokemon;
   const Ref source = c.event.source;
   const Effect effect = c.effect;
   Pokemon& p = c.b.at(target);
-  if (!p.hp || !p.is_active) return;
+  if (!p.hp || !p.is_active) return 0;
   if (amount != 0) amount = std::max(std::floor(amount), 1.0);
   if (type_of(effect) == EffectType::Weather) {
     const Immunity to = Condition(effect.id) == Condition::Sandstorm ? Immunity::Sandstorm : Immunity::Hail;
-    if (!run_status_immunity(c, target, CONDITION_NAMES[effect.id].id, get_immunity(p, to))) return;
+    if (!run_status_immunity(c, target, CONDITION_NAMES[effect.id].id, get_immunity(p, to))) return 0;
   }
   const Relay after = run_event(c, DAMAGE, on(target), source, effect, relay::number(amount), true);
-  if (after.kind != Relay::Kind::Number) return; // the event refused the damage
+  if (after.kind != Relay::Kind::Number) return 0; // the event refused the damage
   amount = after.number;
   if (amount != 0) amount = std::max(std::floor(amount), 1.0);
   // Pokemon.damage (pokemon.ts).
+  uint16_t dealt = 0;
   if (amount > 0) {
-    const uint16_t d = uint16_t(std::min<double>(amount, p.hp));
-    p.hp = uint16_t(p.hp - d);
+    dealt = uint16_t(std::min<double>(amount, p.hp));
+    p.hp = uint16_t(p.hp - dealt);
     if (!p.hp) faint(c, target, source, effect);
   }
   if (effect.kind == EffectKind::Move || effect.kind == EffectKind::Rule) unported("damage from a move outside its hit");
@@ -319,23 +320,40 @@ inline void damage(Ctx& c, double amount) {
   } else {
     add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target), part::from(effect)});
   }
+  return dealt;
 }
 
 // Battle.damage(amount, target, source) from a handler: as above, with the
 // target and the source given (Rough Skin hurts the attacker).
-inline void damage(Ctx& c, double amount, Ref target, Ref source) {
+inline double damage(Ctx& c, double amount, Ref target, Ref source) {
   const auto event = c.event;
   c.event.target = on(target);
   c.event.source = source;
-  damage(c, amount);
+  const double dealt = damage(c, amount);
   c.event = event;
+  return dealt;
 }
 // And with the effect given (a move's recoil).
-inline void damage(Ctx& c, double amount, Ref target, Ref source, Effect effect) {
+inline double damage(Ctx& c, double amount, Ref target, Ref source, Effect effect) {
   const Effect current = c.effect;
   c.effect = effect;
-  damage(c, amount, target, source);
+  const double dealt = damage(c, amount, target, source);
   c.effect = current;
+  return dealt;
+}
+
+// Battle.directDamage(amount) (battle.ts) from a handler: damage that no
+// event can change, on the event's target.
+inline void direct_damage(Ctx& c, double amount) {
+  if (c.event.target.kind != HolderKind::Pokemon) unported("direct damage with no Pokémon target");
+  const Ref target = c.event.target.pokemon;
+  Pokemon& p = c.b.at(target);
+  if (!p.hp || !amount) return;
+  amount = std::max(std::floor(amount), 1.0);
+  const uint16_t dealt = uint16_t(std::min<double>(amount, p.hp));
+  p.hp = uint16_t(p.hp - dealt);
+  if (!p.hp) faint(c, target, c.event.source, c.effect);
+  add(c, {part::text("-damage"), part::pokemon(c.b, target), part::health(c.b, target)});
 }
 
 // Battle.heal (battle.ts) from a handler, with the same target, source and
@@ -350,10 +368,9 @@ inline double heal(Ctx& c, double amount, Ref target, Ref source, Effect effect)
   if (!p.hp || !p.is_active || p.hp >= p.maxhp) return 0;
   const uint16_t before = p.hp;
   p.hp = uint16_t(std::min<double>(p.hp + amount, p.maxhp)); // Pokemon.heal
-  if (effect.kind == EffectKind::Move && (Move(effect.id) == Move::LeechSeed || Move(effect.id) == Move::Wish)) {
-    unported("healing from Leech Seed or Wish");
-  }
-  if (effect == adv::effect(Move::Rest)) {
+  if (effect == adv::effect(Condition::Wish)) {
+    // Wish writes its own line.
+  } else if (effect == adv::effect(Move::Rest) || effect == adv::effect(Condition::LeechSeed)) {
     add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target), part::text("[silent]")});
   } else if (effect.kind == EffectKind::Move) {
     add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target)});
@@ -436,6 +453,107 @@ inline bool remove_volatile(Ctx& c, Ref r, Condition id) {
   if (!v) return false;
   single_event(c, ON_VOLATILE_END, effect(id), &v->state, on(r));
   if (Volatile* still = volatile_of(p, id)) still->id = Condition::None;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Side conditions (side.ts). A removed one keeps its slot until the turn
+// ends, as a removed volatile does.
+// ---------------------------------------------------------------------------
+inline SideCondition* side_condition_of(Side& s, Condition id) {
+  if (id == Condition::None) return nullptr;
+  for (int i = 0; i < s.n_side_conditions; i++) {
+    if (s.side_conditions[i].id == id) return &s.side_conditions[i];
+  }
+  return nullptr;
+}
+inline void compact_side_conditions(Side& s) {
+  int kept = 0;
+  for (int i = 0; i < s.n_side_conditions; i++) {
+    if (s.side_conditions[i].id != Condition::None) s.side_conditions[kept++] = s.side_conditions[i];
+  }
+  s.n_side_conditions = uint8_t(kept);
+}
+
+// Side.addSideCondition(status, source, sourceEffect).
+inline bool add_side_condition(Ctx& c, int side, Condition id, Ref source, Effect source_effect) {
+  Side& s = c.b.sides[side];
+  if (SideCondition* sc = side_condition_of(s, id)) {
+    if (!has(effect(id), callback("", "SideRestart"))) return false;
+    return single_event(c, callback("", "SideRestart"), effect(id), &sc->state, on_side(side), source, source_effect).truthy();
+  }
+  if (s.n_side_conditions == s.side_conditions.size()) unported("more than six side conditions");
+  SideCondition& sc = s.side_conditions[s.n_side_conditions++];
+  sc.id = id;
+  sc.state = EffectState{};
+  sc.state.effect_order = c.b.effect_order++; // a side's effect always takes an order
+  sc.state.target = HolderKind::Side;
+  sc.state.target_side = uint8_t(side);
+  sc.state.source = source;
+  sc.state.duration = data(id).duration;
+  if (has(effect(id), Callback::durationCallback)) {
+    // durationCallback(the side's active Pokémon, source, sourceEffect).
+    const Ref active{uint8_t(side), s.active};
+    sc.state.duration = uint8_t(call(c, {effect(id), Callback::durationCallback}, relay::undefined, on(active), source, source_effect).number);
+  }
+  if (!single_event(c, callback("", "SideStart"), effect(id), &sc.state, on_side(side), source, source_effect).truthy()) {
+    if (SideCondition* added = side_condition_of(s, id)) added->id = Condition::None;
+    return false;
+  }
+  // Nothing listens for SideConditionStart in Gen 3.
+  return true;
+}
+
+// Side.addSlotCondition and removeSlotCondition, for the side's one slot.
+inline SideCondition* slot_condition_of(Side& s, Condition id) {
+  for (int i = 0; id != Condition::None && i < s.n_slot_conditions; i++) {
+    if (s.slot_conditions[i].id == id) return &s.slot_conditions[i];
+  }
+  return nullptr;
+}
+inline bool add_slot_condition(Ctx& c, int side, Condition id, Ref source, Effect source_effect) {
+  Side& s = c.b.sides[side];
+  if (slot_condition_of(s, id)) {
+    if (has(effect(id), ON_RESTART)) unported("a slot condition's onRestart");
+    return false;
+  }
+  int kept = 0;
+  for (int i = 0; i < s.n_slot_conditions; i++) {
+    if (s.slot_conditions[i].id != Condition::None) s.slot_conditions[kept++] = s.slot_conditions[i];
+  }
+  s.n_slot_conditions = uint8_t(kept);
+  if (s.n_slot_conditions == s.slot_conditions.size()) unported("more than two slot conditions");
+  SideCondition& sc = s.slot_conditions[s.n_slot_conditions++];
+  sc.id = id;
+  sc.state = EffectState{};
+  sc.state.effect_order = c.b.effect_order++;
+  sc.state.target = HolderKind::Side;
+  sc.state.target_side = uint8_t(side);
+  sc.state.source = source;
+  sc.state.duration = data(id).duration;
+  const Ref active{uint8_t(side), s.active};
+  if (!single_event(c, ON_START, effect(id), &sc.state, on(active), source, source_effect).truthy()) {
+    if (SideCondition* added = slot_condition_of(s, id)) added->id = Condition::None;
+    return false;
+  }
+  return true;
+}
+inline bool remove_slot_condition(Ctx& c, int side, Condition id) {
+  Side& s = c.b.sides[side];
+  SideCondition* sc = slot_condition_of(s, id);
+  if (!sc) return false;
+  single_event(c, ON_VOLATILE_END, effect(id), &sc->state, on(Ref{uint8_t(side), s.active}));
+  if (SideCondition* still = slot_condition_of(s, id)) still->id = Condition::None;
+  return true;
+}
+
+// Side.removeSideCondition.
+inline bool remove_side_condition(Ctx& c, int side, Condition id) {
+  Side& s = c.b.sides[side];
+  SideCondition* sc = side_condition_of(s, id);
+  if (!sc) return false;
+  single_event(c, callback("", "SideEnd"), effect(id), &sc->state, on_side(side));
+  if (SideCondition* still = side_condition_of(s, id)) still->id = Condition::None;
   return true;
 }
 

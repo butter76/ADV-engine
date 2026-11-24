@@ -58,18 +58,17 @@ inline const char* unsupported(Move move) {
   const MoveData& m = data(move);
   if (m.type == Type::Unknown && m.category != Category::Status) return "a typeless move that does damage";
   if (m.target != Target::Normal && m.target != Target::Any && m.target != Target::AllAdjacent &&
-      m.target != Target::AllAdjacentFoes && m.target != Target::Self && m.target != Target::All) {
-    return "a move on a side or a random target";
+      m.target != Target::AllAdjacentFoes && m.target != Target::Self && m.target != Target::All &&
+      m.target != Target::FoeSide && m.target != Target::AllySide && m.target != Target::AllyTeam) {
+    return "a move on a team or a random target";
   }
   if (m.multihit[1]) return "a move that hits more than once";
   if (m.ohko) return "a one-hit KO move";
   if (m.selfdestruct == SelfDestruct::IfHit) return "a move that faints its user if it hits";
   if (m.self_switch != SelfSwitch::None) return "a move that switches its user out";
-  if (m.force_switch) return "a move that forces a switch";
-  if (m.side_condition != Condition::None || m.slot_condition != Condition::None) return "a move that sets a side condition";
-  if (m.sleep_usable || m.calls_move || m.stalling_move || m.has_crash_damage || m.multiaccuracy) return "a move of a special kind";
+  if (m.sleep_usable || m.calls_move || m.has_crash_damage || m.multiaccuracy) return "a move of a special kind";
   if (m.self_volatile_status != Condition::None) return "a move that gives its user a volatile";
-  if (move == Move::RapidSpin || move == Move::BatonPass || move == Move::TriAttack) return "a move with a handler in its secondary";
+  if (move == Move::BatonPass || move == Move::TriAttack) return "a move with a handler in its secondary";
   return nullptr;
 }
 
@@ -229,11 +228,30 @@ inline SparseBoosts sparse(const Boosts& b) {
   }
   return out;
 }
+// Battle.canSwitch (battle.ts): how many Pokémon behind the active one have
+// not fainted.
+inline int can_switch(const Battle& b, int side) {
+  const Side& s = b.sides[side];
+  if (!s.pokemon_left) return 0;
+  int n = 0;
+  for (int i = 0; i < s.size; i++) n += s.pokemon[i].position >= 1 && !s.pokemon[i].fainted;
+  return n;
+}
+
+// A move on the field or on a side: it has no Pokémon for a target.
+constexpr bool is_wide(Target t) {
+  return t == Target::All || t == Target::FoeSide || t == Target::AllySide || t == Target::AllyTeam;
+}
+
+inline void rapidspin_self_onHit(Ctx& c, Ref pokemon); // callbacks.hpp
+
 inline HitData hit_data(const Battle::ActiveMove& active, HitEffect effect_) {
   const MoveData& m = data(active.id);
   switch (effect_) {
   case HitEffect::Move:
-    return {sparse(m.boosts), m.status, active.volatile_status, m.heal, !(active.self_boosts == Boosts{})};
+    // Rapid Spin's `self` is a handler alone.
+    return {sparse(m.boosts), m.status, active.volatile_status, m.heal,
+            !(active.self_boosts == Boosts{}) || active.id == Move::RapidSpin};
   case HitEffect::Secondary:
     return {sparse(m.secondary.boosts), m.secondary.status, m.secondary.volatile_status, {},
             !(m.secondary.self_boosts == Boosts{})};
@@ -348,15 +366,21 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which = HitEffec
 // effect does besides damage. `hit` says whether the target is still a
 // target; the result replaces `damage`.
 inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref source, HitEffect which) {
+  // `target` is no Pokémon when a Substitute took the hit: the effect then
+  // does nothing to it, and counts as having done something.
   Battle& b = c.b;
   const Move id = b.active_move.id;
   const Effect me = effect(id);
   const HitData d = hit_data(b.active_move, which);
   const bool is_secondary = which == HitEffect::Secondary || which == HitEffect::SecondarySelf;
   const bool is_self = which == HitEffect::Self || which == HitEffect::SecondarySelf;
-  const bool on_field = data(id).target == Target::All && !is_self;
+  // A move on the user's team runs its onHit as a move on a Pokémon does.
+  const bool on_field = is_wide(data(id).target) && data(id).target != Target::AllyTeam && !is_self;
   Relay did_anything = damage;
-  if (hit) {
+  if (hit && !target) {
+    damage = combine_results(damage, relay::yes);
+    did_anything = combine_results(did_anything, relay::yes);
+  } else if (hit) {
     Relay did_something = relay::undefined;
     bool stop = false;
     if (d.boosts.present && !b.at(target).fainted) {
@@ -397,12 +421,26 @@ inline Relay run_move_effects(Ctx& c, Relay damage, bool hit, Ref target, Ref so
       c.effect = parent;
       did_something = combine_results(did_something, as_result(added));
     }
+    if (!stop && which == HitEffect::Move && data(id).side_condition != Condition::None) {
+      // The side of the target: the user's own for a move on its side.
+      const int side = data(id).target == Target::AllySide ? source.side : target.side;
+      did_something = combine_results(did_something, as_result(add_side_condition(c, side, data(id).side_condition, source, me)));
+    }
+    if (!stop && which == HitEffect::Move && data(id).force_switch) {
+      did_something = combine_results(did_something, as_result(can_switch(b, target.side) > 0));
+    }
+    if (!stop && which == HitEffect::Move && data(id).slot_condition != Condition::None) {
+      did_something = combine_results(did_something, as_result(add_slot_condition(c, target.side, data(id).slot_condition, source, me)));
+    }
     if (!stop && which == HitEffect::Move && data(id).weather != Condition::None) {
       did_something = combine_results(did_something, as_result(set_weather(c, data(id).weather, source, me)));
     }
     if (!stop) {
       if (on_field) {
-        if (has(me, callback("", "HitField"))) unported("a move's onHitField");
+        // Its onHitField; no move of Gen 3 has an onHitSide.
+        if (data(id).target == Target::All && has(me, callback("", "HitField"))) {
+          did_something = combine_results(did_something, move_event(c, callback("", "HitField"), target, source));
+        }
       } else {
         if (which == HitEffect::Move && b.active_move.on_hit && has(me, events::ON_HIT)) {
           const Relay result = move_event(c, events::ON_HIT, target, source);
@@ -434,7 +472,7 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
   const bool is_secondary = which == HitEffect::Secondary || which == HitEffect::SecondarySelf;
   const bool is_self = which == HitEffect::Self || which == HitEffect::SecondarySelf;
   const HitData d = hit_data(b.active_move, which);
-  const bool on_field = m.target == Target::All && !is_self;
+  const bool on_field = is_wide(m.target) && !is_self;
   Relay damage = relay::yes;
   bool hit = true;
   if (on_field) {
@@ -449,15 +487,22 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
       return relay::no;
     }
   }
-  if (!is_secondary && !is_self && !on_field) {
+  if (!is_secondary && !is_self && !on_field && target) {
     damage = run_event(c, events::TRY_PRIMARY_HIT, on(target), source, me);
-    if (damage.kind == Relay::Kind::Number) unported("a hit taken by a Substitute");
+    // A Substitute took the hit (HIT_SUBSTITUTE, which is 0): the move has
+    // no target from here on, and its damage is 0.
+    if (damage.kind == Relay::Kind::Number) {
+      damage = relay::number(0);
+      target = Ref{};
+    }
   }
-  if (is_secondary && !d.has_self) damage = relay::yes;
-  if (!damage.truthy()) hit = false;
+  if (target && is_secondary && !d.has_self) damage = relay::yes;
+  if (!damage.truthy() && damage.kind != Relay::Kind::Number) hit = false;
 
-  // getSpreadDamage, then spreadDamage.
-  if (hit) {
+  // getSpreadDamage, then spreadDamage. With no target the damage is 0.
+  if (hit && !target) {
+    damage = relay::number(0);
+  } else if (hit) {
     b.active_target = target;
     damage = which == HitEffect::Move ? get_damage(c, source, target) : relay::undefined;
     if (damage == relay::no || damage.kind == Relay::Kind::Null) {
@@ -465,7 +510,7 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
       hit = false;
     }
   }
-  if (hit && damage.kind == Relay::Kind::Number) {
+  if (hit && target && damage.kind == Relay::Kind::Number) {
     damage = move_damage(c, damage.number, target, source);
     if (damage == relay::no) hit = false;
   }
@@ -475,7 +520,16 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
   // selfDrops: what the effect does to the user. A move's own stat changes
   // are drawn for, though they have no chance to miss.
   if (d.has_self && hit) {
-    if (which == HitEffect::Move) {
+    if (which == HitEffect::Move && id == Move::RapidSpin) {
+      // moveHit(source, source, move, move.self, false, true): its onHit.
+      const auto parent = c.event;
+      c.event = {"Hit", on(source), source, me, 1};
+      const Effect current = c.effect;
+      c.effect = me;
+      rapidspin_self_onHit(c, source);
+      c.effect = current;
+      c.event = parent;
+    } else if (which == HitEffect::Move) {
       if (!b.active_move.self_dropped) {
         random(b, c.out, 100);
         move_hit(c, source, source, HitEffect::Self);
@@ -488,7 +542,8 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
   // secondaries: each is drawn for. A chance on a stat change is taken
   // modulo 256, as the games overflow it.
   if (which == HitEffect::Move && b.active_move.secondary_chance && hit) {
-    const Relay kept = run_event(c, events::MODIFY_SECONDARIES, on(target), source, me, relay::yes);
+    // With no target the event is run on the battle, where nothing listens.
+    const Relay kept = target ? run_event(c, events::MODIFY_SECONDARIES, on(target), source, me, relay::yes) : relay::yes;
     const bool own_only = kept == relay::no; // Shield Dust keeps only what has a `self`
     if (!own_only || !(m.secondary.self_boosts == Boosts{})) {
       const uint32_t roll = random(b, c.out, 100);
@@ -498,13 +553,43 @@ inline Relay move_hit(Ctx& c, Ref target, Ref source, HitEffect which) {
       }
     }
   }
+  // forceSwitch: the target is flagged to be dragged out when the action is
+  // over, unless something holds it in.
+  if (which == HitEffect::Move && m.force_switch && hit && target && b.at(target).hp && b.at(source).hp &&
+      can_switch(b, target.side)) {
+    const Relay dragged = run_event(c, event("DragOut"), on(target), source, me);
+    if (dragged.truthy()) {
+      b.at(target).force_switch_flag = true;
+    } else if (dragged == relay::no && m.category == Category::Status) {
+      add(c, {part::text("-fail"), part::pokemon(b, source)});
+      attr_last_move(c, "[still]");
+      damage = relay::no;
+    }
+  }
   if (!damage.truthy() && damage.kind != Relay::Kind::Number) hit = false;
-  if (hit && damage.kind == Relay::Kind::Number && !is_secondary && !is_self) {
+  if (hit && target && damage.kind == Relay::Kind::Number && !is_secondary && !is_self) {
     if (has(me, events::ON_AFTER_HIT) && b.at(source).hp) move_event(c, events::ON_AFTER_HIT, target, source);
     run_event(c, events::DAMAGING_HIT, on(target), source, me, damage);
     // Nothing listens for EmergencyExit in Gen 3.
   }
   return damage == relay::yes ? relay::undefined : damage;
+}
+
+// BattleActions.applyRecoilDamage (data/mods/gen4/scripts.ts:179).
+inline void apply_recoil_damage(Ctx& c, double dealt, Ref user) {
+  const Fraction recoil = data(c.b.active_move.id).recoil;
+  if (!recoil) return;
+  damage(c, std::max(std::floor(dealt * recoil.num / recoil.den), 1.0), user, user, effect(Special::Recoil));
+}
+
+// BattleQueue.willAct (battle-queue.ts): whether a move or a switch is still
+// queued.
+inline bool will_act(const Battle& b) {
+  for (int i = 0; i < b.queue.size; i++) {
+    const Choice choice = b.queue.list[i].choice;
+    if (choice == Choice::Move || choice == Choice::Switch || choice == Choice::InstaSwitch) return true;
+  }
+  return false;
 }
 
 // Gen 3's BattleActions.tryMoveHit (data/mods/gen3/scripts.ts:232) on one
@@ -524,8 +609,8 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
     return relay::no;
   }
   if (!move_event(c, events::ON_TRY, source, target).truthy()) return relay::no;
-  if (data(move.id).target == Target::All) {
-    // Nothing listens for TryHitField in Gen 3.
+  if (is_wide(data(move.id).target)) {
+    // Nothing listens for TryHitField or TryHitSide in Gen 3.
     return move_hit(c, target, source);
   }
   if (run_event(c, events::INVULNERABILITY, on(target), source, me) == relay::no) {
@@ -584,12 +669,7 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
   b.at(source).last_damage = 0;
   const Relay damage = move_hit(c, target, source);
   move.total_damage = damage.kind == Relay::Kind::Number ? uint16_t(damage.number) : 0;
-  // applyRecoilDamage (data/mods/gen4/scripts.ts:179): a part of the damage
-  // dealt, at least 1, as damage from `recoil`.
-  if (const Fraction recoil = data(move.id).recoil; move.total_damage && recoil) {
-    const double amount = std::max(std::floor(double(move.total_damage) * recoil.num / recoil.den), 1.0);
-    adv::damage(c, amount, source, source, effect(Special::Recoil));
-  }
+  if (move.total_damage) apply_recoil_damage(c, move.total_damage, source);
   // gotAttacked records the hit for Counter and its kind, which are not
   // ported.
   // A hit that dealt no damage, a status move's included, ends here.
@@ -610,7 +690,10 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
                    .volatile_status = m.volatile_status, .on_hit = true};
   const Effect me = effect(id);
   Pokemon& p = b.at(user);
-  const auto self_targeted = [&] { return b.active_move.target == Target::Self || b.active_move.target == Target::All; };
+  const auto self_targeted = [&] {
+    const Target t = b.active_move.target;
+    return t == Target::Self || t == Target::All || t == Target::AllySide || t == Target::AllyTeam;
+  };
   if (self_targeted()) target = user;
   set_active_move(b, user, target);
   // The move's own onModifyMove, then everyone's; they change the active
@@ -639,6 +722,11 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
   if (aim == Target::All) {
     pressure(user);
     if (b.sides[user.side ^ 1].active != 0xFF) pressure({uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active});
+  } else if (m.flags & flag(MoveFlag::Mustpressure)) {
+    // Spikes: the foes with HP, though a move on their side has no target.
+    if (const Ref foe = foe_of(b, user)) pressure(foe);
+  } else if (aim == Target::FoeSide) {
+    // Any other move on the foe's side has no target for Pressure.
   } else if (has_target) {
     pressure(target);
   }
@@ -650,7 +738,7 @@ inline bool use_move(Ctx& c, Move id, Ref user, Ref target) {
   move_event(c, events::ON_USE_MOVE_MESSAGE, user, target);
   if (m.selfdestruct == SelfDestruct::Always) faint(c, user, user, me);
   const bool aimed_at_foe = aim == Target::Normal;
-  if (!has_target || (aimed_at_foe && !is_adjacent(b, target, user))) {
+  if (!is_wide(aim) && (!has_target || (aimed_at_foe && !is_adjacent(b, target, user)))) {
     attr_last_move(c, "[notarget]");
     add(c, {part::text("-notarget"), part::pokemon(b, user)});
     return false;
@@ -676,7 +764,8 @@ inline void run_move(Ctx& c, Move id, Ref user) {
   p.active_move_actions++;
   // Battle.getTarget (battle.ts) in singles: the user for a move on itself,
   // else the foe's active Pokémon, fainted or not.
-  const bool on_self = data(id).target == Target::Self || data(id).target == Target::All;
+  const bool on_self = data(id).target == Target::Self || data(id).target == Target::All ||
+                       data(id).target == Target::AllySide || data(id).target == Target::AllyTeam;
   const Ref target = on_self ? user : Ref{uint8_t(user.side ^ 1), b.sides[user.side ^ 1].active};
   if (run_event(c, events::OVERRIDE_ACTION, on(user), target, me) != relay::yes) unported("a move overridden");
   b.active_move = {.id = id, .type = data(id).type, .category = data(id).category};

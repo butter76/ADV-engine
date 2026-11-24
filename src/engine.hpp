@@ -7,7 +7,6 @@
 #include <cmath>
 
 #include "callbacks.hpp"
-#include "moves.hpp"
 #include "setup.hpp"
 
 namespace adv {
@@ -67,6 +66,7 @@ inline Action resolve_action(Ctx& c, Action a) {
   case Choice::Start: a.order = 2; break;
   case Choice::InstaSwitch: a.order = 3; break;
   case Choice::BeforeTurn: a.order = 4; break;
+  case Choice::BeforeTurnMove: a.order = 5; break;
   case Choice::RunSwitch: a.order = 101; break;
   case Choice::Switch: a.order = 103; break;
   case Choice::Residual: a.order = 300; break;
@@ -75,11 +75,6 @@ inline Action resolve_action(Ctx& c, Action a) {
     // Battle.getActionSpeed for a move: its priority, which no plain move
     // and nothing in Gen 3 changes (ModifyPriority, FractionalPriority).
     if (has(effect(a.move), callback("", "ModifyPriority"))) unported("a move's onModifyPriority");
-    // A move with a beforeTurnCallback or a priorityChargeCallback queues an
-    // action of its own ahead of the turn's moves.
-    if (has(effect(a.move), Callback::beforeTurnCallback)) {
-      unported("a move that acts before the turn: " + std::string(MOVE_NAMES[uint16_t(a.move)].id));
-    }
     a.priority = data(a.move).priority;
     break;
   }
@@ -93,8 +88,15 @@ inline void push(Queue& q, const Action& a, int at) {
   q.list[at] = a;
   q.size++;
 }
-// BattleQueue.addChoice (battle-queue.ts:307).
-inline void add_choice(Ctx& c, Action a) { push(c.b.queue, resolve_action(c, a), c.b.queue.size); }
+// BattleQueue.addChoice (battle-queue.ts:307). A move with a
+// beforeTurnCallback comes with an action that runs it before the turn's
+// moves.
+inline void add_choice(Ctx& c, Action a) {
+  if (a.choice == Choice::Move && has(effect(a.move), Callback::beforeTurnCallback)) {
+    push(c.b.queue, resolve_action(c, {.choice = Choice::BeforeTurnMove, .pokemon = a.pokemon, .move = a.move}), c.b.queue.size);
+  }
+  push(c.b.queue, resolve_action(c, a), c.b.queue.size);
+}
 
 // BattleQueue.insertChoice (battle-queue.ts:375): among the queued actions it
 // ties with, the place is drawn.
@@ -215,21 +217,21 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
   Listeners handlers;
   find_field_event_handlers(c, e.field, handlers, FIELD, residual);
   for (uint8_t s = 0; s < 2; s++) {
-    // The side's conditions under onSide<Event> would be gathered here.
+    find_side_event_handlers(c, s, e.side, handlers, {}, residual);
     const Side& side = c.b.sides[s];
     if (side.active == 0xFF) continue;
     const Ref active{s, side.active};
     if (switch_in) find_pokemon_event_handlers(c, active, e.any, handlers);
     if (!targets.empty() && std::find(targets.begin(), targets.end(), active) == targets.end()) continue;
     find_pokemon_event_handlers(c, active, e.on, handlers, {}, residual);
-    // Then the side's conditions under on<Event>, held by the Pokémon.
+    find_side_event_handlers(c, s, e.on, handlers, on(active));
     find_field_event_handlers(c, e.on, handlers, on(active));
     find_battle_event_handlers(c, e.on, handlers, on(active));
   }
   speed_sort(c, handlers);
   for (int i = 0; i < handlers.n; i++) {
     const Listener& h = handlers.list[i];
-    if (h.holder.kind == HolderKind::Pokemon && c.b.at(h.holder.pokemon).fainted) continue;
+    if (h.holder.kind == HolderKind::Pokemon && c.b.at(h.holder.pokemon).fainted && !h.is_slot_condition) continue;
     const Effect he = h.callback.effect;
     if (residual && h.ends && h.state && h.state->duration) {
       h.state->duration--;
@@ -238,6 +240,14 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
         if (h.is_volatile) {
           if (Volatile* v = volatile_of(c.b.at(h.holder.pokemon), Condition(he.id)); v && &v->state == h.state) {
             remove_volatile(c, h.holder.pokemon, Condition(he.id));
+          }
+        } else if (h.is_slot_condition) {
+          if (SideCondition* sc = slot_condition_of(c.b.sides[h.side], Condition(he.id)); sc && &sc->state == h.state) {
+            remove_slot_condition(c, h.side, Condition(he.id));
+          }
+        } else if (h.is_side_condition) {
+          if (SideCondition* sc = side_condition_of(c.b.sides[h.side], Condition(he.id)); sc && &sc->state == h.state) {
+            remove_side_condition(c, h.side, Condition(he.id));
           }
         } else if (h.state == &c.b.field.weather_state) {
           clear_weather(c);
@@ -253,6 +263,10 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
     if (h.is_volatile) {
       const Volatile* v = volatile_of(c.b.at(h.holder.pokemon), Condition(he.id));
       if (!v || &v->state != h.state) continue;
+    }
+    if (h.is_side_condition) {
+      const SideCondition* sc = side_condition_of(c.b.sides[h.side], Condition(he.id));
+      if (!sc || &sc->state != h.state) continue;
     }
     if (!h.callback) continue;
     Callback name = e.on;
@@ -274,9 +288,12 @@ inline void run_pursuit_activation(Ctx& c, Ref r) {
   run_event(c, events::BEFORE_SWITCH_OUT, on(r));
 }
 
+inline void run_switch(Ctx& c, Ref r);
+
 // BattleActions.switchIn (battle-actions.ts:79): `r` comes in at position 0,
-// in place of whatever is there.
-inline bool switch_in(Ctx& c, Ref r) {
+// in place of whatever is there. A Pokémon dragged in is not chased by
+// Pursuit, is written as `drag`, and runs its switch-in at once.
+inline bool switch_in(Ctx& c, Ref r, bool is_drag = false) {
   Side& side = c.b.sides[r.side];
   Pokemon& p = c.b.at(r);
   if (p.is_active) unported("a switch to a Pokémon that is already in");
@@ -285,7 +302,7 @@ inline bool switch_in(Ctx& c, Ref r) {
     Pokemon& old = c.b.at(old_ref);
     if (old.hp) {
       old.being_called_back = true;
-      run_pursuit_activation(c, old_ref);
+      if (!is_drag) run_pursuit_activation(c, old_ref);
       if (!run_event(c, events::SWITCH_OUT, on(old_ref)).truthy()) return false;
       if (!old.hp) unported("a Pokémon fainting as it is called back");
       single_event(c, events::ON_END, effect(old.ability), &old.ability_state, on(old_ref));
@@ -306,15 +323,18 @@ inline bool switch_in(Ctx& c, Ref r) {
   side.active = r.index;
   p.active_turns = 0;
   for (MoveSlot& slot : p.move_slots) slot.used = false;
+  // In Gen 3 an item knocked off is lost again at every switch-in.
+  if (p.item_knocked_off && p.item != Item::None) unported("a Pokémon that lost its item to Knock Off holding one again");
   p.ability_state = init_effect_state(c.b, p.ability != Ability::None, r);
   p.item_state = init_effect_state(c.b, p.item != Item::None, r);
   run_event(c, events::BEFORE_SWITCH_IN, on(r));
-  add(c, {part::text("switch"), part::pokemon(c.b, r), part::details(c.b, r)});
+  add(c, {part::text(is_drag ? "drag" : "switch"), part::pokemon(c.b, r), part::details(c.b, r)});
   p.previously_switched_in++;
   run_event(c, events::ENTRY_HAZARD, on(r));
   if (!p.hp) return false;
   if (c.b.turn > 0) run_event(c, events::AFTER_ENTRY_HAZARD, on(r));
-  insert_choice(c, {.choice = Choice::RunSwitch, .pokemon = r});
+  if (is_drag) run_switch(c, r);
+  else insert_choice(c, {.choice = Choice::RunSwitch, .pokemon = r});
   return true;
 }
 
@@ -340,16 +360,6 @@ inline void run_switch(Ctx& c, Ref r) {
 // ---------------------------------------------------------------------------
 // Requests.
 // ---------------------------------------------------------------------------
-
-// Battle.canSwitch (battle.ts): how many Pokémon behind the active one have
-// not fainted.
-inline int can_switch(const Battle& b, int side) {
-  const Side& s = b.sides[side];
-  if (!s.pokemon_left) return 0;
-  int n = 0;
-  for (int i = 0; i < s.size; i++) n += s.pokemon[i].position >= 1 && !s.pokemon[i].fainted;
-  return n;
-}
 
 // Pokemon.getMoveRequestData (pokemon.ts:1104) with getMoves (pokemon.ts:985).
 // It settles the Pokémon's maybe flags, so it runs when the request is made.
@@ -502,6 +512,7 @@ inline void end_turn(Ctx& c) {
   }
   for (Side& side : b.sides) {
     for (int i = 0; i < side.size; i++) compact_volatiles(side.pokemon[i]);
+    compact_side_conditions(side);
   }
   // maybeTriggerEndlessBattleClause (battle.ts) does nothing through turn 100.
   if (b.turn > 100) unported("turn 101");
@@ -559,6 +570,13 @@ inline bool run_action(Ctx& c, const Action& action) {
   case Choice::InstaSwitch: switch_in(c, action.target); break;
   case Choice::RunSwitch: run_switch(c, action.pokemon); break;
   case Choice::BeforeTurn: each_event(c, events::BEFORE_TURN); break;
+  case Choice::BeforeTurnMove: {
+    // The move's beforeTurnCallback(pokemon, target).
+    if (!b.at(action.pokemon).is_active || b.at(action.pokemon).fainted) return false;
+    const Ref foe{uint8_t(action.pokemon.side ^ 1), b.sides[action.pokemon.side ^ 1].active};
+    call(c, {effect(action.move), Callback::beforeTurnCallback}, relay::undefined, on(action.pokemon), foe, effect(action.move));
+    break;
+  }
   case Choice::Residual:
     add(c, {part::text("")});
     for (uint8_t s = 0; s < 2; s++) {
@@ -574,6 +592,29 @@ inline bool run_action(Ctx& c, const Action& action) {
     break;
   }
   b.has_active_move = false; // clearActiveMove
+
+  // A Pokémon flagged by Roar or Whirlwind is dragged out now
+  // (BattleActions.dragIn): another of its side comes in, drawn from those
+  // that can, even when there is only one.
+  for (uint8_t s = 0; s < 2; s++) {
+    Side& side = b.sides[s];
+    if (side.active == 0xFF || !side.pokemon[side.active].force_switch_flag) continue;
+    Pokemon& out_ = side.pokemon[side.active];
+    if (out_.hp) {
+      const int choices = can_switch(b, s);
+      if (choices) {
+        const int pick = int(random(b, c.out, uint32_t(choices)));
+        int position = 0;
+        for (int seen = -1; seen < pick;) {
+          position++;
+          if (!side.pokemon[index_at(side, position)].fainted) seen++;
+        }
+        const Ref in{s, index_at(side, position)};
+        if (run_event(c, event("DragOut"), on(Ref{s, side.active})).truthy()) switch_in(c, in, true);
+      }
+    }
+    out_.force_switch_flag = false;
+  }
 
   resolve_faints(c);
   if (b.ended) return true;
