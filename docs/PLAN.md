@@ -83,10 +83,17 @@ Draws that change nothing but must still be made:
    shuffle; a stable sort without draws for `Invulnerability`, `TryHit`,
    `DamagingHit` and `EntryHazard`, and for redirection.
 5. **A listener test comes first.** Every handler name is a bit (Gen 3 has
-   110). An effect has a constant mask; a Pokémon, side or field keeps the OR
-   of its effects' masks. An event tests those before gathering. Measured on
-   the real event mix (`smoke/dispatch_bench.cpp`, handlers that do nothing):
-   about 330 ns per update with the test, 1,400 ns without.
+   114). An effect has a constant mask, made by the compiler from the
+   handler table. A Pokémon keeps the OR of the masks of its status,
+   volatiles, ability and item; the battle keeps the OR of everything in
+   play, and for each side the OR of what is not a Pokémon's own. An event
+   tests its names against those, in line where it is run, and 92% of events
+   end there; only then are handlers gathered, exactly as before. A kept
+   mask is refreshed wherever an effect is *given* (`refresh_mask`, and
+   `listening_stale` for the battle's); one taken away may linger until the
+   turn ends, since a mask that says too much only costs time. The build
+   with `ADV_CHECK_MASKS` makes every use of a kept mask first prove that it
+   covers what is there, and is part of `ctest`.
 6. **Numbers are JavaScript's.** `double` where Showdown multiplies by a
    fraction, 32-bit truncation where it calls `trunc`, compiled with
    `-ffp-contract=off`.
@@ -139,6 +146,7 @@ that differs does.
 | `replay_regressions` | nine whole games that once differed |
 | `replay_targeted` | 16 games of up to 99 turns between teams written to use particular moves (`tests/teams/targeted`) |
 | `replay_random` | 24 games of 30 turns between teams of anything Gen 3 has, legal or not |
+| `masks_targeted`, `masks_random`, `masks_regressions` | the same games on the build that checks every kept mask before it is used |
 | `data` | the tables state the same 2,254 facts as Showdown, Metronome's list in its order among them (`tools/tables_ref.cjs`, written apart from the generator) |
 
 The recorded games behind the last full run, none of them with a line
@@ -256,11 +264,40 @@ two), and Torment's `onEnd`, which nothing in Gen 3 brings about.
    games for random teams of anything (see Testing); the same run for legal
    random teams and for OU teams comes next, and then a pass over the
    branches that remain `unported` inside ported handlers (below).
-5. Speed: the listener masks, a benchmark against hoenn. A first reading,
-   on 2,000 recorded random-team games replayed three times on one core:
-   about 100,000 updates a second for the engine alone and 46,000 when it
-   also writes Showdown's text, against hoenn's 3,290,000 and Showdown's
-   4,150. Nothing has been profiled.
+5. Speed. `smoke/engine_bench.cpp` replays the choices of recorded games on
+   one core and counts updates as the recorder does. Where it stood and
+   stands, in updates a second for the engine alone (OU games; games of
+   random teams run about 5% faster):
+
+   | Change | Updates/s |
+   |---|---|
+   | as first measured | 97,000 |
+   | callback names resolved by the compiler (`consteval`), not matched as strings while a battle runs | 112,000 |
+   | the hash map of handlers replaced by a bit for each callback of each effect | 140,000 |
+   | events' names asked as flags; no 24-entry array filled for each event; a Pokémon, side or field with no bit for the name not looked through | 330,000 |
+   | the masks a constant table; the rules' mask kept | 390,000 |
+   | each Pokémon's mask kept on it | 430,000 |
+   | one mask for the battle, tested before anything else | 495,000 |
+   | a log part 16 bytes, not 48 (a line 114, not 344), and written in place | 555,000 |
+   | the test for "nothing listens" put in line at every event | 760,000 |
+   | the exact holders asked for an event looked up under one name | 790,000 |
+
+   (The benchmark stopped timing the parsing of team text at the eighth row,
+   which was by then about a tenth of the time.) hoenn does 3,290,000 and
+   Showdown 4,150.
+
+   Writing Showdown's text and requests as well, the engine did 41,000 and
+   does 180,000: a request is some 1,500 bytes twice a turn, and it and the
+   log's lines are now appended to one string where each piece had been a
+   string of its own. Text is still four times the cost of the battle; a
+   reader that takes the typed log and the request as the engine holds them
+   pays none of it.
+
+   The engine's profile is now flat: moves 31%, the end-of-turn event 19%,
+   `Update` after each action 10%, the turn's end 9%, requests 8%. Not done:
+   profile-guided optimisation, which would ask the same of whatever builds
+   the engine into olympus; keeping the handler's function with a gathered
+   handler, in place of looking it up again to call it.
 6. Olympus reads the engine's player stream (a separate change in olympus).
 
 ## The battle's start
@@ -435,8 +472,11 @@ numbers are in `sim/` at the pinned commit.
 - **The log is typed parts.** A `Line` is one call of Showdown's `add`, its
   parts kept as what they were (a Pokémon, its details, its health, a
   number, a literal). Text is made from it in `src/showdown/log.hpp`.
-- **Dispatch is not yet fast.** Handlers are found through a hash map; the
-  listener masks of design rule 5 are step 5.
+- **A mask is refreshed where an effect is given.** Anything new that sets a
+  status, adds a volatile, or changes an ability or an item calls
+  `refresh_mask`; anything that adds a side or slot condition, changes the
+  weather or the active Pokémon sets `listening_stale`. Forgetting one makes
+  events miss handlers; the `masks_*` tests stop on it and say so.
 
 ## Running it
 
@@ -450,6 +490,7 @@ most need `--teams DIR`:
 | Tool | What it does |
 |---|---|
 | `tests/replay.cpp` (`replay FILE [--complete]`) | compares a recorded trace with the engine, line by line; `-` reads a pipe |
+| `smoke/engine_bench.cpp` (`engine_bench FILE [REPEATS] [alone\|text]`) | how fast the engine plays the choices of a recorded trace |
 | `tools/soak.cjs` | records and checks games through a pipe, in parallel (`--teams`, `--games`, `--first`, `--jobs`, `--chunk`, `--turns`); the report goes to `build/soak/` |
 | `tools/trace.cjs` | records games (`--teams DIR`, `random` or `randbats`, `--out FILE` or `-`, `--games`, `--first`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
 | `tools/coverage.cjs` | counts runs of each checklist function over the same games (`--teams DIR`, `random` or `randbats`) |

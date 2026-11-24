@@ -55,6 +55,20 @@ add_test(NAME replay_regressions COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtur
 add_test(NAME replay_targeted COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-16.trace --complete)
 add_test(NAME replay_random COMMAND replay ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace --complete)
 
+# The same checker built so that every event verifies the masks it is about
+# to trust (ADV_CHECK_MASKS): a mask kept on a Pokémon or on the battle that
+# has fallen behind what it covers stops the game.
+add_executable(replay_masks tests/replay.cpp)
+target_link_libraries(replay_masks PRIVATE adv)
+target_compile_definitions(replay_masks PRIVATE ADV_CHECK_MASKS)
+add_test(NAME masks_targeted COMMAND replay_masks ${CMAKE_SOURCE_DIR}/tests/fixtures/targeted-16.trace --complete)
+add_test(NAME masks_random COMMAND replay_masks ${CMAKE_SOURCE_DIR}/tests/fixtures/random-24.trace --complete)
+add_test(NAME masks_regressions COMMAND replay_masks ${CMAKE_SOURCE_DIR}/tests/fixtures/regressions.trace --complete)
+
 # Not a test: what dispatch costs on the measured mix of events.
 add_executable(dispatch_bench smoke/dispatch_bench.cpp)
 target_link_libraries(dispatch_bench PRIVATE adv)
+
+# Not a test: how fast the engine plays the choices of a recorded trace.
+add_executable(engine_bench smoke/engine_bench.cpp)
+target_link_libraries(engine_bench PRIVATE adv)

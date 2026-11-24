@@ -1312,11 +1312,13 @@ inline void steal_item(Ctx& c, Ref target, Ref source, Move move) {
   if (!single_event(c, callback("", "TakeItem"), effect(item), &none, on(source), target, effect(move), relay::yes).truthy() || !to.hp ||
       !to.is_active) {
     from.item = item;
+    refresh_mask(c.b, from);
     return;
   }
   from.pending_staleness = Staleness::None;
   to.pending_staleness = Staleness::Internal;
   to.item = item;
+  refresh_mask(c.b, to);
   to.item_state = init_effect_state(b, true, source);
   single_event(c, ON_START, effect(item), &to.item_state, on(source), source, effect(move));
   if (move == Move::Thief) {
@@ -1374,6 +1376,7 @@ ADV_HANDLER(trace_onStart) {
   const Ability old = p.ability, taken = c.b.at(foe).ability;
   single_event(c, callback("", "End"), effect(old), &p.ability_state, on(t.pokemon), foe);
   p.ability = taken;
+  refresh_mask(c.b, p);
   p.ability_state = init_effect_state(c.b, taken != Ability::None, t.pokemon);
   add(c, {part::text("-ability"), part::pokemon(c.b, t.pokemon), part::ability(taken), part::ability(old),
           part::from(effect(Ability::Trace)), part::of(c.b, foe)});
@@ -2579,6 +2582,8 @@ ADV_HANDLER(trick_onHit) {
   const auto put_back = [&] {
     if (yours.item != Item::None) c.b.at(t.pokemon).item = yours.item;
     if (mine.item != Item::None) c.b.at(source).item = mine.item;
+    refresh_mask(c.b, c.b.at(t.pokemon));
+    refresh_mask(c.b, c.b.at(source));
     return relay::no;
   };
   if (yours.refused || mine.refused || (yours.item == Item::None && mine.item == Item::None)) return put_back();
@@ -2622,6 +2627,8 @@ ADV_HANDLER(skillswap_onHit) {
   single_event(c, callback("", "End"), effect(yours), &other.ability_state, on(t.pokemon));
   user.ability = yours;
   other.ability = mine;
+  refresh_mask(c.b, user);
+  refresh_mask(c.b, other);
   user.ability_state = init_effect_state(c.b, yours != Ability::None, source);
   other.ability_state = init_effect_state(c.b, mine != Ability::None, t.pokemon);
   user.volatile_staleness = false;

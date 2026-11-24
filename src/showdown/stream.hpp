@@ -22,7 +22,10 @@ struct Stream {
   std::vector<std::string> lines;
   size_t sent_log = 0, sent_draws = 0;
 
-  Stream() : ctx(battle, out) { out.draws = &draws; }
+  Stream() : ctx(battle, out) {
+    out.draws = &draws;
+    out.log.reserve(1024); // most games write fewer lines than this
+  }
 
   // Battle.sendUpdates (battle.ts:3325): the new log lines, then the requests
   // if they were not sent yet. The draws made since the last call come
@@ -36,16 +39,20 @@ struct Stream {
     }
     if (sent_log < out.log.size()) {
       lines.push_back("U");
-      std::vector<std::string> text;
-      for (; sent_log < out.log.size(); sent_log++) write(out.log[sent_log], battle, names, text);
-      for (const std::string& t : text) lines.push_back("u " + t);
+      for (; sent_log < out.log.size(); sent_log++) write(out.log[sent_log], battle, names, lines, "u ");
     }
     if (!battle.sent_requests) {
       for (int side = 0; side < 2; side++) send_request(side);
       battle.sent_requests = true;
     }
   }
-  void send_request(int side) { lines.push_back("s " + side_id(side) + " |request|" + request_json(battle, side, names)); }
+  void send_request(int side) {
+    std::string line;
+    line.reserve(2048);
+    line += side == 0 ? "s p1 |request|" : "s p2 |request|";
+    append_request_json(line, battle, side, names);
+    lines.push_back(std::move(line));
+  }
 
   // `>start`, `>player p1` and `>player p2` written as one chunk.
   void start(uint64_t seed, const Team& p1, const Team& p2) {

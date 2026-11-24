@@ -175,6 +175,10 @@ struct Pokemon {
   bool item_knocked_off = false;
   bool used_item_this_turn = false;
   bool transformed = false;
+  // The callbacks that its status, volatiles, ability or item could answer
+  // (events.hpp), refreshed wherever one of them is given. It may say more
+  // than is so, after one is taken away, and never less.
+  std::array<uint64_t, 2> mask{};
   Item last_item = Item::None; // the item it last used up, for Recycle
   // Staleness: what it has, what eating a healing berry will give it, and
   // (until it leaves) whether Skill Swap was used on it by a foe.
@@ -244,6 +248,9 @@ struct PseudoWeather {
 struct Field {
   std::array<PseudoWeather, 8> pseudo_weather{};
   uint8_t pseudo_weathers = 0;
+  // The callbacks the pseudo-weathers answer, together (events.hpp): they
+  // are the format's rules, set once when the battle is made.
+  std::array<uint64_t, 2> pseudo_weather_mask{};
   Condition weather = Condition::None;
   EffectState weather_state;
 };
@@ -300,6 +307,17 @@ struct Battle {
   Field field;
   Queue queue;
   std::array<Request, 2> requests{};
+  // The callbacks that anything now in play could answer (events.hpp): the
+  // active Pokémon's masks, the sides' and the field's conditions and the
+  // format's, together. An event none of whose names is here has no handler,
+  // which is nearly every event. Made again when marked stale, as it is
+  // wherever something is added to what it covers.
+  std::array<uint64_t, 2> listening{};
+  // And what is not a Pokémon's own, for each side: its conditions, the
+  // field's and the format's. With the target's own mask this is all that
+  // can answer an event looked for under its plain name alone.
+  std::array<std::array<uint64_t, 2>, 2> listening_side{};
+  bool listening_stale = true;
   std::array<Move, 2> refused_move{}; // the disabled move a side was just refused
   uint16_t turn = 0;
   uint32_t effect_order = 0;

@@ -171,6 +171,7 @@ inline void clear_volatile(Ctx& c, Ref r, bool include_switch_flags = true) {
   p.newly_switched = true;
   p.being_called_back = false;
   set_species(p, p.base_species);
+  refresh_mask(c.b, p);
 }
 
 // Battle.win (battle.ts): -1 is a tie.
@@ -371,6 +372,7 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
             old.volatiles[i].state.linked_status = Condition::None;
           }
         }
+        refresh_mask(c.b, p);
         clear_volatile(c, old_ref);
         for (int i = 0; i < p.n_volatiles; i++) {
           if (has(effect(p.volatiles[i].id), callback("", "Copy"))) unported("a volatile's onCopy");
@@ -400,6 +402,7 @@ inline bool switch_in(Ctx& c, Ref r, bool is_drag = false, Move source_move = Mo
   }
   p.is_active = true;
   side.active = r.index;
+  c.b.listening_stale = true;
   p.active_turns = 0;
   p.active_move_actions = 0;
   for (MoveSlot& slot : p.move_slots) slot.used = false;
@@ -680,8 +683,12 @@ inline void end_turn(Ctx& c) {
     p.active_turns++;
   }
   for (Side& side : b.sides) {
-    for (int i = 0; i < side.size; i++) compact_volatiles(side.pokemon[i]);
+    for (int i = 0; i < side.size; i++) {
+      compact_volatiles(side.pokemon[i]);
+      refresh_mask(c.b, side.pokemon[i]); // and what was taken away is forgotten
+    }
     compact_side_conditions(side);
+    b.listening_stale = true;
   }
   if (maybe_trigger_endless_battle_clause(c, trapped, stale)) return;
   add(c, {part::text("turn"), part::number(b.turn)});
@@ -996,22 +1003,28 @@ inline Refusal choose_move(Ctx& c, int s, int slot) {
 // Battle's constructor (battle.ts): the game type's line, and each rule that
 // has a handler other than its onBegin and the team validator's is put on
 // the field as a pseudo-weather (battle.ts:116).
+// The rules that have such a handler, which is the same for every battle.
+inline constexpr std::array<bool, RULES> RULE_LISTENS = [] {
+  std::array<bool, RULES> listens{};
+  for (const Handler& h : HANDLERS) {
+    if (h.kind != EffectKind::Rule || !h.handled) continue;
+    const std::string_view name = CALLBACK_NAMES[uint8_t(h.callback)];
+    listens[h.id] |= name != "onBegin" && name != "onTeamPreview" && name != "onBattleStart" && name != "onValidateRule" &&
+                     name != "onValidateTeam" && name != "onChangeSet" && name != "onValidateSet";
+  }
+  return listens;
+}();
 inline void construct(Ctx& c) {
   add(c, {part::text("gametype"), part::text("singles")});
   for (int rule = 1; rule < RULES; rule++) {
-    bool listens = false;
-    for (const Handler& h : HANDLERS) {
-      if (h.kind != EffectKind::Rule || h.id != rule || !h.handled) continue;
-      const std::string_view name = CALLBACK_NAMES[uint8_t(h.callback)];
-      listens |= name != "onBegin" && name != "onTeamPreview" && name != "onBattleStart" && name != "onValidateRule" &&
-                 name != "onValidateTeam" && name != "onChangeSet" && name != "onValidateSet";
-    }
-    if (!listens) continue;
+    if (!RULE_LISTENS[size_t(rule)]) continue;
     // Field.addPseudoWeather (field.ts:186): a state with no target has
     // effect order 0. No rule has onFieldStart, and nothing listens for
     // PseudoWeatherChange.
     Field& f = c.b.field;
     f.pseudo_weather[f.pseudo_weathers++] = {effect(Rule(rule)), EffectState{}};
+    merge(f.pseudo_weather_mask, mask_of(effect(Rule(rule))));
+    c.b.listening_stale = true;
   }
 }
 
@@ -1034,6 +1047,7 @@ inline void start(Ctx& c) {
 // are set.
 inline void set_player_and_start(Ctx& c, int side, const Team& team) {
   set_player(c.b, c.out, side, team);
+  for (int i = 0; i < team.size; i++) refresh_mask(c.b, c.b.sides[side].pokemon[i]);
   c.b.sides[side].pokemon_left = team.size;
   add(c, {part::text("player"), part::side(side), part::player(side), part::text(""), part::text("")});
   if (side == 1) start(c);

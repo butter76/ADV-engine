@@ -83,7 +83,7 @@ inline void set_active_move(Battle& b, Ref pokemon, Ref target) {
 inline void attr_last_move(Ctx& c, std::string_view attribute) {
   if (c.out.last_move_line < 0) return;
   Line& line = c.out.log[size_t(c.out.last_move_line)];
-  if (line.parts[0].kind == Part::Kind::Text && line.parts[0].text == "-anim") {
+  if (line.parts[0].kind == Part::Kind::Text && line.parts[0].text() == "-anim") {
     if (attribute == "[still]") {
       c.out.log.erase(c.out.log.begin() + c.out.last_move_line);
       c.out.log_lines--;

@@ -10,10 +10,12 @@
 #pragma once
 
 #include <array>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "out.hpp"
 
@@ -116,8 +118,9 @@ std::span<const Ported> ported();
 
 inline constexpr Callback NO_CALLBACK = Callback(0xFF);
 
-// The callback named "on" + prefix + event, if Gen 3 has that name.
-constexpr Callback callback(std::string_view prefix, std::string_view event) {
+// The callback named "on" + prefix + event, if Gen 3 has that name. Looked
+// up by the compiler: a name is never matched while a battle runs.
+consteval Callback callback(std::string_view prefix, std::string_view event) {
   for (int i = 0; i < CALLBACKS; i++) {
     const std::string_view name = CALLBACK_NAMES[i];
     if (name.size() == 2 + prefix.size() + event.size() && name.starts_with("on") &&
@@ -132,10 +135,31 @@ constexpr Callback callback(std::string_view prefix, std::string_view event) {
 struct EventNames {
   std::string_view id;
   Callback on, ally, foe, any, source, side, field;
+  // What runEvent asks of the event's name, answered once.
+  bool prefixed = true;        // looked for under the Ally, Foe, Any and Source names too
+  bool left_to_right = false;  // sorted by order and priority alone, with no shuffle
+  bool weather = false;        // the Weather event itself
+  bool residual_or_end = false;
+  bool always_look = false;    // SwitchIn: an ability or item answers it under another name
+  bool only_on = false;        // looked for under its plain name alone
+  // A bit for each of the names it is looked for under.
+  std::array<uint64_t, 2> names{};
 };
-constexpr EventNames event(std::string_view id) {
-  return {id, callback("", id), callback("Ally", id), callback("Foe", id), callback("Any", id),
-          callback("Source", id), callback("Side", id), callback("Field", id)};
+consteval EventNames event(std::string_view id) {
+  EventNames e{id, callback("", id), callback("Ally", id), callback("Foe", id), callback("Any", id),
+               callback("Source", id), callback("Side", id), callback("Field", id)};
+  e.prefixed = id != "BeforeTurn" && id != "Update" && id != "Weather" && id != "WeatherChange";
+  e.left_to_right = id == "Invulnerability" || id == "TryHit" || id == "DamagingHit" || id == "EntryHazard";
+  e.weather = id == "Weather";
+  e.residual_or_end = id == "Residual" || id == "End";
+  e.always_look = id == "SwitchIn";
+  const auto none = [](Callback name) { return uint8_t(name) == 0xFF; };
+  e.only_on = !e.prefixed || (none(e.ally) && none(e.foe) && none(e.any) && none(e.source));
+  for (const Callback name : {e.on, e.ally, e.foe, e.any, e.source}) {
+    if (e.only_on && name != e.on) continue;
+    if (!none(name)) e.names[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
+  }
+  return e;
 }
 
 namespace detail {
@@ -143,22 +167,75 @@ struct Entry {
   const Handler* row = nullptr; // the ranks, and whether Showdown has a handler
   Fn fn = nullptr;              // the port of it, if there is one yet
 };
-constexpr uint32_t key(Effect e, Callback c) { return uint32_t(e.kind) << 24 | uint32_t(e.id) << 8 | uint32_t(c); }
-inline const std::unordered_map<uint32_t, Entry>& entries() {
-  static const std::unordered_map<uint32_t, Entry> map = [] {
-    std::unordered_map<uint32_t, Entry> m;
-    for (const Handler& h : HANDLERS) m[key({h.kind, h.id}, h.callback)].row = &h;
-    for (const Ported& p : ported()) m[key(p.effect, p.callback)].fn = p.fn;
-    return m;
+// Every effect's entries, found without hashing: for each effect a bit for
+// each callback that has an entry (nearly every lookup ends there, with
+// none), and where its few entries are.
+struct Table {
+  struct Of {
+    std::array<uint64_t, 2> mask{};
+    uint16_t first = 0, count = 0;
+  };
+  static constexpr int SIZES[] = {MOVES, ABILITYS, ITEMS, CONDITIONS, RULES, 4};
+  static constexpr int BASE[] = {0, MOVES, MOVES + ABILITYS, MOVES + ABILITYS + ITEMS, MOVES + ABILITYS + ITEMS + CONDITIONS,
+                                 MOVES + ABILITYS + ITEMS + CONDITIONS + RULES};
+  static constexpr int EFFECTS = MOVES + ABILITYS + ITEMS + CONDITIONS + RULES + 4;
+  std::array<Of, EFFECTS> of{};
+  std::vector<Entry> entries;
+  std::vector<Callback> names;
+  static constexpr int index(Effect e) { return BASE[uint8_t(e.kind)] + e.id; }
+};
+inline const Table& table() {
+  static const Table t = [] {
+    // Gathered by effect first, then laid out with each effect's together.
+    std::vector<std::vector<std::pair<Callback, Entry>>> by(Table::EFFECTS);
+    const auto at = [&](Effect e, Callback c) -> Entry& {
+      auto& list = by[size_t(Table::index(e))];
+      for (auto& [name, entry] : list) {
+        if (name == c) return entry;
+      }
+      list.push_back({c, Entry{}});
+      return list.back().second;
+    };
+    for (const Handler& h : HANDLERS) at({h.kind, h.id}, h.callback).row = &h;
+    for (const Ported& p : ported()) at(p.effect, p.callback).fn = p.fn;
+    Table out;
+    for (int i = 0; i < Table::EFFECTS; i++) {
+      Table::Of& o = out.of[size_t(i)];
+      o.first = uint16_t(out.entries.size());
+      o.count = uint16_t(by[size_t(i)].size());
+      for (const auto& [name, entry] : by[size_t(i)]) {
+        o.mask[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
+        out.entries.push_back(entry);
+        out.names.push_back(name);
+      }
+    }
+    return out;
   }();
-  return map;
+  return t;
 }
 inline const Entry* entry(Effect e, Callback c) {
   if (!e || c == NO_CALLBACK) return nullptr;
-  const auto it = entries().find(key(e, c));
-  return it == entries().end() ? nullptr : &it->second;
+  const Table& t = table();
+  const Table::Of& o = t.of[size_t(Table::index(e))];
+  if (!(o.mask[uint8_t(c) >> 6] >> (uint8_t(c) & 63) & 1)) return nullptr;
+  for (int i = o.first;; i++) {
+    if (t.names[size_t(i)] == c) return &t.entries[size_t(i)];
+  }
 }
 } // namespace detail
+
+// A set of callbacks, a bit each.
+using Mask = std::array<uint64_t, 2>;
+// For each effect, a bit for each callback Showdown has a handler under: the
+// handler table, turned on its side by the compiler.
+inline constexpr std::array<Mask, detail::Table::EFFECTS> MASKS = [] {
+  std::array<Mask, detail::Table::EFFECTS> masks{};
+  for (const Handler& h : HANDLERS) {
+    if (h.handled) masks[size_t(detail::Table::index({h.kind, h.id}))][uint8_t(h.callback) >> 6] |= uint64_t{1} << (uint8_t(h.callback) & 63);
+  }
+  return masks;
+}();
+constexpr const Mask& mask_of(Effect e) { return MASKS[size_t(detail::Table::index(e))]; }
 
 // A handler found for a name: which of the effect's handlers answers.
 struct Found {
@@ -167,9 +244,9 @@ struct Found {
   constexpr explicit operator bool() const { return actual != NO_CALLBACK; }
 };
 
-inline bool has(Effect e, Callback c) {
-  const detail::Entry* entry = detail::entry(e, c);
-  return entry && entry->row && entry->row->handled;
+// Whether Showdown has a handler of the effect under the name.
+constexpr bool has(Effect e, Callback c) {
+  return c != NO_CALLBACK && (mask_of(e)[uint8_t(c) >> 6] >> (uint8_t(c) & 63) & 1);
 }
 
 inline constexpr Callback ON_SWITCH_IN = callback("", "SwitchIn");
@@ -250,12 +327,17 @@ struct Listener {
   bool is_slot_condition = false;
   uint8_t side = 0; // of a side or slot condition
 };
+// The handlers gathered for one event. Nearly every event gathers none, so
+// the 24 places are left as they are until one is written.
 struct Listeners {
-  std::array<Listener, 24> list;
+  union {
+    std::array<Listener, 24> list;
+  };
   int n = 0;
+  Listeners() {}
   void push(const Listener& l) {
     if (n == int(list.size())) unported("more than 24 handlers of one event");
-    list[n++] = l;
+    std::construct_at(&list[size_t(n++)], l);
   }
 };
 
@@ -303,6 +385,19 @@ inline void speed_sort(Ctx& c, Listeners& l) {
              [](const Listener& a, const Listener& b) { return compare_priority(a, b); });
 }
 
+// Which callback names end in SwitchIn or in RedirectTarget.
+struct NameFlags {
+  std::array<bool, CALLBACKS> switch_in{}, redirect{};
+};
+inline constexpr NameFlags NAME_FLAGS = [] {
+  NameFlags f;
+  for (int i = 0; i < CALLBACKS; i++) {
+    f.switch_in[size_t(i)] = CALLBACK_NAMES[i].ends_with("SwitchIn");
+    f.redirect[size_t(i)] = CALLBACK_NAMES[i].ends_with("RedirectTarget");
+  }
+  return f;
+}();
+
 // Battle.resolvePriority (battle.ts:957): a handler's ranks. The ranks are
 // the effect's under the name the handler was looked for, whichever of its
 // handlers answers.
@@ -327,9 +422,8 @@ inline Listener resolve_priority(Ctx& c, Listener l, Callback name) {
     case EffectType::Status: break;
     }
   }
-  const std::string_view text = CALLBACK_NAMES[uint8_t(name)];
-  const bool switch_in = text.ends_with("SwitchIn");
-  if ((switch_in || text.ends_with("RedirectTarget")) && l.state) l.effect_order = l.state->effect_order;
+  const bool switch_in = NAME_FLAGS.switch_in[uint8_t(name)];
+  if ((switch_in || NAME_FLAGS.redirect[uint8_t(name)]) && l.state) l.effect_order = l.state->effect_order;
   if (l.holder.kind == HolderKind::Pokemon) {
     const Pokemon& p = c.b.at(l.holder.pokemon);
     l.speed = p.speed;
@@ -429,43 +523,148 @@ inline void find_battle_event_handlers(Ctx& c, Callback name, Listeners& out, Su
   }
 }
 
+// The callbacks that something a holder has could answer: the masks of its
+// effects together. Nearly every event finds none, and these say so without
+// looking at each effect. They are worked out when asked, from the state as
+// it is, so nothing has to keep them up to date.
+inline void merge(Mask& into, const Mask& m) { into[0] |= m[0], into[1] |= m[1]; }
+// Whether to look under a name. onSwitchIn is always looked for: an ability
+// or an item answers it with another of its handlers (get_callback).
+inline bool listens(const Mask& m, Callback name) {
+  return name != NO_CALLBACK && (name == ON_SWITCH_IN || (m[uint8_t(name) >> 6] >> (uint8_t(name) & 63) & 1));
+}
+// A Pokémon's own effects: kept on it (Pokemon::mask), and brought up to date
+// by refresh_mask wherever an effect is given to it.
+inline Mask own_mask(const Pokemon& p) {
+  Mask m = mask_of(effect(p.status));
+  for (int i = 0; i < p.n_volatiles; i++) merge(m, mask_of(effect(p.volatiles[i].id)));
+  merge(m, mask_of(effect(p.ability)));
+  merge(m, mask_of(effect(p.item)));
+  return m;
+}
+inline void refresh_mask(Battle& b, Pokemon& p) {
+  p.mask = own_mask(p);
+  b.listening_stale = true;
+}
+// With ADV_CHECK_MASKS, every use of a kept mask first makes sure that it
+// covers what the Pokémon has now.
+inline void check_mask([[maybe_unused]] const Pokemon& p) {
+#ifdef ADV_CHECK_MASKS
+  if (const Mask now = own_mask(p); (now[0] & ~p.mask[0]) || (now[1] & ~p.mask[1])) unported("a Pokémon's mask left out of date");
+#endif
+}
+inline Mask pokemon_mask(const Battle& b, Ref r) {
+  const Pokemon& p = b.at(r);
+  check_mask(p);
+  Mask m = p.mask;
+  const Side& side = b.sides[r.side];
+  for (int i = 0; p.position == 0 && i < side.n_slot_conditions; i++) merge(m, mask_of(effect(side.slot_conditions[i].id)));
+  return m;
+}
+inline Mask side_mask(const Battle& b, int side) {
+  Mask m{};
+  const Side& s = b.sides[side];
+  for (int i = 0; i < s.n_side_conditions; i++) merge(m, mask_of(effect(s.side_conditions[i].id)));
+  return m;
+}
+inline Mask field_mask(const Battle& b) {
+  Mask m = mask_of(effect(b.field.weather));
+  merge(m, b.field.pseudo_weather_mask);
+  return m;
+}
+
+// What is not a Pokémon's own, for a side (Battle::listening_side), and
+// everything in play together (Battle::listening).
+inline Mask fresh_listening_side(const Battle& b, int s) {
+  Mask m = field_mask(b);
+  merge(m, mask_of(effect(Rule::FormatOU)));
+  const Side& side = b.sides[s];
+  for (int i = 0; i < side.n_slot_conditions; i++) merge(m, mask_of(effect(side.slot_conditions[i].id)));
+  merge(m, side_mask(b, s));
+  return m;
+}
+inline Mask fresh_listening(const Battle& b) {
+  Mask m{};
+  for (int s = 0; s < 2; s++) {
+    const Side& side = b.sides[s];
+    if (side.active != 0xFF) merge(m, side.pokemon[side.active].mask);
+    merge(m, fresh_listening_side(b, s));
+  }
+  return m;
+}
+[[gnu::noinline]] inline void refresh_listening(Battle& b) {
+  b.listening = fresh_listening(b);
+  for (int s = 0; s < 2; s++) b.listening_side[size_t(s)] = fresh_listening_side(b, s);
+  b.listening_stale = false;
+}
+inline const Mask& listening(Battle& b) {
+  if (b.listening_stale) [[unlikely]] refresh_listening(b);
+#ifdef ADV_CHECK_MASKS
+  for (const Side& side : b.sides) {
+    if (side.active != 0xFF) check_mask(side.pokemon[side.active]);
+  }
+  const auto covers = [](const Mask& kept, const Mask& now) { return !((now[0] & ~kept[0]) | (now[1] & ~kept[1])); };
+  if (!covers(b.listening, fresh_listening(b)) || !covers(b.listening_side[0], fresh_listening_side(b, 0)) ||
+      !covers(b.listening_side[1], fresh_listening_side(b, 1))) {
+    unported("the battle's mask left out of date");
+  }
+#endif
+  return b.listening;
+}
+
 // Battle.findEventHandlers (battle.ts:1049) for a Pokémon in singles, or for
 // the battle. BeforeTurn, Update and Weather are not looked for under the
 // prefixed names.
 inline void find_event_handlers(Ctx& c, Subject t, const EventNames& e, Ref source, Listeners& out) {
-  const bool prefixed = e.id != "BeforeTurn" && e.id != "Update" && e.id != "Weather" && e.id != "WeatherChange";
+  const bool prefixed = e.prefixed;
   int target_side = -1;
+  // The source is nearly always the target or its foe, whose masks are made
+  // anyway.
+  Mask source_mask{};
+  bool have_source_mask = false;
   if (t.kind == HolderKind::Pokemon && (c.b.at(t.pokemon).is_active || (source && c.b.at(source).is_active))) {
     const Ref self = t.pokemon;
-    find_pokemon_event_handlers(c, self, e.on, out);
+    const Mask mine = pokemon_mask(c.b, self);
+    if (source == self) source_mask = mine, have_source_mask = true;
+    if (listens(mine, e.on)) find_pokemon_event_handlers(c, self, e.on, out);
     if (prefixed) {
       // alliesAndSelf(), then foes(): the active Pokémon of each side that
       // have HP.
       if (c.b.at(self).is_active && c.b.at(self).hp) {
-        find_pokemon_event_handlers(c, self, e.ally, out);
-        find_pokemon_event_handlers(c, self, e.any, out);
+        if (listens(mine, e.ally)) find_pokemon_event_handlers(c, self, e.ally, out);
+        if (listens(mine, e.any)) find_pokemon_event_handlers(c, self, e.any, out);
       }
       const Side& other = c.b.sides[self.side ^ 1];
-      if (other.active != 0xFF && other.pokemon[other.active].hp) {
+      if (other.active != 0xFF && other.pokemon[other.active].hp && (e.foe != NO_CALLBACK || e.any != NO_CALLBACK)) {
         const Ref foe{uint8_t(self.side ^ 1), other.active};
-        find_pokemon_event_handlers(c, foe, e.foe, out);
-        find_pokemon_event_handlers(c, foe, e.any, out);
+        const Mask theirs = pokemon_mask(c.b, foe);
+        if (source == foe) source_mask = theirs, have_source_mask = true;
+        if (listens(theirs, e.foe)) find_pokemon_event_handlers(c, foe, e.foe, out);
+        if (listens(theirs, e.any)) find_pokemon_event_handlers(c, foe, e.any, out);
       }
     }
     target_side = self.side;
   } else if (t.kind != HolderKind::Battle && t.kind != HolderKind::Pokemon) {
     unported("an event on a side or the field");
   }
-  if (source && prefixed) find_pokemon_event_handlers(c, source, e.source, out);
+  if (source && prefixed && e.source != NO_CALLBACK) {
+    if (!have_source_mask) source_mask = pokemon_mask(c.b, source);
+    if (listens(source_mask, e.source)) find_pokemon_event_handlers(c, source, e.source, out);
+  }
   // The sides' conditions, p1's then p2's: on<Event> of the target's own
   // side, onFoe<Event> of the other, and onAny<Event> of both.
   for (int side = 0; target_side >= 0 && side < 2; side++) {
-    if (side == target_side) find_side_event_handlers(c, side, e.on, out);
-    else if (prefixed) find_side_event_handlers(c, side, e.foe, out);
-    if (prefixed) find_side_event_handlers(c, side, e.any, out);
+    if (!c.b.sides[side].n_side_conditions) continue;
+    const Mask conditions = side_mask(c.b, side);
+    if (side == target_side) {
+      if (listens(conditions, e.on)) find_side_event_handlers(c, side, e.on, out);
+    } else if (prefixed && listens(conditions, e.foe)) {
+      find_side_event_handlers(c, side, e.foe, out);
+    }
+    if (prefixed && listens(conditions, e.any)) find_side_event_handlers(c, side, e.any, out);
   }
-  find_field_event_handlers(c, e.on, out);
-  find_battle_event_handlers(c, e.on, out);
+  if (listens(field_mask(c.b), e.on)) find_field_event_handlers(c, e.on, out);
+  if (listens(mask_of(effect(Rule::FormatOU)), e.on)) find_battle_event_handlers(c, e.on, out);
 }
 
 // Battle.modify (battle.ts:2348) with a modifier in 4096ths, as runEvent
@@ -486,9 +685,13 @@ inline void chain_modify(Ctx& c, double numerator, double denominator = 1) {
 // Battle.singleEvent (battle.ts:578): one effect's handler for a name.
 inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, Subject t, Ref source = {},
                           Effect source_effect = {}, Relay value = relay::undefined, Found custom = {}) {
-  if (c.event_depth >= 8) unported("an event stack eight deep");
   const bool has_relay = !value.undefined();
   if (!has_relay) value = relay::yes;
+  // Most effects have no handler under the name, and the value comes back
+  // as it is whichever of these stops the event; so that is asked first.
+  const Found f = custom ? custom : Found{e, has(e, name) ? name : NO_CALLBACK};
+  if (!f) return value;
+  if (c.event_depth >= 8) unported("an event stack eight deep");
   if (type_of(e) == EffectType::Status && t.kind == HolderKind::Pokemon &&
       c.b.at(t.pokemon).status != Condition(e.id)) {
     return value;
@@ -498,8 +701,6 @@ inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, S
       suppressing_weather(c.b)) {
     return value;
   }
-  const Found f = custom ? custom : Found{e, has(e, name) ? name : NO_CALLBACK};
-  if (!f) return value;
 
   const auto parent_effect = c.effect;
   const auto parent_state = c.effect_state;
@@ -519,8 +720,40 @@ inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, S
 
 // Battle.runEvent (battle.ts:765) for one target. A falsy return ends the
 // event; with fast_exit (priorityEvent) any return does.
-inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, Effect source_effect = {},
+// With no handler an event's value comes back as it was, passed through the
+// modifier of an event that modified nothing.
+inline Relay unheard(Relay value) {
+  if (value.undefined() || value.kind == Relay::Kind::Null) return relay::yes;
+  if (value.kind == Relay::Kind::Number && value.number >= 0 && value.number == double(uint64_t(value.number))) {
+    value.number = modify(value.number, 1);
+  }
+  return value;
+}
+inline Relay run_event_heard(Ctx& c, const EventNames& e, Subject t, Ref source, Effect source_effect, Relay value,
+                             bool on_effect, bool fast_exit);
+// Nearly every event ends in this part: none of its names is among those
+// that anything in play, the target or the source could answer. It is put
+// in line wherever an event is run; the rest is not.
+[[gnu::always_inline]] inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, Effect source_effect = {},
                        Relay value = relay::undefined, bool on_effect = false, bool fast_exit = false) {
+  if (!e.always_look) {
+    Mask m = listening(c.b);
+    if (t.kind == HolderKind::Pokemon) check_mask(c.b.at(t.pokemon));
+    if (source) check_mask(c.b.at(source));
+    if (e.only_on && t.kind == HolderKind::Pokemon) {
+      // Only the target's own effects, its side's and the field's are asked.
+      m = c.b.listening_side[t.pokemon.side];
+      merge(m, c.b.at(t.pokemon).mask);
+    } else {
+      if (t.kind == HolderKind::Pokemon) merge(m, c.b.at(t.pokemon).mask);
+      if (source) merge(m, c.b.at(source).mask);
+    }
+    if (!((m[0] & e.names[0]) | (m[1] & e.names[1])) && !(on_effect && has(source_effect, e.on))) return unheard(value);
+  }
+  return run_event_heard(c, e, t, source, source_effect, value, on_effect, fast_exit);
+}
+[[gnu::noinline]] inline Relay run_event_heard(Ctx& c, const EventNames& e, Subject t, Ref source, Effect source_effect,
+                                               Relay value, bool on_effect, bool fast_exit) {
   if (c.event_depth >= 8) unported("an event stack eight deep");
   Listeners handlers;
   if (on_effect && has(source_effect, e.on)) {
@@ -537,7 +770,9 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
       }
     }
   };
-  if (e.id == "Invulnerability" || e.id == "TryHit" || e.id == "DamagingHit" || e.id == "EntryHazard") {
+  if (handlers.n < 2) {
+    // Nothing to put in order, and so nothing drawn.
+  } else if (e.left_to_right) {
     // Battle.compareLeftToRightOrder: order, then priority; one target, so
     // no index to tell them apart.
     stable_sort([](const Listener& a, const Listener& b) {
@@ -559,6 +794,7 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
 
   const bool has_relay = !value.undefined() && value.kind != Relay::Kind::Null;
   if (!has_relay) value = relay::yes;
+  if (!handlers.n) return unheard(value);
   const auto parent_event = c.event;
   c.event = {e.id, t, source, source_effect, 1};
   c.event_depth++;
@@ -569,8 +805,7 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
         c.b.at(h.holder.pokemon).status != Condition(he.id)) {
       continue;
     }
-    if ((type_of(he) == EffectType::Weather || e.id == "Weather") && e.id != "Residual" && e.id != "End" &&
-        suppressing_weather(c.b)) {
+    if ((type_of(he) == EffectType::Weather || e.weather) && !e.residual_or_end && suppressing_weather(c.b)) {
       continue;
     }
     const auto parent_effect = c.effect;

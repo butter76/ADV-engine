@@ -13,13 +13,12 @@ namespace adv {
 
 // Battle.add (battle.ts).
 inline void add(Ctx& c, std::initializer_list<Part> parts) {
-  Line line;
+  Line& line = c.out.log.emplace_back();
   bool split = false;
   for (const Part& p : parts) {
     line.parts[line.n++] = p;
     split |= p.kind == Part::Kind::Details || p.kind == Part::Kind::Health;
   }
-  c.out.log.push_back(line);
   c.out.log_lines += split ? 3 : 1;
 }
 // Battle.addSplit(side, secret) with no shared line.
@@ -162,6 +161,7 @@ inline bool set_weather(Ctx& c, Condition weather, Ref source, Effect source_eff
   const Condition previous = f.weather;
   const EffectState previous_state = f.weather_state;
   f.weather = weather;
+  c.b.listening_stale = true;
   f.weather_state = EffectState{};
   f.weather_state.duration = data(weather).duration;
   // durationCallback(source, source, sourceEffect).
@@ -172,6 +172,7 @@ inline bool set_weather(Ctx& c, Condition weather, Ref source, Effect source_eff
   }
   if (!single_event(c, ON_FIELD_START, effect(weather), &f.weather_state, FIELD, source, source_effect).truthy()) {
     f.weather = previous;
+    c.b.listening_stale = true;
     f.weather_state = previous_state;
     return false;
   }
@@ -463,6 +464,7 @@ inline Relay add_volatile_result(Ctx& c, Ref r, Condition id, Ref source = {}, E
   if (p.n_volatiles == p.volatiles.size()) unported("more than eight volatiles");
   Volatile& v = p.volatiles[p.n_volatiles++];
   v.id = id;
+  refresh_mask(c.b, p);
   v.state = init_effect_state(c.b, true, r);
   v.state.source = source;
   v.state.source_effect = source_effect;
@@ -619,6 +621,7 @@ inline bool set_item(Ctx& c, Ref r, Item item, Ref source = {}, Effect by = {}) 
   const Item old = p.item;
   EffectState old_state = p.item_state;
   p.item = item;
+  refresh_mask(c.b, p);
   p.item_state = init_effect_state(c.b, item != Item::None, r);
   if (old != Item::None) single_event(c, callback("", "End"), effect(old), &old_state, on(r));
   if (item != Item::None) single_event(c, callback("", "Start"), effect(item), &p.item_state, on(r), source, by);
@@ -633,6 +636,7 @@ inline bool set_ability(Ctx& c, Ref r, Ability ability, Ref source, Effect by) {
   const Ability old = p.ability;
   single_event(c, callback("", "End"), effect(old), &p.ability_state, on(r), source);
   p.ability = ability;
+  refresh_mask(c.b, p);
   p.ability_state = init_effect_state(c.b, ability != Ability::None, r);
   if (by) {
     add(c, {part::text("-ability"), part::pokemon(c.b, r), part::ability(ability), part::ability(old), part::from(by), part::of(c.b, source)});
@@ -719,6 +723,7 @@ inline bool add_side_condition(Ctx& c, int side, Condition id, Ref source, Effec
   if (s.n_side_conditions == s.side_conditions.size()) unported("more than six side conditions");
   SideCondition& sc = s.side_conditions[s.n_side_conditions++];
   sc.id = id;
+  c.b.listening_stale = true;
   sc.state = EffectState{};
   sc.state.effect_order = c.b.effect_order++; // a side's effect always takes an order
   sc.state.target = HolderKind::Side;
@@ -760,6 +765,7 @@ inline bool add_slot_condition(Ctx& c, int side, Condition id, Ref source, Effec
   if (s.n_slot_conditions == s.slot_conditions.size()) unported("more than two slot conditions");
   SideCondition& sc = s.slot_conditions[s.n_slot_conditions++];
   sc.id = id;
+  c.b.listening_stale = true;
   sc.state = EffectState{};
   sc.state.effect_order = c.b.effect_order++;
   sc.state.target = HolderKind::Side;
@@ -852,12 +858,14 @@ inline Relay set_status_result(Ctx& c, Ref r, Condition status, Ref source = {},
   const Condition previous = p.status;
   const EffectState previous_state = p.status_state;
   p.status = status;
+  refresh_mask(c.b, p);
   p.status_fnt = false;
   p.status_state = status == Condition::None ? EffectState{} : init_effect_state(c.b, true, r);
   p.status_state.source = source;
   if (status == Condition::None) return relay::yes;
   if (!single_event(c, ON_START, effect(status), &p.status_state, on(r), source, source_effect).truthy()) {
     p.status = previous;
+    refresh_mask(c.b, p);
     p.status_state = previous_state;
     return relay::no;
   }
