@@ -112,7 +112,28 @@ function play({Battle}, {format, seed, teams, rnd, each, before}) {
 //
 // As BattleStream does after each chunk it is written, `sendUpdates` runs
 // after the players are set and after every choice.
-function record({Battle, Teams}, {format, seed, teams, rnd, site, turns, choices}) {
+// A move with power, a type, one target and nothing else: the moves the
+// engine can use so far (is_plain in src/moves.hpp is the same test).
+function plainMoves(Dex) {
+  const dex = Dex.mod('gen3');
+  const coded = o => Object.keys(o || {}).some(k => typeof o[k] === 'function' || /^on[A-Z]/.test(k));
+  const plain = new Set();
+  for (const m of dex.moves.all()) {
+    // A typed Hidden Power has the id of Hidden Power, which is not plain.
+    if (!m.exists || m.gen > 3 || m.isNonstandard || m.id !== m.name.toLowerCase().replace(/[^a-z0-9]+/g, '')) continue;
+    if (m.category === 'Status' || !m.basePower || m.type === '???') continue;
+    if (!['normal', 'any', 'allAdjacent', 'allAdjacentFoes'].includes(m.target)) continue;
+    if (coded(m) || m.condition || m.secondary || m.self || m.drain || m.recoil || m.heal || m.multihit || m.ohko ||
+        m.damage || m.selfdestruct || m.selfSwitch || m.forceSwitch || m.status || m.volatileStatus || m.sideCondition ||
+        m.slotCondition || m.weather || m.boosts || m.sleepUsable || m.stallingMove || m.callsMove ||
+        m.hasCrashDamage || m.multiaccuracy || m.ignoreImmunity) continue;
+    plain.add(m.id);
+  }
+  return plain;
+}
+
+function record({Battle, Teams, Dex}, {format, seed, teams, rnd, site, turns, choices}) {
+  const allowed = choices === 'plain' ? (record.plain || (record.plain = plainMoves(Dex))) : null;
   const out = [`G ${format} ${seed}`];
   const battle = new Battle({
     formatid: format, seed,
@@ -166,8 +187,12 @@ function record({Battle, Teams}, {format, seed, teams, rnd, site, turns, choices
         const a = r.active[0];
         const switches = a.trapped ? [] : bench.map(b => 'switch ' + b);
         // Moves first, then switches: the order the draws of earlier traces depend on.
-        if (choices !== 'switch' || !switches.length) a.moves.forEach((m, i) => { if (!m.disabled) options.push('move ' + (i + 1)); });
+        if (choices !== 'switch' || !switches.length) {
+          a.moves.forEach((m, i) => { if (!m.disabled && (!allowed || allowed.has(m.id))) options.push('move ' + (i + 1)); });
+        }
         options.push(...switches);
+        // With nothing it is allowed, a player uses whatever it has.
+        if (!options.length) a.moves.forEach((m, i) => { if (!m.disabled) options.push('move ' + (i + 1)); });
       }
       const turn = battle.turn, sent = battle.log.length;
       let done = false;

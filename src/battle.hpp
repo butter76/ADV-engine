@@ -78,6 +78,16 @@ struct EffectState {
   uint8_t duration = 0;
   HolderKind target = HolderKind::None;
   Ref target_pokemon; // the target, when it is a Pokémon
+  Ref source;
+  Effect source_effect;
+  Move move = Move::None; // Choice lock: the move locked into
+};
+
+// A volatile of a Pokémon (Pokemon.volatiles), kept in the order they were
+// added, which is the order their handlers are gathered in.
+struct Volatile {
+  Condition id = Condition::None;
+  EffectState state;
 };
 
 enum class Disabled : uint8_t { No, Yes, Hidden };
@@ -111,6 +121,8 @@ struct Pokemon {
   Item item = Item::None;
   Condition status = Condition::None;
   EffectState ability_state, item_state, status_state;
+  std::array<Volatile, 8> volatiles{};
+  uint8_t n_volatiles = 0;
   uint8_t position = 0;
   // Showdown's speed is a number: Gen 3 gives a Quick Claw holder 65535.
   uint32_t speed = 0;
@@ -125,6 +137,9 @@ struct Pokemon {
   bool known_type = true, newly_switched = false;
   bool switch_flag = false, force_switch_flag = false;
   uint8_t active_turns = 0, previously_switched_in = 0;
+  Move last_move = Move::None, move_this_turn = Move::None;
+  uint16_t last_damage = 0;
+  uint8_t active_move_actions = 0;
 };
 
 // What a side has chosen so far (Side.choice, side.ts). In singles a side
@@ -134,6 +149,7 @@ struct ChoiceState {
   uint8_t forced_switches_left = 0, forced_passes_left = 0;
   enum class Kind : uint8_t { None, Pass, Switch, InstaSwitch, Move } action = Kind::None;
   uint8_t target = 0xFF; // the team index of the Pokémon to switch to
+  Move move = Move::None;
 };
 
 struct Side {
@@ -169,6 +185,7 @@ struct Action {
   double speed = 0;
   Ref pokemon;
   Ref target; // a switch: the Pokémon coming in
+  Move move = Move::None;
 };
 
 struct Queue {
@@ -208,14 +225,33 @@ struct Battle {
   RequestState request_state = RequestState::None;
   bool started = false, ended = false, mid_turn = false;
   bool report_percentages = false, support_cancel = false, quick_claw_roll = false;
-  // Battle.faintQueue: who fainted, and from what.
+  // Battle.faintQueue: who fainted, and from what. A move runs the Faint
+  // event itself before the faints are resolved.
   struct Faint {
     Ref target, source;
     Effect effect;
+    bool faint_event_done = false;
   };
   std::array<Faint, 4> faint_queue{};
   uint8_t faints = 0;
   bool sent_requests = true;
+  // Battle.activeMove, activePokemon and activeTarget: the move in use, as a
+  // copy that its use may change.
+  struct ActiveMove {
+    Move id = Move::None;
+    Type type = Type::None;
+    Category category = Category::Status;
+    uint8_t base_power = 0;
+    uint8_t accuracy = 0; // 0: always hits
+    Target target = Target::Normal;
+    uint8_t crit_ratio = 0;
+    bool crit = false;   // moveHitData of the one target
+    int8_t type_mod = 0;
+    uint16_t total_damage = 0;
+  };
+  ActiveMove active_move;
+  bool has_active_move = false;
+  Ref active_pokemon, active_target;
   int8_t winner = -1; // 0 or 1 once the battle ends with one; 2: a tie
   // Battle.speedOrder: the active Pokémon's field positions (0 for p1's, 1
   // for p2's) as the last runSwitch sorted them.

@@ -52,6 +52,14 @@ inline void each_event(Ctx& c, const EventNames& e, Effect source_effect = {}) {
   for (int i = 0; i < n; i++) run_event(c, e, on(actives[i]), {}, source_effect);
 }
 
+// An event whose relay value is an object, which the engine cannot pass yet:
+// it must find no handler.
+inline void run_event_without_handlers(Ctx& c, const EventNames& e, Subject t) {
+  Listeners handlers;
+  find_event_handlers(c, t, e, {}, handlers);
+  if (handlers.n) unported("a handler of " + std::string(e.id));
+}
+
 // Battle.initEffectState (battle.ts:3381) for a Pokémon's ability or item:
 // an effect of an active Pokémon takes the next effect order.
 inline EffectState init_effect_state(Battle& b, bool has_id, Ref target) {
@@ -280,9 +288,19 @@ inline void damage(Ctx& c, double amount) {
   }
 }
 
+// Battle.damage(amount, target, source) from a handler: as above, with the
+// target and the source given (Rough Skin hurts the attacker).
+inline void damage(Ctx& c, double amount, Ref target, Ref source) {
+  const auto event = c.event;
+  c.event.target = on(target);
+  c.event.source = source;
+  damage(c, amount);
+  c.event = event;
+}
+
 // Battle.heal (battle.ts) from a handler, with the same target, source and
-// effect as damage.
-inline void heal(Ctx& c, double amount) {
+// effect as damage. It returns what was healed, 0 when nothing was.
+inline double heal(Ctx& c, double amount) {
   if (c.event.target.kind != HolderKind::Pokemon) unported("healing with no Pokémon target");
   const Ref target = c.event.target.pokemon;
   const Ref source = c.event.source;
@@ -290,10 +308,11 @@ inline void heal(Ctx& c, double amount) {
   if (amount && amount <= 1) amount = 1;
   amount = std::floor(amount);
   const Relay tried = run_event(c, TRY_HEAL, on(target), source, effect, relay::number(amount));
-  if (!tried.truthy()) return;
+  if (!tried.truthy()) return 0;
   amount = tried.number;
   Pokemon& p = c.b.at(target);
-  if (!p.hp || !p.is_active || p.hp >= p.maxhp) return;
+  if (!p.hp || !p.is_active || p.hp >= p.maxhp) return 0;
+  const uint16_t before = p.hp;
   p.hp = uint16_t(std::min<double>(p.hp + amount, p.maxhp)); // Pokemon.heal
   if (effect.kind == EffectKind::Move) unported("healing from a move");
   if (source && source != target) {
@@ -302,6 +321,75 @@ inline void heal(Ctx& c, double amount) {
     add(c, {part::text("-heal"), part::pokemon(c.b, target), part::health(c.b, target), part::from(effect)});
   }
   // Nothing listens for Heal in Gen 3.
+  return p.hp - before;
+}
+
+// ---------------------------------------------------------------------------
+// Volatiles (pokemon.ts).
+// ---------------------------------------------------------------------------
+inline constexpr EventNames TRY_ADD_VOLATILE = event("TryAddVolatile");
+inline constexpr Callback ON_RESTART = callback("", "Restart");
+inline constexpr Callback ON_VOLATILE_END = callback("", "End");
+
+inline Volatile* volatile_of(Pokemon& p, Condition id) {
+  for (int i = 0; i < p.n_volatiles; i++) {
+    if (p.volatiles[i].id == id) return &p.volatiles[i];
+  }
+  return nullptr;
+}
+
+// Pokemon.addVolatile(status) from a handler: the source is the event's, or
+// the Pokémon itself, and the source effect the handler's own.
+inline bool add_volatile(Ctx& c, Ref r, Condition id, Ref source = {}) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp && !data(id).affects_fainted) return false;
+  if (!source) source = c.event.source;
+  const Effect source_effect = c.effect;
+  if (!source) source = r;
+  if (Volatile* v = volatile_of(p, id)) {
+    if (!has(effect(id), ON_RESTART)) return false;
+    return single_event(c, ON_RESTART, effect(id), &v->state, on(r), source, source_effect).truthy();
+  }
+  if (!run_status_immunity(c, r, CONDITION_NAMES[uint8_t(id)].id)) return false;
+  if (!run_event(c, TRY_ADD_VOLATILE, on(r), source, source_effect, relay::text(CONDITION_NAMES[uint8_t(id)].id)).truthy()) {
+    return false;
+  }
+  if (p.n_volatiles == p.volatiles.size()) unported("more than eight volatiles");
+  Volatile& v = p.volatiles[p.n_volatiles++];
+  v.id = id;
+  v.state = init_effect_state(c.b, true, r);
+  v.state.source = source;
+  v.state.source_effect = source_effect;
+  v.state.duration = data(id).duration;
+  if (has(effect(id), Callback::durationCallback)) unported("a volatile with a durationCallback");
+  if (!single_event(c, ON_START, effect(id), &v.state, on(r), source, source_effect).truthy()) {
+    // The volatile is taken off again; it is the last unless its onStart
+    // added another.
+    for (int i = 0; i < p.n_volatiles; i++) {
+      if (p.volatiles[i].id != id) continue;
+      for (int k = i + 1; k < p.n_volatiles; k++) p.volatiles[k - 1] = p.volatiles[k];
+      p.n_volatiles--;
+      break;
+    }
+    return false;
+  }
+  return true;
+}
+
+// Pokemon.removeVolatile.
+inline bool remove_volatile(Ctx& c, Ref r, Condition id) {
+  Pokemon& p = c.b.at(r);
+  if (!p.hp) return false;
+  Volatile* v = volatile_of(p, id);
+  if (!v) return false;
+  single_event(c, ON_VOLATILE_END, effect(id), &v->state, on(r));
+  for (int i = 0; i < p.n_volatiles; i++) {
+    if (p.volatiles[i].id != id) continue;
+    for (int k = i + 1; k < p.n_volatiles; k++) p.volatiles[k - 1] = p.volatiles[k];
+    p.n_volatiles--;
+    break;
+  }
+  return true;
 }
 
 } // namespace adv

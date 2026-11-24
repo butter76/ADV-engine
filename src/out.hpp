@@ -22,6 +22,7 @@ struct Draw {
 struct Out {
   std::vector<Line> log;
   uint32_t log_lines = 0; // as Showdown counts them: a split line is three
+  int32_t last_move_line = -1; // Battle.lastMoveLine: the `move` line a later attribute is added to
   std::vector<Draw>* draws = nullptr;
 };
 

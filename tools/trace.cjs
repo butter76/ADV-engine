@@ -8,7 +8,8 @@
 // Showdown sent: enough to replay the draws, and small enough to keep in git.
 // The digest is of the full trace either way.
 // --turns N stops each game after N turns. --choices switch has both players
-// switch whenever they are offered a switch.
+// switch whenever they are offered a switch; --choices plain has them use
+// only plain damaging moves, or switch.
 // --opening 1 writes each game up to its first choice: the teams, the battle's
 // start and the first requests.
 //

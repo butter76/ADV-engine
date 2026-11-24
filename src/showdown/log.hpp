@@ -45,6 +45,7 @@ inline std::string part_text(const Part& p, bool secret, const Battle& b, const 
   case Part::Kind::Pokemon:
     return side_id(p.pokemon.side) + (p.active ? "a: " : ": ") + names.teams[p.pokemon.side].names[p.pokemon.index];
   case Part::Kind::Ability: return std::string(ABILITY_NAMES[p.id].name);
+  case Part::Kind::Move: return std::string(MOVE_NAMES[p.id].name);
   case Part::Kind::From:
     // An effect's fullname. Damage from `tox` is written as `psn`.
     switch (p.effect_kind) {

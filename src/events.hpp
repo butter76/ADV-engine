@@ -3,8 +3,8 @@
 // gathered in, the sort and its shuffle of ties are all part of what a
 // battle's draws depend on, so each function here follows the one it ports.
 //
-// Not yet: volatiles, side conditions and slot conditions are not in the
-// state, so nothing is gathered from them. Speed is not what this is
+// Not yet: side conditions and slot conditions are not in the state, so
+// nothing is gathered from them. Speed is not what this is
 // written for; the listener masks of docs/PLAN.md come later.
 
 #pragma once
@@ -342,6 +342,7 @@ inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners&
     if (const Found f = get_callback(c.b, true, e, name)) out.push(resolve_priority(c, {f, state, holder}, name));
   };
   add(effect(p.status), &p.status_state);
+  for (int i = 0; i < p.n_volatiles; i++) add(effect(p.volatiles[i].id), &p.volatiles[i].state);
   add(effect(p.ability), &p.ability_state);
   add(effect(p.item), &p.item_state);
 }
@@ -399,9 +400,10 @@ inline void find_event_handlers(Ctx& c, Subject t, const EventNames& e, Ref sour
 
 // Battle.modify (battle.ts:2348) with a modifier in 4096ths, as runEvent
 // applies an event's modifier to a whole number.
+// Showdown's `tr` is JavaScript's `>>> 0`, which keeps the low 32 bits.
 constexpr double modify(double value, double modifier) {
   const uint32_t m = uint32_t(modifier * 4096);
-  return double(uint32_t((double(uint32_t(value * m)) + 2048 - 1) / 4096));
+  return double(uint32_t((double(uint32_t(uint64_t(value * m))) + 2048 - 1) / 4096));
 }
 
 // Battle.chainModify (battle.ts:2337).
@@ -456,8 +458,31 @@ inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, 
   }
   find_event_handlers(c, t, e, source, handlers);
 
-  if (e.id == "Invulnerability" || e.id == "TryHit" || e.id == "DamagingHit" || e.id == "EntryHazard" || fast_exit) {
-    if (handlers.n > 1) unported("an event sorted without a shuffle: " + std::string(e.id));
+  // Four events are sorted left to right, and a priority event by its own
+  // order; neither shuffles ties, and JavaScript's sort keeps their order.
+  const auto stable_sort = [&](auto less) {
+    for (int i = 1; i < handlers.n; i++) {
+      for (int k = i; k > 0 && less(handlers.list[k], handlers.list[k - 1]); k--) {
+        std::swap(handlers.list[k], handlers.list[k - 1]);
+      }
+    }
+  };
+  if (e.id == "Invulnerability" || e.id == "TryHit" || e.id == "DamagingHit" || e.id == "EntryHazard") {
+    // Battle.compareLeftToRightOrder: order, then priority; one target, so
+    // no index to tell them apart.
+    stable_sort([](const Listener& a, const Listener& b) {
+      const double oa = a.order ? a.order : 4294967296.0, ob = b.order ? b.order : 4294967296.0;
+      return oa != ob ? oa < ob : a.priority > b.priority;
+    });
+  } else if (fast_exit) {
+    // Battle.compareRedirectOrder: priority, speed, then the holders'
+    // abilities in the order they came into effect.
+    stable_sort([&](const Listener& a, const Listener& b) {
+      if (a.priority != b.priority) return a.priority > b.priority;
+      if (a.speed != b.speed) return a.speed > b.speed;
+      if (a.holder.kind != HolderKind::Pokemon || b.holder.kind != HolderKind::Pokemon) return false;
+      return c.b.at(a.holder.pokemon).ability_state.effect_order < c.b.at(b.holder.pokemon).ability_state.effect_order;
+    });
   } else {
     speed_sort(c, handlers);
   }

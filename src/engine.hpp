@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "callbacks.hpp"
+#include "moves.hpp"
 #include "setup.hpp"
 
 namespace adv {
@@ -32,14 +33,6 @@ inline constexpr Callback ON_END = callback("", "End");
 inline constexpr Callback ON_BEGIN = callback("", "Begin");
 inline constexpr Callback ON_FOE_MAYBE_TRAP_POKEMON = callback("Foe", "MaybeTrapPokemon");
 } // namespace events
-
-// An event whose relay value is an object, which the engine cannot pass yet:
-// it must find no handler.
-inline void run_event_without_handlers(Ctx& c, const EventNames& e, Subject t) {
-  Listeners handlers;
-  find_event_handlers(c, t, e, {}, handlers);
-  if (handlers.n) unported("a handler of " + std::string(e.id));
-}
 
 // Pokemon.getStat('spe', false, false) (pokemon.ts:617).
 inline double get_stat_spe(Ctx& c, Ref r) {
@@ -77,7 +70,13 @@ inline Action resolve_action(Ctx& c, Action a) {
   case Choice::RunSwitch: a.order = 101; break;
   case Choice::Switch: a.order = 103; break;
   case Choice::Residual: a.order = 300; break;
-  case Choice::Move: unported("a move action");
+  case Choice::Move:
+    a.order = 200;
+    // Battle.getActionSpeed for a move: its priority, which no plain move
+    // and nothing in Gen 3 changes (ModifyPriority, FractionalPriority).
+    if (has(effect(a.move), callback("", "ModifyPriority"))) unported("a move's onModifyPriority");
+    a.priority = data(a.move).priority;
+    break;
   }
   a.speed = a.pokemon ? double(get_action_speed(c, a.pokemon)) : 1;
   return a;
@@ -140,6 +139,7 @@ inline void cancel_action(Queue& q, Ref r) {
 inline void clear_volatile(Pokemon& p, bool include_switch_flags = true) {
   p.boosts = Boosts{};
   p.ability = p.base_ability;
+  p.n_volatiles = 0;
   if (include_switch_flags) p.switch_flag = p.force_switch_flag = false;
   p.newly_switched = true;
   p.being_called_back = false;
@@ -179,8 +179,8 @@ inline bool resolve_faints(Ctx& c) {
     b.faints--;
     Pokemon& p = b.at(f.target);
     if (p.fainted) continue;
-    // Nothing listens for BeforeFaint in Gen 3.
-    run_event(c, events::FAINT, on(f.target), f.source, f.effect);
+    // Nothing listens for BeforeFaint in Gen 3. A move has run Faint already.
+    if (!f.faint_event_done) run_event(c, events::FAINT, on(f.target), f.source, f.effect);
     add(c, {part::text("faint"), part::pokemon(b, f.target)});
     if (b.sides[f.target.side].pokemon_left) b.sides[f.target.side].pokemon_left--;
     single_event(c, events::ON_END, effect(p.ability), &p.ability_state, on(f.target));
@@ -540,8 +540,13 @@ inline bool run_action(Ctx& c, const Action& action) {
     field_event(c, events::RESIDUAL);
     if (!b.ended) add(c, {part::text("upkeep")});
     break;
-  case Choice::Move: unported("a move action");
+  case Choice::Move:
+    // A Pokémon that left or fainted does not move, and nothing follows.
+    if (!b.at(action.pokemon).is_active || b.at(action.pokemon).fainted) return false;
+    run_move(c, action.move, action.pokemon);
+    break;
   }
+  b.has_active_move = false; // clearActiveMove
 
   resolve_faints(c);
   if (b.ended) return true;
@@ -611,7 +616,7 @@ inline void commit_choices(Ctx& c) {
       add_choice(c, {.choice = choice.action == ChoiceState::Kind::Switch ? Choice::Switch : Choice::InstaSwitch,
                      .pokemon = out, .target = {s, choice.target}});
     } else if (choice.action == ChoiceState::Kind::Move) {
-      unported("a move choice");
+      add_choice(c, {.choice = Choice::Move, .pokemon = {s, side.active}, .move = choice.move});
     }
   }
   // clearRequest.
@@ -664,6 +669,34 @@ inline Refusal choose_switch(Ctx& c, int s, int position) {
     side.choice.action = ChoiceState::Kind::InstaSwitch;
   }
   side.choice.target = target;
+  if (is_choice_done(b, 0) && is_choice_done(b, 1)) commit_choices(c);
+  return Refusal::None;
+}
+
+// Side.chooseMove (side.ts) for the move in a slot of the request, with no
+// target given, as singles needs none.
+inline Refusal choose_move(Ctx& c, int s, int slot) {
+  Battle& b = c.b;
+  Side& side = b.sides[s];
+  if (request_state(b, s) != RequestState::Move) unported("a move chosen for a request that is not for a move");
+  if (side.choice.cant_undo) unported("a choice after one that cannot be undone");
+  clear_choice(c, s);
+  const Ref r{uint8_t(s), side.active};
+  // chooseMove makes the request's data again, and asks twice more whether
+  // the Pokémon is locked into a move.
+  const Request request = get_move_request_data(c, r);
+  // A default choice is the first move that is not disabled.
+  for (int i = 0; slot < 0 && i < request.n_moves; i++) {
+    if (!request.moves[i].disabled) slot = i;
+  }
+  if (slot < 0 || slot >= request.n_moves) unported("a move the Pokémon does not have");
+  for (int i = 0; i < 2; i++) {
+    if (run_event(c, events::LOCK_MOVE, on(r), {}, {}, relay::undefined, false, true) != relay::yes) unported("a locked move");
+  }
+  if (request.moves[slot].disabled) unported("a disabled move chosen");
+  side.choice.action = ChoiceState::Kind::Move;
+  side.choice.move = request.moves[slot].id;
+  if (b.at(r).maybe_disabled) side.choice.cant_undo = true;
   if (is_choice_done(b, 0) && is_choice_done(b, 1)) commit_choices(c);
   return Refusal::None;
 }

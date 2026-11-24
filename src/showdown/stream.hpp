@@ -64,8 +64,14 @@ struct Stream {
       int slot = 0;
       std::from_chars(text.data() + 7, text.data() + text.size(), slot);
       refusal = choose_switch(ctx, side, slot - 1);
+    } else if (text.starts_with("move ")) {
+      int slot = 0;
+      std::from_chars(text.data() + 5, text.data() + text.size(), slot);
+      refusal = choose_move(ctx, side, slot - 1);
     } else if (text == "default" && battle.requests[side].kind == Request::Kind::Switch) {
       refusal = choose_switch(ctx, side, -1);
+    } else if (text == "default" && battle.requests[side].kind == Request::Kind::Move) {
+      refusal = choose_move(ctx, side, -1);
     } else {
       unported("the choice \"" + std::string(text.substr(0, text.find(' '))) + "\"");
     }

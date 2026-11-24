@@ -25,6 +25,7 @@ struct Part {
     Details,  // getFullDetails: details and health, split by viewer
     Health,   // getHealth: split by viewer
     Ability,  // an ability's name
+    Move,     // a move's name
     From,     // `[from] ` and an effect's full name
     Of,       // `[of] p1a: Name`
   } kind = Kind::Text;
@@ -44,7 +45,7 @@ struct Part {
 };
 
 struct Line {
-  std::array<Part, 6> parts{};
+  std::array<Part, 7> parts{};
   uint8_t n = 0;
   // addSplit(side, secret) with no shared line: this side is sent the line
   // and the others an empty one. -1: an ordinary line.
@@ -57,6 +58,7 @@ constexpr Part number(int32_t v) { return {.kind = Part::Kind::Number, .number =
 constexpr Part side(int s) { return {.kind = Part::Kind::Side, .number = s}; }
 constexpr Part player(int s) { return {.kind = Part::Kind::Player, .number = s}; }
 constexpr Part ability(Ability a) { return {.kind = Part::Kind::Ability, .id = uint16_t(a)}; }
+constexpr Part move(adv::Move m) { return {.kind = Part::Kind::Move, .id = uint16_t(m)}; }
 constexpr Part from(Effect e) { return {.kind = Part::Kind::From, .id = e.id, .effect_kind = e.kind}; }
 constexpr Part from_ability(Ability a) { return from(effect(a)); }
 inline Part pokemon(const Battle& b, Ref r) {

@@ -336,6 +336,295 @@ ADV_HANDLER(sunnyday_onImmunity) {
   return value.text == "frz" ? relay::no : relay::undefined;
 }
 
+
+// ---------------------------------------------------------------------------
+// What a move's use and its hit run.
+// ---------------------------------------------------------------------------
+
+// The type of the move a handler is given (its `move` argument).
+inline Type move_type(const Ctx& c, Effect move) {
+  return move.kind == EffectKind::Move && move ? c.b.active_move.type : Type::None;
+}
+// A handler that is `if (condition) return this.chainModify(n, d)`.
+#define ADV_CHAIN(name, condition, numerator, denominator)       \
+  ADV_HANDLER(name) {                                            \
+    ADV_UNUSED;                                                  \
+    if (condition) chain_modify(c, numerator, denominator);      \
+    return relay::undefined;                                     \
+  }
+
+// Abilities.
+ADV_HANDLER(pressure_onDeductPP) {
+  ADV_UNUSED;
+  return t.pokemon == source ? relay::undefined : relay::number(1);
+}
+ADV_HANDLER(hustle_onModifyAtk) {
+  ADV_UNUSED;
+  return relay::number(modify(value.number, 1.5));
+}
+ADV_HANDLER(hustle_onSourceModifyAccuracy) {
+  ADV_UNUSED;
+  // Gen 3's physical types.
+  const Type type = move_type(c, source_effect);
+  const bool physical = type == Type::Normal || type == Type::Fighting || type == Type::Flying || type == Type::Poison ||
+                        type == Type::Ground || type == Type::Rock || type == Type::Bug || type == Type::Ghost ||
+                        type == Type::Steel;
+  if (physical && value.kind == Relay::Kind::Number) chain_modify(c, 3277, 4096);
+  return relay::undefined;
+}
+inline bool active_with(const Battle& b, Ability ability) {
+  for (const Side& side : b.sides) {
+    if (side.active != 0xFF && !side.pokemon[side.active].fainted && side.pokemon[side.active].ability == ability) return true;
+  }
+  return false;
+}
+ADV_CHAIN(minus_onModifySpA, active_with(c.b, Ability::Plus), 1.5, 1)
+ADV_CHAIN(plus_onModifySpA, active_with(c.b, Ability::Minus), 1.5, 1)
+// onBasePower(basePower, attacker, defender, move) at a third of full HP.
+#define ADV_PINCH(name, type_)                                                                        \
+  ADV_CHAIN(name, move_type(c, source_effect) == Type::type_ &&                                       \
+                      double(c.b.at(t.pokemon).hp) <= double(c.b.at(t.pokemon).maxhp) / 3, 1.5, 1)
+ADV_PINCH(blaze_onBasePower, Fire)
+ADV_PINCH(overgrow_onBasePower, Grass)
+ADV_PINCH(swarm_onBasePower, Bug)
+ADV_PINCH(torrent_onBasePower, Water)
+#undef ADV_PINCH
+ADV_CHAIN(thickfat_onSourceBasePower, move_type(c, source_effect) == Type::Ice || move_type(c, source_effect) == Type::Fire, 0.5, 1)
+ADV_CHAIN(compoundeyes_onSourceModifyAccuracy, value.kind == Relay::Kind::Number, 1.3, 1)
+ADV_CHAIN(sandveil_onModifyAccuracy, value.kind == Relay::Kind::Number && effective_weather(c.b) == Condition::Sandstorm, 0.8, 1)
+ADV_CHAIN(guts_onModifyAtk, c.b.at(t.pokemon).status != Condition::None, 1.5, 1)
+ADV_CHAIN(hugepower_onModifyAtk, true, 2, 1)
+ADV_CHAIN(purepower_onModifyAtk, true, 2, 1)
+ADV_CHAIN(marvelscale_onModifyDef, c.b.at(t.pokemon).status != Condition::None, 1.5, 1)
+// onCriticalHit: false, a constant.
+ADV_HANDLER(battlearmor_onCriticalHit) {
+  ADV_UNUSED;
+  return relay::no;
+}
+ADV_HANDLER(shellarmor_onCriticalHit) {
+  ADV_UNUSED;
+  return relay::no;
+}
+// onTryHit(target, source, move).
+ADV_HANDLER(sturdy_onTryHit) {
+  ADV_UNUSED;
+  if (data(Move(source_effect.id)).ohko) unported("ability sturdy against a one-hit KO move");
+  return relay::undefined;
+}
+#define ADV_ABSORB(name, ability, type_, except)                                                        \
+  ADV_HANDLER(name) {                                                                                   \
+    ADV_UNUSED;                                                                                         \
+    if (t.pokemon == source || move_type(c, source_effect) != Type::type_ || Move(source_effect.id) == except) { \
+      return relay::undefined;                                                                          \
+    }                                                                                                   \
+    if (!heal(c, double(c.b.at(t.pokemon).base_maxhp) / 4)) {                                           \
+      add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::ability))}); \
+    }                                                                                                   \
+    return relay::null;                                                                                 \
+  }
+ADV_ABSORB(voltabsorb_onTryHit, VoltAbsorb, Electric, Move::ThunderWave)
+ADV_ABSORB(waterabsorb_onTryHit, WaterAbsorb, Water, Move::None)
+#undef ADV_ABSORB
+ADV_HANDLER(soundproof_onTryHit) {
+  ADV_UNUSED;
+  if (!(data(Move(source_effect.id)).flags & flag(MoveFlag::Sound))) return relay::undefined;
+  add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::Soundproof))});
+  return relay::null;
+}
+ADV_HANDLER(oblivious_onTryHit) {
+  ADV_UNUSED;
+  return relay::undefined; // only Captivate, which is not Gen 3's
+}
+ADV_HANDLER(wonderguard_onTryHit) {
+  ADV_UNUSED;
+  const Battle::ActiveMove& move = c.b.active_move;
+  if (t.pokemon == source || move.category == Category::Status || move.type == Type::Unknown) return relay::undefined;
+  // runEffectiveness and runImmunity of the move against the holder.
+  const Pokemon& p = c.b.at(t.pokemon);
+  int total = 0;
+  bool immune_to = false;
+  for (const Type type : p.types) {
+    if (type == Type::None) continue;
+    const uint8_t taken = damage_taken(type, move.type);
+    total += taken == 1 ? 1 : taken == 2 ? -1 : 0;
+    immune_to |= taken == 3;
+  }
+  if (move.type == Type::Ground) unported("ability wonderguard against a Ground move");
+  if (total <= 0 || immune_to) {
+    add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::WonderGuard))});
+    return relay::null;
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(flashfire_onTryHit) {
+  ADV_UNUSED;
+  if (t.pokemon == source || move_type(c, source_effect) != Type::Fire) return relay::undefined;
+  if (Move(source_effect.id) == Move::WillOWisp) unported("ability flashfire against Will-O-Wisp");
+  if (c.b.at(t.pokemon).status == Condition::Frz) return relay::undefined;
+  if (!add_volatile(c, t.pokemon, Condition::FlashFire)) {
+    add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::FlashFire))});
+  }
+  return relay::null;
+}
+ADV_HANDLER(flashfire_onEnd) {
+  ADV_UNUSED;
+  remove_volatile(c, t.pokemon, Condition::FlashFire);
+  return relay::undefined;
+}
+ADV_HANDLER(flashfire_condition_onStart) {
+  ADV_UNUSED;
+  add(c, {part::text("-start"), part::pokemon(c.b, t.pokemon), part::text("ability: Flash Fire")});
+  return relay::undefined;
+}
+ADV_HANDLER(flashfire_condition_onEnd) {
+  ADV_UNUSED;
+  add(c, {part::text("-end"), part::pokemon(c.b, t.pokemon), part::text("ability: Flash Fire"), part::text("[silent]")});
+  return relay::undefined;
+}
+ADV_CHAIN(flashfire_condition_onModifyDamagePhase1, move_type(c, source_effect) == Type::Fire, 1.5, 1)
+// onDamagingHit(damage, target, source, move): what touching the holder does.
+inline bool made_contact(Relay damage, Effect move) {
+  return damage.number != 0 && (data(Move(move.id)).flags & flag(MoveFlag::Contact));
+}
+ADV_HANDLER(roughskin_onDamagingHit) {
+  ADV_UNUSED;
+  if (made_contact(value, source_effect)) damage(c, double(c.b.at(source).base_maxhp) / 16, source, t.pokemon);
+  return relay::undefined;
+}
+// The draw is made on every contact; what it then does needs statuses.
+#define ADV_CONTACT_STATUS(name, what)                                                  \
+  ADV_HANDLER(name) {                                                                   \
+    ADV_UNUSED;                                                                         \
+    if (made_contact(value, source_effect) && random(c.b, c.out, 3) < 1) unported(what " on contact"); \
+    return relay::undefined;                                                            \
+  }
+ADV_CONTACT_STATUS(static_onDamagingHit, "ability static")
+ADV_CONTACT_STATUS(flamebody_onDamagingHit, "ability flamebody")
+ADV_CONTACT_STATUS(poisonpoint_onDamagingHit, "ability poisonpoint")
+ADV_CONTACT_STATUS(cutecharm_onDamagingHit, "ability cutecharm")
+#undef ADV_CONTACT_STATUS
+ADV_HANDLER(effectspore_onDamagingHit) {
+  ADV_UNUSED;
+  if (made_contact(value, source_effect) && random(c.b, c.out, 10) < 1) unported("ability effectspore on contact");
+  return relay::undefined;
+}
+ADV_HANDLER(colorchange_onDamagingHit) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  if (!value.number || !p.hp) return relay::undefined;
+  const Battle::ActiveMove& move = c.b.active_move;
+  if (p.is_active && move.category != Category::Status && move.type != Type::Unknown && !has_type(p, move.type)) {
+    unported("ability colorchange changing its type");
+  }
+  return relay::undefined;
+}
+ADV_HANDLER(serenegrace_onModifyMove) {
+  ADV_UNUSED;
+  if (data(c.b.active_move.id).secondary.chance) unported("ability serenegrace with a secondary effect");
+  return relay::undefined;
+}
+ADV_HANDLER(damp_onAnyTryMove) {
+  ADV_UNUSED;
+  const Move move = Move(source_effect.id);
+  if (move == Move::Explosion || move == Move::SelfDestruct) unported("ability damp stopping an explosion");
+  return relay::undefined;
+}
+ADV_HANDLER(owntempo_onHit) {
+  ADV_UNUSED;
+  if (source_effect.kind == EffectKind::Move && data(Move(source_effect.id)).volatile_status == Condition::Confusion) {
+    unported("ability owntempo against a confusing move");
+  }
+  return relay::undefined;
+}
+
+// Items.
+ADV_CHAIN(blackbelt_onModifyAtk, move_type(c, source_effect) == Type::Fighting, 1.1, 1)
+ADV_CHAIN(hardstone_onModifyAtk, move_type(c, source_effect) == Type::Rock, 1.1, 1)
+ADV_CHAIN(metalcoat_onModifyAtk, move_type(c, source_effect) == Type::Steel, 1.1, 1)
+ADV_CHAIN(poisonbarb_onModifyAtk, move_type(c, source_effect) == Type::Poison, 1.1, 1)
+ADV_CHAIN(sharpbeak_onModifyAtk, move_type(c, source_effect) == Type::Flying, 1.1, 1)
+ADV_CHAIN(silkscarf_onModifyAtk, move_type(c, source_effect) == Type::Normal, 1.1, 1)
+ADV_CHAIN(silverpowder_onModifyAtk, move_type(c, source_effect) == Type::Bug, 1.1, 1)
+ADV_CHAIN(softsand_onModifyAtk, move_type(c, source_effect) == Type::Ground, 1.1, 1)
+ADV_CHAIN(spelltag_onModifyAtk, move_type(c, source_effect) == Type::Ghost, 1.1, 1)
+ADV_CHAIN(blackglasses_onModifySpA, move_type(c, source_effect) == Type::Dark, 1.1, 1)
+ADV_CHAIN(charcoal_onModifySpA, move_type(c, source_effect) == Type::Fire, 1.1, 1)
+ADV_CHAIN(dragonfang_onModifySpA, move_type(c, source_effect) == Type::Dragon, 1.1, 1)
+ADV_CHAIN(magnet_onModifySpA, move_type(c, source_effect) == Type::Electric, 1.1, 1)
+ADV_CHAIN(miracleseed_onModifySpA, move_type(c, source_effect) == Type::Grass, 1.1, 1)
+ADV_CHAIN(mysticwater_onModifySpA, move_type(c, source_effect) == Type::Water, 1.1, 1)
+ADV_CHAIN(nevermeltice_onModifySpA, move_type(c, source_effect) == Type::Ice, 1.1, 1)
+ADV_CHAIN(twistedspoon_onModifySpA, move_type(c, source_effect) == Type::Psychic, 1.1, 1)
+ADV_CHAIN(seaincense_onModifySpA, move_type(c, source_effect) == Type::Water, 1.05, 1)
+ADV_CHAIN(choiceband_onModifyAtk, true, 1.5, 1)
+ADV_CHAIN(lightball_onModifySpA, c.b.at(t.pokemon).species == Species::Pikachu, 2, 1)
+ADV_CHAIN(deepseatooth_onModifySpA, c.b.at(t.pokemon).species == Species::Clamperl, 2, 1)
+ADV_CHAIN(deepseascale_onModifySpD, c.b.at(t.pokemon).species == Species::Clamperl, 2, 1)
+ADV_CHAIN(thickclub_onModifyAtk, c.b.at(t.pokemon).species == Species::Cubone || c.b.at(t.pokemon).species == Species::Marowak, 2, 1)
+inline bool lati(const Pokemon& p) { return p.base_species == Species::Latias || p.base_species == Species::Latios; }
+ADV_CHAIN(souldew_onModifySpA, lati(c.b.at(t.pokemon)), 1.5, 1)
+ADV_CHAIN(souldew_onModifySpD, lati(c.b.at(t.pokemon)), 1.5, 1)
+// Nothing transforms yet, so a Ditto is itself.
+ADV_CHAIN(metalpowder_onModifyDef, c.b.at(t.pokemon).species == Species::Ditto, 2, 1)
+// onModifyAccuracy(accuracy): a number is scaled, not chained.
+ADV_HANDLER(brightpowder_onModifyAccuracy) {
+  ADV_UNUSED;
+  return value.kind == Relay::Kind::Number ? relay::number(value.number * 0.9) : relay::undefined;
+}
+ADV_HANDLER(laxincense_onModifyAccuracy) {
+  ADV_UNUSED;
+  return value.kind == Relay::Kind::Number ? relay::number(value.number * 0.95) : relay::undefined;
+}
+ADV_HANDLER(scopelens_onModifyCritRatio) {
+  ADV_UNUSED;
+  return relay::number(value.number + 1);
+}
+ADV_HANDLER(luckypunch_onModifyCritRatio) {
+  ADV_UNUSED;
+  return c.b.at(t.pokemon).species == Species::Chansey ? relay::number(value.number + 2) : relay::undefined;
+}
+ADV_HANDLER(stick_onModifyCritRatio) {
+  ADV_UNUSED;
+  return c.b.at(t.pokemon).species == Species::Farfetchd ? relay::number(value.number + 2) : relay::undefined;
+}
+ADV_HANDLER(choiceband_onAfterMove) {
+  ADV_UNUSED;
+  add_volatile(c, t.pokemon, Condition::Choicelock);
+  return relay::undefined;
+}
+ADV_HANDLER(shellbell_onAfterMoveSecondarySelf) {
+  ADV_UNUSED;
+  const uint16_t total = c.b.active_move.total_damage;
+  if (total && !c.b.at(t.pokemon).force_switch_flag) heal(c, double(total) / 8);
+  return relay::undefined;
+}
+
+// The lock a Choice Band puts on its holder (data/conditions.ts).
+ADV_HANDLER(choicelock_onStart) {
+  ADV_UNUSED;
+  const Pokemon& p = c.b.at(t.pokemon);
+  if (p.last_move == Move::None) return relay::no;
+  c.effect_state->move = p.last_move;
+  return relay::undefined;
+}
+ADV_HANDLER(choicelock_onDisableMove) {
+  ADV_UNUSED;
+  Pokemon& p = c.b.at(t.pokemon);
+  const Move locked = c.effect_state->move;
+  bool has_move = false;
+  for (int i = 0; i < p.moves; i++) has_move |= p.move_slots[i].id == locked;
+  if (!data(p.item).is_choice || !has_move) {
+    remove_volatile(c, t.pokemon, Condition::Choicelock);
+    return relay::undefined;
+  }
+  // disableMove: every other move, openly.
+  for (int i = 0; i < p.moves; i++) {
+    if (p.move_slots[i].id != locked) p.move_slots[i].disabled = Disabled::Yes;
+  }
+  return relay::undefined;
+}
+#undef ADV_CHAIN
+
 #undef ADV_HANDLER
 #undef ADV_UNUSED
 #undef ADV_RULE_BEGIN
@@ -417,6 +706,80 @@ inline constexpr Ported PORTED[] = {
     I(PetayaBerry, onResidual, petayaberry_onResidual),
     I(SalacBerry, onResidual, salacberry_onResidual),
     I(StarfBerry, onResidual, starfberry_onResidual),
+    A(Pressure, onDeductPP, pressure_onDeductPP),
+    A(Hustle, onModifyAtk, hustle_onModifyAtk),
+    A(Hustle, onSourceModifyAccuracy, hustle_onSourceModifyAccuracy),
+    A(Minus, onModifySpA, minus_onModifySpA),
+    A(Plus, onModifySpA, plus_onModifySpA),
+    A(Blaze, onBasePower, blaze_onBasePower),
+    A(Overgrow, onBasePower, overgrow_onBasePower),
+    A(Swarm, onBasePower, swarm_onBasePower),
+    A(Torrent, onBasePower, torrent_onBasePower),
+    A(ThickFat, onSourceBasePower, thickfat_onSourceBasePower),
+    A(CompoundEyes, onSourceModifyAccuracy, compoundeyes_onSourceModifyAccuracy),
+    A(SandVeil, onModifyAccuracy, sandveil_onModifyAccuracy),
+    A(Guts, onModifyAtk, guts_onModifyAtk),
+    A(HugePower, onModifyAtk, hugepower_onModifyAtk),
+    A(PurePower, onModifyAtk, purepower_onModifyAtk),
+    A(MarvelScale, onModifyDef, marvelscale_onModifyDef),
+    A(BattleArmor, onCriticalHit, battlearmor_onCriticalHit),
+    A(ShellArmor, onCriticalHit, shellarmor_onCriticalHit),
+    A(Sturdy, onTryHit, sturdy_onTryHit),
+    A(VoltAbsorb, onTryHit, voltabsorb_onTryHit),
+    A(WaterAbsorb, onTryHit, waterabsorb_onTryHit),
+    A(Soundproof, onTryHit, soundproof_onTryHit),
+    A(Oblivious, onTryHit, oblivious_onTryHit),
+    A(WonderGuard, onTryHit, wonderguard_onTryHit),
+    A(FlashFire, onTryHit, flashfire_onTryHit),
+    A(FlashFire, onEnd, flashfire_onEnd),
+    A(RoughSkin, onDamagingHit, roughskin_onDamagingHit),
+    A(Static, onDamagingHit, static_onDamagingHit),
+    A(FlameBody, onDamagingHit, flamebody_onDamagingHit),
+    A(PoisonPoint, onDamagingHit, poisonpoint_onDamagingHit),
+    A(CuteCharm, onDamagingHit, cutecharm_onDamagingHit),
+    A(EffectSpore, onDamagingHit, effectspore_onDamagingHit),
+    A(ColorChange, onDamagingHit, colorchange_onDamagingHit),
+    A(SereneGrace, onModifyMove, serenegrace_onModifyMove),
+    A(Damp, onAnyTryMove, damp_onAnyTryMove),
+    A(OwnTempo, onHit, owntempo_onHit),
+    I(BlackBelt, onModifyAtk, blackbelt_onModifyAtk),
+    I(HardStone, onModifyAtk, hardstone_onModifyAtk),
+    I(MetalCoat, onModifyAtk, metalcoat_onModifyAtk),
+    I(PoisonBarb, onModifyAtk, poisonbarb_onModifyAtk),
+    I(SharpBeak, onModifyAtk, sharpbeak_onModifyAtk),
+    I(SilkScarf, onModifyAtk, silkscarf_onModifyAtk),
+    I(SilverPowder, onModifyAtk, silverpowder_onModifyAtk),
+    I(SoftSand, onModifyAtk, softsand_onModifyAtk),
+    I(SpellTag, onModifyAtk, spelltag_onModifyAtk),
+    I(BlackGlasses, onModifySpA, blackglasses_onModifySpA),
+    I(Charcoal, onModifySpA, charcoal_onModifySpA),
+    I(DragonFang, onModifySpA, dragonfang_onModifySpA),
+    I(Magnet, onModifySpA, magnet_onModifySpA),
+    I(MiracleSeed, onModifySpA, miracleseed_onModifySpA),
+    I(MysticWater, onModifySpA, mysticwater_onModifySpA),
+    I(NeverMeltIce, onModifySpA, nevermeltice_onModifySpA),
+    I(TwistedSpoon, onModifySpA, twistedspoon_onModifySpA),
+    I(SeaIncense, onModifySpA, seaincense_onModifySpA),
+    I(ChoiceBand, onModifyAtk, choiceband_onModifyAtk),
+    I(ChoiceBand, onAfterMove, choiceband_onAfterMove),
+    I(LightBall, onModifySpA, lightball_onModifySpA),
+    I(DeepSeaTooth, onModifySpA, deepseatooth_onModifySpA),
+    I(DeepSeaScale, onModifySpD, deepseascale_onModifySpD),
+    I(ThickClub, onModifyAtk, thickclub_onModifyAtk),
+    I(SoulDew, onModifySpA, souldew_onModifySpA),
+    I(SoulDew, onModifySpD, souldew_onModifySpD),
+    I(MetalPowder, onModifyDef, metalpowder_onModifyDef),
+    I(BrightPowder, onModifyAccuracy, brightpowder_onModifyAccuracy),
+    I(LaxIncense, onModifyAccuracy, laxincense_onModifyAccuracy),
+    I(ScopeLens, onModifyCritRatio, scopelens_onModifyCritRatio),
+    I(LuckyPunch, onModifyCritRatio, luckypunch_onModifyCritRatio),
+    I(Stick, onModifyCritRatio, stick_onModifyCritRatio),
+    I(ShellBell, onAfterMoveSecondarySelf, shellbell_onAfterMoveSecondarySelf),
+    C(FlashFire, onStart, flashfire_condition_onStart),
+    C(FlashFire, onEnd, flashfire_condition_onEnd),
+    C(FlashFire, onModifyDamagePhase1, flashfire_condition_onModifyDamagePhase1),
+    C(Choicelock, onStart, choicelock_onStart),
+    C(Choicelock, onDisableMove, choicelock_onDisableMove),
     C(Par, onModifySpe, par_onModifySpe),
     C(Sandstorm, durationCallback, sandstorm_durationCallback),
     C(Sandstorm, onFieldStart, sandstorm_onFieldStart),

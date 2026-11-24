@@ -6,10 +6,11 @@ pkmn.ai's ladder runs). Given the same seed, teams and choices it must make
 the same random draws in the same order and write the same log and the same
 requests, bugs included.
 
-Status (2026-11-23): step 1 of "Order of work" is done, and three of the four
-slices of step 2. A battle runs for as long as both players switch: the
-turn loop, switching out and in, the end-of-turn step with sandstorm and
-Leftovers, fainting, forced switches and the win. No move can be used yet.
+Status (2026-11-23): step 1 of "Order of work" is done, and step 2: a
+skeleton plays whole games on a restricted set. Both players can switch and
+use the 44 plain damaging moves (power, a type, one target, nothing else),
+with the abilities and items that take part in a hit. Step 3, widening the
+set to every move, is next.
 
 ## What was measured
 
@@ -131,6 +132,7 @@ What is tested today (`ctest`, no Node needed):
 | `trace_draws` | all 20,124 draws of 50 recorded games replay from their seeds |
 | `replay_openings` | 200 games up to the first choice, line for line |
 | `replay_switches` | 30 games of 30 turns in which both players switch whenever they can; 9 run to the end and 21 stop at something unported, with no line different before |
+| `replay_plain_moves` | 20 games of 40 turns of plain damaging moves and switches, line for line until each ends or stops |
 | `data` | the tables state the same 1,834 facts as Showdown (`tools/tables_ref.cjs`, written apart from the generator) |
 
 ## Order of work
@@ -156,7 +158,14 @@ What is tested today (`ctest`, no Node needed):
       code), the rest at Trace, Cloud Nine, Flash Fire, Truant or a berry
       being eaten. Only 2 of them reach a faint before stopping, so fainting
       and forced switches are compared but thinly.
-   4. Moves, starting with plain damaging ones.
+   4. ~~Moves, starting with plain damaging ones.~~ Done for the 44 plain
+      moves: the move choice, `runMove`, Gen 3's `useMoveInner`,
+      `tryMoveHit` and `modifyDamage`, `getDamage`, accuracy and its draw,
+      critical hits, the damage roll, Pressure, volatiles and Choice Band's
+      lock, and about seventy handlers of abilities and items. Over 200
+      games of up to 99 turns, 334,838 lines compared and equal, none
+      different; 117 run to the end and the rest stop where a Pokémon has
+      only an unported move left.
 3. Widen the set by how often things occur, to the whole checklist.
 4. Zero differences in all three environments.
 5. Speed: the listener masks, a benchmark against hoenn.
@@ -225,12 +234,17 @@ numbers are in `sim/` at the pinned commit.
 - **A test passes when no line differs**, however early its games stop. The
   count of games that run to the end is printed, not required; that has to
   change once moves are in.
-- **Unported and reached by switch-only games:** a move choice, Trace,
-  Cloud Nine, Flash Fire's end, Truant after turn 0, eating a berry, a
-  default choice for a move request, anything past turn 100.
-- **Not modelled yet, and marked in the code:** volatiles, side conditions,
+- **Unported and reached by the recorded games:** every move that is not
+  plain, Struggle, Trace, Cloud Nine, Truant, King's Rock, eating a berry,
+  the statuses a contact ability gives, anything past turn 100.
+- **Not modelled yet, and marked in the code:** side conditions, statuses,
   the check that skips a handler whose effect was replaced after gathering,
-  and effects whose duration counts down.
+  effects whose duration counts down, and the record of who attacked whom
+  (`attackedBy`, for Counter and its kind).
+- **A plain move skips its own handlers.** `useMoveInner` and `tryMoveHit`
+  call the move's own `onModifyMove`, `onTryMove`, `onPrepareHit`, `onTry`,
+  `onTryHit`, `onHit` and so on; a plain move has none, so those calls are
+  comments in `src/moves.hpp` until moves with handlers are ported.
 - **No teams of its own.** The tools take `--teams DIR`; so far that has been
   hoenn's `teams/ou`. The random-legal and random-anything environments do
   not exist yet, and they are what will reach the 62% OU does not.
@@ -282,7 +296,7 @@ most need `--teams DIR`:
 
 | Tool | What it does |
 |---|---|
-| `tools/trace.cjs` | records games (`--games`, `--first`, `--out`, `--turns N`, `--choices switch`, `--opening 1`, `--brief 1`, `--sites 1`) |
+| `tools/trace.cjs` | records games (`--games`, `--first`, `--out`, `--turns N`, `--choices switch` or `plain`, `--opening 1`, `--brief 1`, `--sites 1`) |
 | `tools/coverage.cjs` | counts runs of each checklist function over the same games |
 | `tools/census.cjs` | events, sorts and draws per update, to `build/census.json` |
 | `tools/dump_dex.cjs` | the data as JSON and the checklist, to `build/dex/` |
