@@ -179,6 +179,20 @@ inline void write(const Line& line, const Battle& b, const Names& names, std::ve
   out.push_back(line.secret_side >= 0 ? std::string(prefix) : text(false));
 }
 
+// A line of one player's view (view.hpp) as that player is sent it. `names`
+// has the other side's Pokémon in the order the view numbers them.
+inline void append_line(std::string& out, const Line& line, const Battle& b, const Names& names) {
+  for (int i = 0; i < line.n; i++) {
+    out += '|';
+    append_part(out, line.parts[size_t(i)], true, b, names);
+  }
+}
+inline std::string line_text(const Line& line, const Battle& b, const Names& names) {
+  std::string out;
+  append_line(out, line, b, names);
+  return out;
+}
+
 // A request's JSON (Battle.getRequests, battle.ts:1432), appended to `out`.
 inline void append_request_json(std::string& out, const Battle& b, int side, const Names& names) {
   const Request& r = b.requests[side];

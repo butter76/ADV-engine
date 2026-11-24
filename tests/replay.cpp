@@ -22,6 +22,7 @@
 #include <string>
 
 #include "showdown/stream.hpp"
+#include "view.hpp"
 
 using namespace adv;
 
@@ -37,7 +38,7 @@ struct Game {
 
 struct Tally {
   uint64_t games = 0, skipped = 0, stopped = 0, matched = 0, failures = 0;
-  uint64_t lines = 0, draws = 0, choices = 0, requests = 0;
+  uint64_t lines = 0, draws = 0, choices = 0, requests = 0, views = 0;
   std::map<std::string, int> skips, stops;
 };
 
@@ -119,6 +120,29 @@ void check(const Game& g, Tally& t) {
     t.stops[stop]++;
     return;
   }
+  // Each player's channel of the log (view.hpp) must be what Showdown's
+  // stream sends that player: of a split line its own side's half, and of a
+  // line for the other side alone, nothing.
+  for (int side = 0; side < 2; side++) {
+    View view(side);
+    showdown::Names shown = stream.names;
+    std::vector<std::string> all;
+    for (const Line& line : stream.out.log) {
+      all.clear();
+      showdown::write(line, stream.battle, stream.names, all);
+      const std::string& sent = all.size() == 1 ? all[0] : all[0] == (side == 0 ? "|split|p1" : "|split|p2") ? all[1] : all[2];
+      Line mine;
+      std::string text;
+      if (view.line(line, stream.battle, mine)) {
+        for (int k = 0; k < view.seen; k++) {
+          shown.teams[size_t(1 - side)].names[size_t(k)] = stream.names.teams[size_t(1 - side)].names[view.index[size_t(k)]];
+        }
+        text = showdown::line_text(mine, stream.battle, shown);
+      }
+      if (text != sent) return fail(g, t, 0, sent, text);
+      t.views++;
+    }
+  }
   t.matched++;
 }
 
@@ -176,6 +200,7 @@ int main(int argc, char** argv) {
   std::printf("lines compared and equal: %llu, of them %llu draws, %llu choices, %llu requests\n",
               static_cast<unsigned long long>(t.lines), static_cast<unsigned long long>(t.draws),
               static_cast<unsigned long long>(t.choices), static_cast<unsigned long long>(t.requests));
+  std::printf("lines of the players' views equal: %llu\n", static_cast<unsigned long long>(t.views));
   for (const auto& [why, count] : t.stops) std::printf("  stopped %d: %s\n", count, why.c_str());
   for (const auto& [why, count] : t.skips) std::printf("  skipped %d: %s\n", count, why.c_str());
   if (complete && (t.stopped || t.skipped)) return 1;
