@@ -259,8 +259,9 @@ ADV_HANDLER(intimidate_onStart) {
     ADV_UNUSED;                                                                                        \
     if (source && t.pokemon == source) return relay::undefined;                                        \
     bool show = false;                                                                                 \
+    SparseBoosts kept = value.boosts();                                                                \
     for (int stat = first; stat <= last; stat++) {                                                     \
-      if (value.boosts.has(stat) && value.boosts.value[size_t(stat)] < 0) value.boosts.remove(stat), show = true; \
+      if (kept.has(stat) && kept.value[size_t(stat)] < 0) kept.remove(stat), show = true;              \
     }                                                                                                  \
     const bool secondary = source_effect.kind == EffectKind::Move && data(Move(source_effect.id)).secondary.chance; \
     if (show && !secondary) {                                                                          \
@@ -272,7 +273,7 @@ ADV_HANDLER(intimidate_onStart) {
                 part::from_ability(Ability::ability), part::of(c.b, t.pokemon)});                      \
       }                                                                                                \
     }                                                                                                  \
-    return value;                                                                                      \
+    return relay::boosts(kept);                                                                        \
   }
 ADV_KEEP_STATS(clearbody_onTryBoost, ClearBody, 0, BOOST_STATS - 1, "")
 ADV_KEEP_STATS(whitesmoke_onTryBoost, WhiteSmoke, 0, BOOST_STATS - 1, "")
@@ -381,15 +382,15 @@ ADV_HANDLER(magnetpull_onAnyMaybeTrapPokemon) {
 // onImmunity(type, pokemon): false makes the Pokémon immune to that.
 ADV_HANDLER(sandveil_onImmunity) {
   ADV_UNUSED;
-  return value.text == "sandstorm" ? relay::no : relay::undefined;
+  return value.text() == "sandstorm" ? relay::no : relay::undefined;
 }
 ADV_HANDLER(oblivious_onImmunity) {
   ADV_UNUSED;
-  return value.text == "attract" ? relay::no : relay::undefined;
+  return value.text() == "attract" ? relay::no : relay::undefined;
 }
 ADV_HANDLER(magmaarmor_onImmunity) {
   ADV_UNUSED;
-  return value.text == "frz" ? relay::no : relay::undefined;
+  return value.text() == "frz" ? relay::no : relay::undefined;
 }
 // Truant loafs every other turn, marked by a volatile of its name.
 inline void truant_turn(Ctx& c, Ref r, bool loafs) {
@@ -468,7 +469,7 @@ ADV_HANDLER(owntempo_onUpdate) {
 #define ADV_REFUSE_STATUS(name, ability, refuses)                                                       \
   ADV_HANDLER(name) {                                                                                   \
     ADV_UNUSED;                                                                                         \
-    const std::string_view status = value.text;                                                         \
+    const std::string_view status = value.text();                                                         \
     if (!(refuses)) return relay::undefined;                                                            \
     if (source_effect.kind == EffectKind::Move && source_effect && data(Move(source_effect.id)).status != Condition::None) { \
       add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::ability))}); \
@@ -490,7 +491,7 @@ inline Condition status_of(std::string_view id) {
 ADV_HANDLER(synchronize_onAfterSetStatus) {
   ADV_UNUSED;
   if (!source || source == t.pokemon) return relay::undefined;
-  Condition status = status_of(value.text);
+  Condition status = status_of(value.text());
   if (status == Condition::Slp || status == Condition::Frz) return relay::undefined;
   if (status == Condition::Tox) status = Condition::Psn;
   try_set_status(c, source, status, t.pokemon);
@@ -504,21 +505,21 @@ ADV_HANDLER(shielddust_onModifySecondaries) {
 }
 ADV_HANDLER(innerfocus_onTryAddVolatile) {
   ADV_UNUSED;
-  return value.text == "flinch" ? relay::null : relay::undefined;
+  return value.text() == "flinch" ? relay::null : relay::undefined;
 }
 ADV_HANDLER(owntempo_onTryAddVolatile) {
   ADV_UNUSED;
-  return value.text == "confusion" ? relay::null : relay::undefined;
+  return value.text() == "confusion" ? relay::null : relay::undefined;
 }
 ADV_HANDLER(insomnia_onTryAddVolatile) {
   ADV_UNUSED;
-  if (value.text != "yawn") return relay::undefined;
+  if (value.text() != "yawn") return relay::undefined;
   add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::Insomnia))});
   return relay::null;
 }
 ADV_HANDLER(vitalspirit_onTryAddVolatile) {
   ADV_UNUSED;
-  if (value.text != "yawn") return relay::undefined;
+  if (value.text() != "yawn") return relay::undefined;
   add(c, {part::text("-immune"), part::pokemon(c.b, t.pokemon), part::from(effect(Ability::VitalSpirit))});
   return relay::null;
 }
@@ -1042,7 +1043,7 @@ ADV_HANDLER(focuspunch_condition_onHit) {
 }
 ADV_HANDLER(focuspunch_condition_onTryAddVolatile) {
   ADV_UNUSED;
-  return value.text == "flinch" ? relay::null : relay::undefined;
+  return value.text() == "flinch" ? relay::null : relay::undefined;
 }
 ADV_HANDLER(suctioncups_onDragOut) {
   ADV_UNUSED;
@@ -1818,7 +1819,7 @@ ADV_HANDLER(dive_condition_onSourceModifyDamage) {
 }
 ADV_HANDLER(underground_onImmunity) {
   ADV_UNUSED;
-  return value.text == "sandstorm" || value.text == "hail" ? relay::no : relay::undefined;
+  return value.text() == "sandstorm" || value.text() == "hail" ? relay::no : relay::undefined;
 }
 // Outrage, Thrash, Petal Dance: two or three turns, and then confusion.
 // `time` is Showdown's trueDuration.
@@ -2058,7 +2059,7 @@ ADV_HANDLER(foresight_condition_onNegateImmunity) {
 }
 ADV_HANDLER(foresight_condition_onModifyBoost) {
   ADV_UNUSED;
-  SparseBoosts boosts = value.boosts;
+  SparseBoosts boosts = value.boosts();
   if (boosts.has(6) && boosts.value[6] > 0) boosts.set(6, 0);
   return relay::boosts(boosts);
 }
@@ -2436,7 +2437,7 @@ ADV_HANDLER(uproar_condition_onLockMove) {
 }
 ADV_HANDLER(uproar_condition_onAnySetStatus) {
   ADV_UNUSED;
-  if (value.text != "slp") return relay::undefined;
+  if (value.text() != "slp") return relay::undefined;
   if (t.pokemon == c.effect_state->target_pokemon) {
     add(c, {part::text("-fail"), part::pokemon(c.b, t.pokemon), part::text("slp"), part::text("[from] Uproar"), part::text("[msg]")});
   } else {
@@ -3091,7 +3092,7 @@ ADV_HANDLER(safeguard_onSetStatus) {
 ADV_HANDLER(safeguard_onTryAddVolatile) {
   ADV_UNUSED;
   if (!source_effect || !source) return relay::undefined;
-  if ((value.text == "confusion" || value.text == "yawn") && t.pokemon != source) {
+  if ((value.text() == "confusion" || value.text() == "yawn") && t.pokemon != source) {
     if (source_effect.kind == EffectKind::Move && !has_secondary(source_effect)) {
       add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("move: Safeguard")});
     }
@@ -3113,13 +3114,14 @@ ADV_HANDLER(mist_onTryBoost) {
   ADV_UNUSED;
   if (!source || t.pokemon == source) return relay::undefined;
   bool show = false;
+  SparseBoosts kept = value.boosts();
   for (int stat = 0; stat < BOOST_STATS; stat++) {
-    if (value.boosts.has(stat) && value.boosts.value[size_t(stat)] < 0) value.boosts.remove(stat), show = true;
+    if (kept.has(stat) && kept.value[size_t(stat)] < 0) kept.remove(stat), show = true;
   }
   if (show && !has_secondary(source_effect)) {
     add(c, {part::text("-activate"), part::pokemon(c.b, t.pokemon), part::text("move: Mist")});
   }
-  return value;
+  return relay::boosts(kept);
 }
 ADV_HANDLER(brickbreak_onTryHit) {
   ADV_UNUSED;
@@ -3181,7 +3183,7 @@ ADV_HANDLER(frustration_basePowerCallback) {
 ADV_HANDLER(sleepclausemod_onSetStatus) {
   ADV_UNUSED;
   if (source && source.side == t.pokemon.side) return relay::undefined;
-  if (value.text != "slp") return relay::undefined;
+  if (value.text() != "slp") return relay::undefined;
   const Side& side = c.b.sides[t.pokemon.side];
   for (int position = 0; position < side.size; position++) {
     const Pokemon& p = side.pokemon[index_at(side, position)];
@@ -3197,7 +3199,7 @@ ADV_HANDLER(sleepclausemod_onSetStatus) {
 ADV_HANDLER(freezeclausemod_onSetStatus) {
   ADV_UNUSED;
   if (source && source.side == t.pokemon.side) return relay::undefined;
-  if (value.text != "frz") return relay::undefined;
+  if (value.text() != "frz") return relay::undefined;
   const Side& side = c.b.sides[t.pokemon.side];
   for (int position = 0; position < side.size; position++) {
     if (side.pokemon[index_at(side, position)].status != Condition::Frz) continue;
@@ -3313,7 +3315,7 @@ ADV_HANDLER(sunnyday_onWeatherModifyDamage) {
 ADV_HANDLER(sunnyday_onImmunity) {
   ADV_UNUSED;
   if (effective_weather(c.b) != Condition::Sunnyday) return relay::undefined;
-  return value.text == "frz" ? relay::no : relay::undefined;
+  return value.text() == "frz" ? relay::no : relay::undefined;
 }
 
 
@@ -4222,6 +4224,12 @@ inline constexpr Ported PORTED[] = {
 } // namespace callbacks
 
 inline std::span<const Ported> ported() { return callbacks::PORTED; }
+namespace detail {
+// One entry for each row of the handler table and each ported handler, less
+// those that are both; the count of both together is room enough.
+inline constexpr auto ENTRIES = make_entries<std::size(HANDLERS) + std::size(callbacks::PORTED)>(callbacks::PORTED);
+inline TableRef table() { return {ENTRIES.of.data(), ENTRIES.entries.data()}; }
+} // namespace detail
 inline void rapidspin_self_onHit(Ctx& c, Ref pokemon) { callbacks::rapid_spin(c, pokemon); }
 // Tri Attack's secondary: a burn, paralysis or a freeze, drawn.
 inline void triattack_secondary_onHit(Ctx& c, Ref target, Ref source) {

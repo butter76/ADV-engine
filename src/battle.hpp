@@ -239,6 +239,10 @@ struct Side {
   uint8_t size = 0;
   uint8_t pokemon_left = 0;
   uint8_t active = 0xFF; // the team index of the Pokémon out, or none
+  // A bit for each Pokémon that has fainted, by its index in the team: what
+  // `fainted` says of each, kept together so that counting who can still
+  // come in does not walk the team. Set where `fainted` is (resolve_faints).
+  uint8_t fainted_mask = 0;
   ChoiceState choice;
 };
 

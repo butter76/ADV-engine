@@ -13,13 +13,18 @@ namespace adv {
 
 // Battle.add (battle.ts).
 inline void add(Ctx& c, std::initializer_list<Part> parts) {
-  if (parts.size() > size_t(LINE_PARTS)) unported("a line with more parts than a Line holds");
+  const size_t n = parts.size();
+  if (n > size_t(LINE_PARTS)) unported("a line with more parts than a Line holds");
   Line& line = c.out.log.emplace_back();
+  // The parts are copied together and counted once: a count kept in the
+  // line while it was filled was read back from memory for every part.
+  const Part* from = parts.begin();
   bool split = false;
-  for (const Part& p : parts) {
-    line.parts[line.n++] = p;
-    split |= p.kind == Part::Kind::Details || p.kind == Part::Kind::Health;
+  for (size_t i = 0; i < n; i++) {
+    line.parts[i] = from[i];
+    split |= from[i].kind == Part::Kind::Details || from[i].kind == Part::Kind::Health;
   }
+  line.n = uint8_t(n);
   c.out.log_lines += split ? 3 : 1;
 }
 // Battle.addSplit(side, secret) with no shared line.
@@ -48,8 +53,7 @@ inline void each_event(Ctx& c, const EventNames& e, Effect source_effect = {}) {
   if (!source_effect) source_effect = c.effect;
   std::array<Ref, 2> actives;
   const int n = all_active(c.b, actives);
-  speed_sort(c, std::span<Ref>(actives.data(), size_t(n)),
-             [&](Ref a, Ref b) { return double(c.b.at(b).speed) - double(c.b.at(a).speed); });
+  speed_sort_active(c, actives, n);
   for (int i = 0; i < n; i++) run_event(c, e, on(actives[i]), {}, source_effect);
 }
 
@@ -210,7 +214,7 @@ inline Relay boost(Ctx& c, SparseBoosts boosts, Ref target, Ref source, Effect e
   boosts = get_capped_boost(p, boosts);
   const Relay tried = run_event(c, TRY_BOOST, on(target), source, effect, relay::boosts(boosts));
   if (tried.kind != Relay::Kind::Boosts) unported("a TryBoost handler that returns something other than the boosts");
-  boosts = tried.boosts;
+  boosts = tried.boosts();
   bool success = false;
   bool boosted = is_secondary;
   int8_t* stage = &p.boosts.atk;

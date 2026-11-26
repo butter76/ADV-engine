@@ -3,13 +3,14 @@
 // gathered in, the sort and its shuffle of ties are all part of what a
 // battle's draws depend on, so each function here follows the one it ports.
 //
-// Not yet: slot conditions are not in the state, so nothing is gathered
-// from them. Speed is not what this is
-// written for; the listener masks of docs/PLAN.md come later.
+// What is here for speed changes none of that: the listener masks of
+// docs/PLAN.md say when an event has no handler to gather, and the handler
+// table is made by the compiler.
 
 #pragma once
 
 #include <array>
+#include <bit>
 #include <memory>
 #include <span>
 #include <string>
@@ -51,26 +52,79 @@ struct SparseBoosts {
   constexpr bool operator==(const SparseBoosts&) const = default;
 };
 
+//
+// Sixteen bytes, so that one is handed to a handler and back in registers:
+// every event passes one, and nearly every handler returns one. The number,
+// the text and the boosts share the same eight bytes, and `kind` says which
+// is there; the text's length and the boosts' first stat are beside it.
 struct Relay {
   enum class Kind : uint8_t { Undefined, Null, False, True, Number, Text, Boosts } kind = Kind::Undefined;
-  double number = 0;
-  std::string_view text; // a status or weather id, as runStatusImmunity passes
-  SparseBoosts boosts;
+  int8_t first = -1;   // Boosts: SparseBoosts::first
+  uint16_t length = 0; // Text: how long it is
+  struct Stages {
+    std::array<int8_t, BOOST_STATS> value;
+    uint8_t present;
+  };
+  union {
+    double number = 0; // Number; 0 for the kinds that carry nothing
+    const char* chars; // Text
+    Stages stages;     // Boosts
+  };
   constexpr bool undefined() const { return kind == Kind::Undefined; }
+  // A status or weather id, as runStatusImmunity passes; empty for any other kind.
+  constexpr std::string_view text() const { return kind == Kind::Text ? std::string_view(chars, length) : std::string_view(); }
+  // Nothing present for any other kind.
+  constexpr SparseBoosts boosts() const {
+    SparseBoosts b;
+    if (kind == Kind::Boosts) b.value = stages.value, b.present = stages.present, b.first = first;
+    return b;
+  }
   constexpr bool truthy() const {
     return kind == Kind::True || kind == Kind::Boosts || (kind == Kind::Number && number != 0) ||
-           (kind == Kind::Text && !text.empty());
+           (kind == Kind::Text && length != 0);
   }
-  constexpr bool operator==(const Relay&) const = default;
+  constexpr bool operator==(const Relay& o) const {
+    if (kind != o.kind) return false;
+    switch (kind) {
+    case Kind::Number: return number == o.number;
+    case Kind::Text: return text() == o.text();
+    case Kind::Boosts: return boosts() == o.boosts();
+    case Kind::Undefined:
+    case Kind::Null:
+    case Kind::False:
+    case Kind::True: break;
+    }
+    return true;
+  }
 };
+static_assert(sizeof(Relay) == 16);
 namespace relay {
+constexpr Relay of(Relay::Kind kind) {
+  Relay r;
+  r.kind = kind;
+  return r;
+}
 inline constexpr Relay undefined{};
-inline constexpr Relay yes{.kind = Relay::Kind::True};
-inline constexpr Relay no{.kind = Relay::Kind::False};
-inline constexpr Relay null{.kind = Relay::Kind::Null};
-constexpr Relay number(double v) { return {.kind = Relay::Kind::Number, .number = v}; }
-constexpr Relay text(std::string_view t) { return {.kind = Relay::Kind::Text, .text = t}; }
-constexpr Relay boosts(const SparseBoosts& b) { return {.kind = Relay::Kind::Boosts, .boosts = b}; }
+inline constexpr Relay yes = of(Relay::Kind::True);
+inline constexpr Relay no = of(Relay::Kind::False);
+inline constexpr Relay null = of(Relay::Kind::Null);
+constexpr Relay number(double v) {
+  Relay r = of(Relay::Kind::Number);
+  r.number = v;
+  return r;
+}
+constexpr Relay text(std::string_view t) {
+  Relay r = of(Relay::Kind::Text);
+  r.length = uint16_t(t.size());
+  r.chars = t.data();
+  return r;
+}
+constexpr Relay boosts(const SparseBoosts& b) {
+  Relay r = of(Relay::Kind::Boosts);
+  r.first = b.first;
+  r.stages = {b.value, b.present};
+  return r;
+}
 } // namespace relay
 
 // What an event is run on, and what holds a handler's effect.
@@ -114,7 +168,7 @@ struct Ported {
   Fn fn;
 };
 // Every handler ported so far (callbacks.hpp).
-std::span<const Ported> ported();
+inline std::span<const Ported> ported();
 
 inline constexpr Callback NO_CALLBACK = Callback(0xFF);
 
@@ -142,8 +196,10 @@ struct EventNames {
   bool residual_or_end = false;
   bool always_look = false;    // SwitchIn: an ability or item answers it under another name
   bool only_on = false;        // looked for under its plain name alone
-  // A bit for each of the names it is looked for under.
+  // A bit for each of the names it is looked for under; and of those, its
+  // plain name's alone, and the others'.
   std::array<uint64_t, 2> names{};
+  std::array<uint64_t, 2> plain{}, others{};
 };
 consteval EventNames event(std::string_view id) {
   EventNames e{id, callback("", id), callback("Ally", id), callback("Foe", id), callback("Any", id),
@@ -157,7 +213,9 @@ consteval EventNames event(std::string_view id) {
   e.only_on = !e.prefixed || (none(e.ally) && none(e.foe) && none(e.any) && none(e.source));
   for (const Callback name : {e.on, e.ally, e.foe, e.any, e.source}) {
     if (e.only_on && name != e.on) continue;
-    if (!none(name)) e.names[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
+    if (none(name)) continue;
+    e.names[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
+    (name == e.on ? e.plain : e.others)[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
   }
   return e;
 }
@@ -167,60 +225,61 @@ struct Entry {
   const Handler* row = nullptr; // the ranks, and whether Showdown has a handler
   Fn fn = nullptr;              // the port of it, if there is one yet
 };
-// Every effect's entries, found without hashing: for each effect a bit for
-// each callback that has an entry (nearly every lookup ends there, with
-// none), and where its few entries are.
-struct Table {
-  struct Of {
-    std::array<uint64_t, 2> mask{};
-    uint16_t first = 0, count = 0;
-  };
+// Every effect's entries, found without hashing or looking through a list:
+// for each effect a bit for each callback that has an entry (nearly every
+// lookup ends there, with none), and where its entries begin. They are in
+// the callbacks' order, so an entry's place is the number of bits below its
+// own. The compiler makes the table (callbacks.hpp, where the handlers are).
+struct Index {
   static constexpr int SIZES[] = {MOVES, ABILITYS, ITEMS, CONDITIONS, RULES, 4};
   static constexpr int BASE[] = {0, MOVES, MOVES + ABILITYS, MOVES + ABILITYS + ITEMS, MOVES + ABILITYS + ITEMS + CONDITIONS,
                                  MOVES + ABILITYS + ITEMS + CONDITIONS + RULES};
   static constexpr int EFFECTS = MOVES + ABILITYS + ITEMS + CONDITIONS + RULES + 4;
-  std::array<Of, EFFECTS> of{};
-  std::vector<Entry> entries;
-  std::vector<Callback> names;
   static constexpr int index(Effect e) { return BASE[uint8_t(e.kind)] + e.id; }
 };
-inline const Table& table() {
-  static const Table t = [] {
-    // Gathered by effect first, then laid out with each effect's together.
-    std::vector<std::vector<std::pair<Callback, Entry>>> by(Table::EFFECTS);
-    const auto at = [&](Effect e, Callback c) -> Entry& {
-      auto& list = by[size_t(Table::index(e))];
-      for (auto& [name, entry] : list) {
-        if (name == c) return entry;
-      }
-      list.push_back({c, Entry{}});
-      return list.back().second;
-    };
-    for (const Handler& h : HANDLERS) at({h.kind, h.id}, h.callback).row = &h;
-    for (const Ported& p : ported()) at(p.effect, p.callback).fn = p.fn;
-    Table out;
-    for (int i = 0; i < Table::EFFECTS; i++) {
-      Table::Of& o = out.of[size_t(i)];
-      o.first = uint16_t(out.entries.size());
-      o.count = uint16_t(by[size_t(i)].size());
-      for (const auto& [name, entry] : by[size_t(i)]) {
-        o.mask[uint8_t(name) >> 6] |= uint64_t{1} << (uint8_t(name) & 63);
-        out.entries.push_back(entry);
-        out.names.push_back(name);
-      }
-    }
-    return out;
-  }();
-  return t;
+struct Of {
+  std::array<uint64_t, 2> mask{};
+  uint16_t first = 0;
+};
+template <size_t N> struct Entries {
+  std::array<Of, Index::EFFECTS> of{};
+  std::array<Entry, N> entries{};
+};
+template <size_t N> constexpr Entries<N> make_entries(std::span<const Ported> ported) {
+  Entries<N> out;
+  const auto bit = [](Callback c) { return uint64_t{1} << (uint8_t(c) & 63); };
+  for (const Handler& h : HANDLERS) out.of[size_t(Index::index({h.kind, h.id}))].mask[uint8_t(h.callback) >> 6] |= bit(h.callback);
+  for (const Ported& p : ported) out.of[size_t(Index::index(p.effect))].mask[uint8_t(p.callback) >> 6] |= bit(p.callback);
+  int next = 0;
+  for (Of& o : out.of) {
+    o.first = uint16_t(next);
+    next += std::popcount(o.mask[0]) + std::popcount(o.mask[1]);
+  }
+  const auto at = [&](Effect e, Callback c) -> Entry& {
+    const Of& o = out.of[size_t(Index::index(e))];
+    const unsigned word = uint8_t(c) >> 6;
+    const int below = (word ? std::popcount(o.mask[0]) : 0) + std::popcount(o.mask[word] & (bit(c) - 1));
+    return out.entries[size_t(o.first + below)];
+  };
+  for (const Handler& h : HANDLERS) at({h.kind, h.id}, h.callback).row = &h;
+  for (const Ported& p : ported) at(p.effect, p.callback).fn = p.fn;
+  return out;
 }
+// Where the table is: its entries, and each effect's place among them.
+struct TableRef {
+  const Of* of;
+  const Entry* entries;
+};
+inline TableRef table(); // callbacks.hpp
 inline const Entry* entry(Effect e, Callback c) {
   if (!e || c == NO_CALLBACK) return nullptr;
-  const Table& t = table();
-  const Table::Of& o = t.of[size_t(Table::index(e))];
-  if (!(o.mask[uint8_t(c) >> 6] >> (uint8_t(c) & 63) & 1)) return nullptr;
-  for (int i = o.first;; i++) {
-    if (t.names[size_t(i)] == c) return &t.entries[size_t(i)];
-  }
+  const TableRef t = table();
+  const Of& o = t.of[size_t(Index::index(e))];
+  const unsigned word = uint8_t(c) >> 6;
+  const uint64_t bit = uint64_t{1} << (uint8_t(c) & 63);
+  if (!(o.mask[word] & bit)) return nullptr;
+  const int below = (word ? std::popcount(o.mask[0]) : 0) + std::popcount(o.mask[word] & (bit - 1));
+  return &t.entries[size_t(o.first + below)];
 }
 } // namespace detail
 
@@ -228,14 +287,14 @@ inline const Entry* entry(Effect e, Callback c) {
 using Mask = std::array<uint64_t, 2>;
 // For each effect, a bit for each callback Showdown has a handler under: the
 // handler table, turned on its side by the compiler.
-inline constexpr std::array<Mask, detail::Table::EFFECTS> MASKS = [] {
-  std::array<Mask, detail::Table::EFFECTS> masks{};
+inline constexpr std::array<Mask, detail::Index::EFFECTS> MASKS = [] {
+  std::array<Mask, detail::Index::EFFECTS> masks{};
   for (const Handler& h : HANDLERS) {
-    if (h.handled) masks[size_t(detail::Table::index({h.kind, h.id}))][uint8_t(h.callback) >> 6] |= uint64_t{1} << (uint8_t(h.callback) & 63);
+    if (h.handled) masks[size_t(detail::Index::index({h.kind, h.id}))][uint8_t(h.callback) >> 6] |= uint64_t{1} << (uint8_t(h.callback) & 63);
   }
   return masks;
 }();
-constexpr const Mask& mask_of(Effect e) { return MASKS[size_t(detail::Table::index(e))]; }
+constexpr const Mask& mask_of(Effect e) { return MASKS[size_t(detail::Index::index(e))]; }
 
 // A handler found for a name: which of the effect's handlers answers.
 struct Found {
@@ -335,9 +394,9 @@ struct Listeners {
   };
   int n = 0;
   Listeners() {}
-  void push(const Listener& l) {
+  Listener& push(const Listener& l) {
     if (n == int(list.size())) unported("more than 24 handlers of one event");
-    std::construct_at(&list[size_t(n++)], l);
+    return *std::construct_at(&list[size_t(n++)], l);
   }
 };
 
@@ -358,8 +417,17 @@ template <typename A, typename B> constexpr double compare_priority(const A& a, 
 // of ties with the battle's PRNG.
 template <typename T, typename Compare> void speed_sort(Ctx& c, std::span<T> list, Compare compare) {
   if (list.size() < 2) return;
+  if (list.size() == 2) {
+    // What the loop below does with two: the one that goes first is put
+    // first, and a tie is one draw of shuffle(list, 0, 2).
+    const double delta = compare(list[0], list[1]);
+    if (delta > 0 || (delta == 0 && random(c.b, c.out, 0, 2) != 0)) std::swap(list[0], list[1]);
+    return;
+  }
   size_t sorted = 0;
-  std::array<size_t, 32> next{};
+  // Written before it is read: not filled with zeros, which was 256 bytes
+  // for a sort that is nearly always of two.
+  std::array<size_t, 32> next;
   while (sorted + 1 < list.size()) {
     size_t ties = 1;
     next[0] = sorted;
@@ -379,6 +447,16 @@ template <typename T, typename Compare> void speed_sort(Ctx& c, std::span<T> lis
     }
     sorted += ties;
   }
+}
+// The active Pokémon, of which singles has two at most, by speed: what
+// speed_sort does with them, the faster first and a tie drawn for.
+inline void speed_sort_active(Ctx& c, std::array<Ref, 2>& actives, int n) {
+  if (n < 2) return;
+  const uint32_t first = c.b.at(actives[0]).speed, second = c.b.at(actives[1]).speed;
+  bool swap = second > first;
+  if (first == second) [[unlikely]] swap = random(c.b, c.out, 0, 2) != 0;
+  const Ref a = actives[swap ? 1 : 0], b = actives[swap ? 0 : 1];
+  actives = {a, b};
 }
 inline void speed_sort(Ctx& c, Listeners& l) {
   speed_sort(c, std::span<Listener>(l.list.data(), size_t(l.n)),
@@ -401,7 +479,8 @@ inline constexpr NameFlags NAME_FLAGS = [] {
 // Battle.resolvePriority (battle.ts:957): a handler's ranks. The ranks are
 // the effect's under the name the handler was looked for, whichever of its
 // handlers answers.
-inline Listener resolve_priority(Ctx& c, Listener l, Callback name) {
+// They are written on the handler where it is kept.
+inline void resolve_priority(Ctx& c, Listener& l, Callback name) {
   if (const detail::Entry* e = detail::entry(l.callback.effect, name); e && e->row) {
     l.order = uint32_t(e->row->order);
     l.priority = e->row->priority;
@@ -437,6 +516,13 @@ inline Listener resolve_priority(Ctx& c, Listener l, Callback name) {
       l.speed -= double(place) / 2;
     }
   }
+}
+// A handler found: put with the event's others, with its ranks. Not in
+// line: the tests that find nothing are, wherever handlers are looked for,
+// and nearly every effect looked at has none.
+[[gnu::noinline]] inline Listener& gather(Ctx& c, Listeners& out, Found f, EffectState* state, Subject holder, Callback name) {
+  Listener& l = out.push({f, state, holder});
+  resolve_priority(c, l, name);
   return l;
 }
 
@@ -454,10 +540,9 @@ inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners&
     if (!e) return; // none, or a volatile that was removed
     const Found f = get_callback(c.b, true, e, name);
     if (!f && !(by_duration && state->duration)) return;
-    Listener l = resolve_priority(c, {{e, f.actual}, state, holder}, name);
+    Listener& l = gather(c, out, {e, f.actual}, state, holder, name);
     l.ends = true;
     l.is_volatile = is_volatile;
-    out.push(l);
   };
   add(effect(p.status), &p.status_state, false);
   for (int i = 0; i < p.n_volatiles; i++) add(effect(p.volatiles[i].id), &p.volatiles[i].state, true);
@@ -470,12 +555,11 @@ inline void find_pokemon_event_handlers(Ctx& c, Ref r, Callback name, Listeners&
     if (sc.id == Condition::None) continue;
     const Found f = get_callback(c.b, true, effect(sc.id), name);
     if (!f && !(by_duration && sc.state.duration)) continue;
-    Listener l = resolve_priority(c, {{effect(sc.id), f.actual}, &sc.state, holder}, name);
+    Listener& l = gather(c, out, {effect(sc.id), f.actual}, &sc.state, holder, name);
     if (!l.sub_order || l.sub_order == 4) l.sub_order = 3;
     l.ends = true;
     l.is_slot_condition = true;
     l.side = r.side;
-    out.push(l);
   }
 }
 
@@ -492,11 +576,10 @@ inline void find_side_event_handlers(Ctx& c, int side, Callback name, Listeners&
     if (sc.id == Condition::None) continue; // removed
     const Found f = get_callback(c.b, false, effect(sc.id), name);
     if (!f && !(by_duration && sc.state.duration)) continue;
-    Listener l = resolve_priority(c, {{effect(sc.id), f.actual}, &sc.state, holder}, name);
+    Listener& l = gather(c, out, {effect(sc.id), f.actual}, &sc.state, holder, name);
     l.ends = own;
     l.is_side_condition = true;
     l.side = uint8_t(side);
-    out.push(l);
   }
 }
 
@@ -508,9 +591,7 @@ inline void find_field_event_handlers(Ctx& c, Callback name, Listeners& out, Sub
     if (!e) return;
     const Found f = get_callback(c.b, false, e, name);
     if (!f && !(by_duration && state->duration)) return;
-    Listener l = resolve_priority(c, {{e, f.actual}, state, holder}, name);
-    l.ends = holder.kind == HolderKind::Field;
-    out.push(l);
+    gather(c, out, {e, f.actual}, state, holder, name).ends = holder.kind == HolderKind::Field;
   };
   for (int i = 0; i < c.b.field.pseudo_weathers; i++) add(c.b.field.pseudo_weather[i].effect, &c.b.field.pseudo_weather[i].state);
   add(effect(c.b.field.weather), &c.b.field.weather_state);
@@ -519,7 +600,7 @@ inline void find_field_event_handlers(Ctx& c, Callback name, Listeners& out, Sub
 // Battle.findBattleEventHandlers (battle.ts:1172): the format.
 inline void find_battle_event_handlers(Ctx& c, Callback name, Listeners& out, Subject holder = BATTLE) {
   if (const Found f = get_callback(c.b, false, effect(Rule::FormatOU), name)) {
-    out.push(resolve_priority(c, {f, nullptr, holder}, name));
+    gather(c, out, f, nullptr, holder, name);
   }
 }
 
@@ -683,14 +764,21 @@ inline void chain_modify(Ctx& c, double numerator, double denominator = 1) {
 }
 
 // Battle.singleEvent (battle.ts:578): one effect's handler for a name.
-inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, Subject t, Ref source = {},
-                          Effect source_effect = {}, Relay value = relay::undefined, Found custom = {}) {
+// Most effects have no handler under the name, and the value comes back as
+// it is whichever of Showdown's tests stops the event; so that is asked
+// first, in line wherever a single event is run, and the rest is not.
+inline Relay single_event_heard(Ctx& c, Callback name, Effect e, Found f, EffectState* state, Subject t, Ref source,
+                                Effect source_effect, Relay value, bool has_relay);
+[[gnu::always_inline]] inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, Subject t, Ref source = {},
+                                                 Effect source_effect = {}, Relay value = relay::undefined, Found custom = {}) {
   const bool has_relay = !value.undefined();
   if (!has_relay) value = relay::yes;
-  // Most effects have no handler under the name, and the value comes back
-  // as it is whichever of these stops the event; so that is asked first.
   const Found f = custom ? custom : Found{e, has(e, name) ? name : NO_CALLBACK};
   if (!f) return value;
+  return single_event_heard(c, name, e, f, state, t, source, source_effect, value, has_relay);
+}
+[[gnu::noinline]] inline Relay single_event_heard(Ctx& c, Callback name, Effect e, Found f, EffectState* state, Subject t, Ref source,
+                                                  Effect source_effect, Relay value, bool has_relay) {
   if (c.event_depth >= 8) unported("an event stack eight deep");
   if (type_of(e) == EffectType::Status && t.kind == HolderKind::Pokemon &&
       c.b.at(t.pokemon).status != Condition(e.id)) {
@@ -722,7 +810,7 @@ inline Relay single_event(Ctx& c, Callback name, Effect e, EffectState* state, S
 // event; with fast_exit (priorityEvent) any return does.
 // With no handler an event's value comes back as it was, passed through the
 // modifier of an event that modified nothing.
-inline Relay unheard(Relay value) {
+[[gnu::always_inline]] inline Relay unheard(Relay value) {
   if (value.undefined() || value.kind == Relay::Kind::Null) return relay::yes;
   if (value.kind == Relay::Kind::Number && value.number >= 0 && value.number == double(uint64_t(value.number))) {
     value.number = modify(value.number, 1);
@@ -731,24 +819,49 @@ inline Relay unheard(Relay value) {
 }
 inline Relay run_event_heard(Ctx& c, const EventNames& e, Subject t, Ref source, Effect source_effect, Relay value,
                              bool on_effect, bool fast_exit);
+inline void find_event_handlers(Ctx& c, Subject t, const EventNames& e, Ref source, Listeners& out);
 // Nearly every event ends in this part: none of its names is among those
-// that anything in play, the target or the source could answer. It is put
-// in line wherever an event is run; the rest is not.
+// that could be answered. It is put in line wherever an event is run; the
+// rest is not.
+//
+// For an event on a Pokémon, its plain name is answered only by what the
+// Pokémon has, by its side's conditions and by the field and the format
+// (Battle::listening_side); the Ally, Foe, Any and Source names by something
+// in play (Battle::listening), or by the source if it is not out. A status
+// that only the other Pokémon has therefore does not send this one's
+// BeforeMove to look for handlers.
 [[gnu::always_inline]] inline Relay run_event(Ctx& c, const EventNames& e, Subject t, Ref source = {}, Effect source_effect = {},
                        Relay value = relay::undefined, bool on_effect = false, bool fast_exit = false) {
   if (!e.always_look) {
-    Mask m = listening(c.b);
+    const Mask& all = listening(c.b);
     if (t.kind == HolderKind::Pokemon) check_mask(c.b.at(t.pokemon));
     if (source) check_mask(c.b.at(source));
-    if (e.only_on && t.kind == HolderKind::Pokemon) {
-      // Only the target's own effects, its side's and the field's are asked.
-      m = c.b.listening_side[t.pokemon.side];
-      merge(m, c.b.at(t.pokemon).mask);
+    uint64_t heard;
+    if (t.kind == HolderKind::Pokemon) {
+      const Mask& side = c.b.listening_side[t.pokemon.side];
+      const Mask& own = c.b.at(t.pokemon).mask;
+      heard = ((side[0] | own[0]) & e.plain[0]) | ((side[1] | own[1]) & e.plain[1]);
+      if (!e.only_on) {
+        Mask m = all;
+        if (source && e.source != NO_CALLBACK) merge(m, c.b.at(source).mask);
+        heard |= (m[0] & e.others[0]) | (m[1] & e.others[1]);
+      }
     } else {
-      if (t.kind == HolderKind::Pokemon) merge(m, c.b.at(t.pokemon).mask);
+      Mask m = all;
       if (source) merge(m, c.b.at(source).mask);
+      heard = (m[0] & e.names[0]) | (m[1] & e.names[1]);
     }
-    if (!((m[0] & e.names[0]) | (m[1] & e.names[1])) && !(on_effect && has(source_effect, e.on))) return unheard(value);
+    if (!heard && !(on_effect && has(source_effect, e.on))) {
+#ifdef ADV_CHECK_MASKS
+      // What the masks said is held to what a look finds.
+      if (t.kind == HolderKind::Pokemon || t.kind == HolderKind::Battle) {
+        Listeners found;
+        find_event_handlers(c, t, e, source, found);
+        if (found.n) unported("an event the masks said nothing answers, which something does");
+      }
+#endif
+      return unheard(value);
+    }
   }
   return run_event_heard(c, e, t, source, source_effect, value, on_effect, fast_exit);
 }
@@ -757,7 +870,7 @@ inline Relay run_event_heard(Ctx& c, const EventNames& e, Subject t, Ref source,
   if (c.event_depth >= 8) unported("an event stack eight deep");
   Listeners handlers;
   if (on_effect && has(source_effect, e.on)) {
-    handlers.push(resolve_priority(c, {{source_effect, e.on}, nullptr, t}, e.on));
+    gather(c, handlers, {source_effect, e.on}, nullptr, t, e.on);
   }
   find_event_handlers(c, t, e, source, handlers);
 

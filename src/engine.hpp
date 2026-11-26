@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstring>
 
 #include "callbacks.hpp"
 #include "setup.hpp"
@@ -61,7 +62,14 @@ inline void update_speed(Ctx& c, Ref r) { c.b.at(r).speed = get_action_speed(c, 
 
 // BattleQueue.resolveAction (battle-queue.ts:166) for the actions that are
 // not moves, and Battle.getActionSpeed (battle.ts:2673) for them.
-inline Action resolve_action(Ctx& c, Action a) {
+//
+// Showdown works a Pokémon's speed out again here, often just after
+// updateSpeed did. Working it out changes nothing and draws nothing: the
+// only handlers of ModifySpe are an ability's, an item's and paralysis's,
+// which cannot tie with one another, and each only multiplies; ModifyBoost
+// has Foresight's alone. So where the Pokémon's speed was updated with
+// nothing done since, `speed_is_fresh` says to take it as it stands.
+inline Action resolve_action(Ctx& c, Action a, bool speed_is_fresh = false) {
   switch (a.choice) {
   case Choice::Start: a.order = 2; break;
   case Choice::InstaSwitch: a.order = 3; break;
@@ -78,7 +86,12 @@ inline Action resolve_action(Ctx& c, Action a) {
     a.priority = data(a.move).priority;
     break;
   }
-  a.speed = a.pokemon ? double(get_action_speed(c, a.pokemon)) : 1;
+  if (!a.pokemon) a.speed = 1;
+  else if (speed_is_fresh) a.speed = double(c.b.at(a.pokemon).speed);
+  else a.speed = double(get_action_speed(c, a.pokemon));
+#ifdef ADV_CHECK_MASKS
+  if (a.pokemon && a.speed != double(get_action_speed(c, a.pokemon))) unported("a speed taken as fresh that was not");
+#endif
   return a;
 }
 
@@ -91,18 +104,19 @@ inline void push(Queue& q, const Action& a, int at) {
 // BattleQueue.addChoice (battle-queue.ts:307). A move with a
 // beforeTurnCallback comes with an action that runs it before the turn's
 // moves.
-inline void add_choice(Ctx& c, Action a) {
+inline void add_choice(Ctx& c, Action a, bool speed_is_fresh = false) {
   if (a.choice == Choice::Move && has(effect(a.move), Callback::beforeTurnCallback)) {
-    push(c.b.queue, resolve_action(c, {.choice = Choice::BeforeTurnMove, .pokemon = a.pokemon, .move = a.move}), c.b.queue.size);
+    push(c.b.queue, resolve_action(c, {.choice = Choice::BeforeTurnMove, .pokemon = a.pokemon, .move = a.move}, speed_is_fresh),
+         c.b.queue.size);
   }
-  push(c.b.queue, resolve_action(c, a), c.b.queue.size);
+  push(c.b.queue, resolve_action(c, a, speed_is_fresh), c.b.queue.size);
 }
 
 // BattleQueue.insertChoice (battle-queue.ts:375): among the queued actions it
 // ties with, the place is drawn.
 inline void insert_choice(Ctx& c, Action a) {
   if (a.pokemon) update_speed(c, a.pokemon);
-  const Action action = resolve_action(c, a);
+  const Action action = resolve_action(c, a, true);
   Queue& q = c.b.queue;
   int first = -1, last = -1;
   for (int i = 0; i < q.size; i++) {
@@ -199,7 +213,10 @@ inline bool check_win(Ctx& c) {
 // then whether the battle is over. A Pokémon that Pursuit caught as it left
 // is resolved without that last look.
 inline bool resolve_faints(Ctx& c) { return resolve_faints(c, true); }
-inline bool resolve_faints(Ctx& c, bool win_check) {
+inline bool resolve_queued_faints(Ctx& c, bool win_check);
+// It is asked after every action and every handler of the turn's end, and
+// nearly always nothing has fainted: that much is in line, the rest is not.
+[[gnu::always_inline]] inline bool resolve_faints(Ctx& c, bool win_check) {
   Battle& b = c.b;
   if (b.ended) return false;
   // While a Pokémon is flagged to switch by a move, faints wait (unless the
@@ -207,7 +224,15 @@ inline bool resolve_faints(Ctx& c, bool win_check) {
   for (const Side& side : b.sides) {
     if (side.active != 0xFF && side.pokemon[side.active].switch_flag_move != Move::None) return false;
   }
-  if (!b.faints) return win_check && check_win(c);
+  if (!b.faints) {
+    // check_win, when neither side is out of Pokémon.
+    if (b.sides[0].pokemon_left && b.sides[1].pokemon_left) return false;
+    return win_check && check_win(c);
+  }
+  return resolve_queued_faints(c, win_check);
+}
+[[gnu::noinline]] inline bool resolve_queued_faints(Ctx& c, bool win_check) {
+  Battle& b = c.b;
   while (b.faints) {
     const Battle::Faint f = b.faint_queue[0];
     for (int i = 1; i < b.faints; i++) b.faint_queue[i - 1] = b.faint_queue[i];
@@ -222,6 +247,7 @@ inline bool resolve_faints(Ctx& c, bool win_check) {
     single_event(c, events::ON_END, effect(p.item), &p.item_state, on(f.target));
     clear_volatile(c, f.target, false);
     p.fainted = true;
+    b.sides[f.target.side].fainted_mask |= uint8_t(1 << f.target.index);
     p.is_active = false;
     p.is_started = false;
   }
@@ -241,9 +267,17 @@ inline bool resolve_faints(Ctx& c, bool win_check) {
 // switched in, and for Residual. For Residual an effect with a duration is
 // gathered whether or not it has a handler, and counted down.
 inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> targets = {}) {
-  const bool residual = e.id == "Residual", switch_in = e.id == "SwitchIn";
+  const bool residual = e.id == "Residual", switch_in = e.always_look;
   Listeners handlers;
   find_field_event_handlers(c, e.field, handlers, FIELD, residual);
+  // What a side's conditions, the field and the format answer under the
+  // event's plain name is asked of their masks first: for these holders a
+  // name is answered only by a handler of that name, which nearly always
+  // none of them has.
+  const auto answers = [&](const Mask& m) {
+    return e.on != NO_CALLBACK && (m[uint8_t(e.on) >> 6] >> (uint8_t(e.on) & 63) & 1);
+  };
+  const bool field_answers = answers(field_mask(c.b)), format_answers = answers(mask_of(effect(Rule::FormatOU)));
   for (uint8_t s = 0; s < 2; s++) {
     find_side_event_handlers(c, s, e.side, handlers, {}, residual);
     const Side& side = c.b.sides[s];
@@ -252,9 +286,9 @@ inline void field_event(Ctx& c, const EventNames& e, std::span<const Ref> target
     if (switch_in) find_pokemon_event_handlers(c, active, e.any, handlers);
     if (!targets.empty() && std::find(targets.begin(), targets.end(), active) == targets.end()) continue;
     find_pokemon_event_handlers(c, active, e.on, handlers, {}, residual);
-    find_side_event_handlers(c, s, e.on, handlers, on(active));
-    find_field_event_handlers(c, e.on, handlers, on(active));
-    find_battle_event_handlers(c, e.on, handlers, on(active));
+    if (side.n_side_conditions && answers(side_mask(c.b, s))) find_side_event_handlers(c, s, e.on, handlers, on(active));
+    if (field_answers) find_field_event_handlers(c, e.on, handlers, on(active));
+    if (format_answers) find_battle_event_handlers(c, e.on, handlers, on(active));
   }
   speed_sort(c, handlers);
   for (int i = 0; i < handlers.n; i++) {
@@ -437,8 +471,7 @@ inline void run_switch(Ctx& c, Ref r) {
   while (c.b.queue.size && c.b.queue.list[0].choice == Choice::RunSwitch) switchers[n++] = shift(c.b.queue).pokemon;
   std::array<Ref, 2> actives;
   const int count = all_active(c.b, actives, true);
-  speed_sort(c, std::span<Ref>(actives.data(), size_t(count)),
-             [&](Ref a, Ref b) { return double(c.b.at(b).speed) - double(c.b.at(a).speed); });
+  speed_sort_active(c, actives, count);
   c.b.speed_orders = uint8_t(count);
   for (int i = 0; i < count; i++) c.b.speed_order[i] = actives[i].side;
   field_event(c, events::SWITCH_IN, std::span<const Ref>(switchers.data(), size_t(n)));
@@ -672,10 +705,13 @@ inline void end_turn(Ctx& c) {
       }
     }
     if (p.fainted) continue;
-    // A hit is forgotten once the Pokémon that dealt it has left.
-    for (uint8_t i = 0; i < TEAM_SIZE; i++) {
-      Pokemon::AttackedBy& hit = p.attacked_by[i];
-      if (hit.order && b.at({uint8_t(s ^ 1), i}).is_active) hit.this_turn = hit.damaged_this_turn = false;
+    // A hit is forgotten once the Pokémon that dealt it has left. Only the
+    // one a side has out is active, if that one is.
+    const Side& other = b.sides[s ^ 1];
+    const int out = other.active != 0xFF && other.pokemon[other.active].is_active ? other.active : -1;
+    for (int i = 0; i < TEAM_SIZE; i++) {
+      Pokemon::AttackedBy& hit = p.attacked_by[size_t(i)];
+      if (hit.order && i == out) hit.this_turn = hit.damaged_this_turn = false;
       else hit = {};
     }
     trapped[s] = p.trapped != Trapped::No;
@@ -684,8 +720,14 @@ inline void end_turn(Ctx& c) {
   }
   for (Side& side : b.sides) {
     for (int i = 0; i < side.size; i++) {
-      compact_volatiles(side.pokemon[i]);
-      refresh_mask(c.b, side.pokemon[i]); // and what was taken away is forgotten
+      // Only a Pokémon that is out has had something taken from it since
+      // its mask was last made: one that left or fainted had its made again
+      // as it went (clear_volatile), and a status is set or cured through
+      // set_status, which makes it again too.
+      Pokemon& p = side.pokemon[i];
+      if (!p.is_active && !p.n_volatiles) continue;
+      compact_volatiles(p);
+      refresh_mask(c.b, p); // and what was taken away is forgotten
     }
     compact_side_conditions(side);
     b.listening_stale = true;
@@ -701,9 +743,9 @@ inline void end_turn(Ctx& c) {
 inline void check_fainted(Ctx& c) {
   for (int s = 0; s < 2; s++) {
     Side& side = c.b.sides[s];
-    if (side.active == 0xFF || !can_switch(c.b, s)) continue;
+    if (side.active == 0xFF) continue;
     Pokemon& p = side.pokemon[side.active];
-    if (!p.fainted) continue;
+    if (!p.fainted || !can_switch(c.b, s)) continue;
     // One whose switch is already queued is left alone.
     bool queued = false;
     for (int i = 0; i < c.b.queue.size; i++) {
@@ -858,11 +900,18 @@ inline void commit_choices(Ctx& c) {
   for (uint8_t s = 0; s < 2; s++) {
     if (b.sides[s].active != 0xFF && !b.sides[s].pokemon[b.sides[s].active].fainted) update_speed(c, {s, b.sides[s].active});
   }
-  const Queue old = b.queue;
+  // What the turn still had queued, set aside: only the actions there are,
+  // which at the start of a turn is none.
+  const int old_size = b.queue.size;
+  alignas(Action) unsigned char old_list[sizeof(Action) * 16];
+  std::memcpy(old_list, static_cast<const void*>(b.queue.list.data()), sizeof(Action) * size_t(old_size));
   b.queue.size = 0;
   for (uint8_t s = 0; s < 2; s++) {
     Side& side = b.sides[s];
     const ChoiceState choice = side.choice;
+    // The speed of an active Pokémon that has not fainted was updated just
+    // above, and queueing a choice changes nothing it depends on.
+    const bool fresh = side.active != 0xFF && !side.pokemon[side.active].fainted;
     if (choice.action == ChoiceState::Kind::Switch || choice.action == ChoiceState::Kind::InstaSwitch) {
       const Ref out{s, side.active};
       // resolveAction: a switch clears the flag that asked for it, and
@@ -871,9 +920,9 @@ inline void commit_choices(Ctx& c) {
       b.at(out).switch_flag = false;
       b.at(out).switch_flag_move = Move::None;
       add_choice(c, {.choice = choice.action == ChoiceState::Kind::Switch ? Choice::Switch : Choice::InstaSwitch,
-                     .pokemon = out, .target = {s, choice.target}, .move = by});
+                     .pokemon = out, .target = {s, choice.target}, .move = by}, fresh);
     } else if (choice.action == ChoiceState::Kind::Move) {
-      add_choice(c, {.choice = Choice::Move, .pokemon = {s, side.active}, .move = choice.move});
+      add_choice(c, {.choice = Choice::Move, .pokemon = {s, side.active}, .move = choice.move}, fresh);
     }
   }
   // clearRequest.
@@ -884,7 +933,9 @@ inline void commit_choices(Ctx& c) {
   }
   speed_sort(c, std::span<Action>(b.queue.list.data(), b.queue.size),
              [](const Action& a, const Action& b2) { return compare_priority(a, b2); });
-  for (int i = 0; i < old.size; i++) push(b.queue, old.list[i], b.queue.size);
+  if (b.queue.size + old_size > int(b.queue.list.size())) unported("more than 16 queued actions");
+  std::memcpy(static_cast<void*>(b.queue.list.data() + b.queue.size), old_list, sizeof(Action) * size_t(old_size));
+  b.queue.size = uint8_t(b.queue.size + old_size);
   turn_loop(c);
 }
 

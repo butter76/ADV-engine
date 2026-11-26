@@ -24,7 +24,7 @@ struct Stream {
 
   Stream() : ctx(battle, out) {
     out.draws = &draws;
-    out.log.reserve(1024); // most games write fewer lines than this
+    out.log.reserve(2048); // a game of random choices writes about a thousand lines
   }
 
   // Battle.sendUpdates (battle.ts:3325): the new log lines, then the requests
@@ -33,9 +33,18 @@ struct Stream {
   void send_updates() {
     for (; sent_draws < draws.size(); sent_draws++) {
       const Draw& d = draws[sent_draws];
-      lines.push_back("d " + (d.from < 0 ? std::string("-") : std::to_string(d.from)) + " " +
-                      (d.to < 0 ? std::string("-") : std::to_string(d.to)) + " " + std::to_string(d.result) + " " +
-                      std::to_string(d.log_lines));
+      append_with(lines.emplace_back(), 48, [&](Cursor to) {
+        to.put("d ");
+        for (const int32_t argument : {d.from, d.to}) {
+          if (argument < 0) to.put('-');
+          else put_number(to, unsigned(argument));
+          to.put(' ');
+        }
+        put_number(to, d.result);
+        to.put(' ');
+        put_number(to, d.log_lines);
+        return to;
+      });
     }
     if (sent_log < out.log.size()) {
       lines.push_back("U");
@@ -47,11 +56,7 @@ struct Stream {
     }
   }
   void send_request(int side) {
-    std::string line;
-    line.reserve(2048);
-    line += side == 0 ? "s p1 |request|" : "s p2 |request|";
-    append_request_json(line, battle, side, names);
-    lines.push_back(std::move(line));
+    append_request_json(lines.emplace_back(), battle, side, names, side == 0 ? "s p1 |request|" : "s p2 |request|");
   }
 
   // `>start`, `>player p1` and `>player p2` written as one chunk.
@@ -65,7 +70,11 @@ struct Stream {
 
   // `>p1 switch 3`: Side.choose's text (side.ts), then the updates.
   void choose(int side, std::string_view text) {
-    lines.push_back("c " + side_id(side) + " " + std::string(text));
+    append_with(lines.emplace_back(), 8 + text.size(), [&](Cursor to) {
+      to.put(std::string_view(side == 0 ? "c p1 " : "c p2 ", 5));
+      to.put(text);
+      return to;
+    });
     Refusal refusal = Refusal::None;
     if (text.starts_with("switch ")) {
       int slot = 0;

@@ -91,9 +91,13 @@ Draws that change nothing but must still be made:
    end there; only then are handlers gathered, exactly as before. A kept
    mask is refreshed wherever an effect is *given* (`refresh_mask`, and
    `listening_stale` for the battle's); one taken away may linger until the
-   turn ends, since a mask that says too much only costs time. The build
-   with `ADV_CHECK_MASKS` makes every use of a kept mask first prove that it
-   covers what is there, and is part of `ctest`.
+   turn ends, since a mask that says too much only costs time. An event on a
+   Pokémon asks its plain name of that Pokémon's mask and its side's, and
+   only its `Ally`, `Foe`, `Any` and `Source` names of everything in play:
+   one Pokémon's paralysis does not send the other's `BeforeMove` to look.
+   The build with `ADV_CHECK_MASKS` makes every use of a kept mask first
+   prove that it covers what is there, holds every "nothing answers" to what
+   a look for handlers then finds, and is part of `ctest`.
 6. **Numbers are JavaScript's.** `double` where Showdown multiplies by a
    fraction, 32-bit truncation where it calls `trunc`, compiled with
    `-ffp-contract=off`.
@@ -312,20 +316,46 @@ two), and Torment's `onEnd`, which nothing in Gen 3 brings about.
    | a log part 16 bytes, not 48 (a line 114, not 344), and written in place | 555,000 |
    | the test for "nothing listens" put in line at every event | 760,000 |
    | the exact holders asked for an event looked up under one name | 790,000 |
+   | the same engine measured again, on the day of the rows below | 842,000 |
+   | who can still come in counted from a bit for each fainted Pokémon, not by walking the team after every action | 914,000 |
+   | a log line's parts copied together; an event nothing answers returns in line | 955,000 |
+   | the value an event passes 16 bytes, not 48: it goes to a handler and back in registers | 1,069,000 |
+   | the handler table made by the compiler, an entry found by counting bits; two things sorted without the general sort | 1,106,000 |
+   | a handler written where the event keeps it, not copied there; the test for a single event in line | 1,210,000 |
+   | a speed just updated not worked out again for the action queued next | 1,255,000 |
+   | an event's plain name asked of its own Pokémon and side alone; faints with nothing fainted, and the turn's end, walk less | 1,287,000 |
 
    (The benchmark stopped timing the parsing of team text at the eighth row,
    which was by then about a tenth of the time.) hoenn does 3,290,000 and
    Showdown 4,150.
 
-   Writing Showdown's text and requests as well, the engine did 41,000 and
-   does 180,000: a request is some 1,500 bytes twice a turn, and it and the
-   log's lines are now appended to one string where each piece had been a
-   string of its own. Text is still four times the cost of the battle; a
-   reader that takes the typed log and the request as the engine holds them
-   pays none of it.
+   None of the later rows changes what an event does or the order anything
+   is asked in. Three rest on facts about Gen 3 that are written where they
+   are used: the Pokémon at the front of a side is its active one
+   (`can_switch`), working out a speed draws nothing and changes nothing
+   (`resolve_action`), and only a side's active Pokémon is active
+   (`end_turn`). The first two are checked on every use in the build with
+   `ADV_CHECK_MASKS`.
 
-   The engine's profile is now flat: moves 31%, the end-of-turn event 19%,
-   `Update` after each action 10%, the turn's end 9%, requests 8%. Not done:
+   Writing Showdown's text and requests as well, the engine did 41,000, then
+   194,000, and does 453,000. A request is some 2,000 bytes twice a turn, in
+   about 250 pieces. First each piece stopped being a string of its own and
+   was appended to one string; now each is written into that string's own
+   room through a cursor of two pointers (`Cursor`, `append_with` in
+   `src/showdown/request.hpp`), which the writers keep in registers: appended,
+   every piece tested for room and made a call, and kept in memory the
+   cursor was read back and stored for every piece. Room that turns out too
+   small is doubled and the text written again, so no length is trusted.
+   Text is now less than twice the cost of the battle, about half of it the
+   requests and half a string allocated for each line; a reader that takes
+   the typed log and the request as the engine holds them pays none of it.
+
+   The engine's profile is flat: moves 29%, the end-of-turn event 21%,
+   `Update` after each action 10%, the turn's end 11%, switching in 7%. No
+   line of it is 3% of the time. What is left is the event system doing
+   what Showdown's does: 66 events an update each make their test (9% of
+   the time together), and the four or so that find a handler gather, rank
+   and call it (15%, the handlers' own work included). Not done:
    profile-guided optimisation, which would ask the same of whatever builds
    the engine into olympus; keeping the handler's function with a gathered
    handler, in place of looking it up again to call it.

@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <bit>
 #include <cmath>
 
 #include "sim.hpp"
@@ -122,7 +123,7 @@ inline LockedMove get_locked_move(Ctx& c, Ref r) {
   const Relay v = run_event(c, event("LockMove"), on(r), {}, {}, relay::undefined, false, true);
   if (v == relay::yes) return {};
   if (v.kind == Relay::Kind::Number) return {true, Move(uint16_t(v.number))};
-  if (v.kind == Relay::Kind::Text && v.text == "recharge") return {true, Move::None};
+  if (v.text() == "recharge") return {true, Move::None};
   unported("a move locked by something else");
 }
 
@@ -286,11 +287,20 @@ inline SparseBoosts sparse(const Boosts& b) {
 }
 // Battle.canSwitch (battle.ts): how many Pokémon behind the active one have
 // not fainted.
+// The Pokémon at position 0 is the active one once there is one (switch_in
+// trades the two places), and the first of the team before that; so the
+// count is of the bits not set in the side's `fainted_mask`, but for that
+// one's.
 inline int can_switch(const Battle& b, int side) {
   const Side& s = b.sides[side];
   if (!s.pokemon_left) return 0;
-  int n = 0;
-  for (int i = 0; i < s.size; i++) n += s.pokemon[i].position >= 1 && !s.pokemon[i].fainted;
+  const unsigned front = s.active != 0xFF ? s.active : 0;
+  const int n = std::popcount(~unsigned(s.fainted_mask) & ((1u << s.size) - 1) & ~(1u << front));
+#ifdef ADV_CHECK_MASKS
+  int walked = 0;
+  for (int i = 0; i < s.size; i++) walked += s.pokemon[i].position >= 1 && !s.pokemon[i].fainted;
+  if (walked != n) unported("a side's fainted mask left out of date");
+#endif
   return n;
 }
 
@@ -775,7 +785,7 @@ inline Relay try_move_hit(Ctx& c, Ref target, Ref source) {
     else accuracy.number /= BOOST_TABLE[-boost_];
     // ModifyBoost: Foresight takes a raised evasion away.
     const Relay seen = run_event(c, events::MODIFY_BOOST_OF, on(target), {}, {}, relay::boosts(sparse(b.at(target).boosts)));
-    boost_ = std::clamp(int(seen.kind == Relay::Kind::Boosts ? seen.boosts.value[6] : b.at(target).boosts.evasion), -6, 6);
+    boost_ = std::clamp(int(seen.kind == Relay::Kind::Boosts ? seen.stages.value[6] : b.at(target).boosts.evasion), -6, 6);
     if (boost_ > 0) accuracy.number /= BOOST_TABLE[boost_];
     else if (boost_ < 0) accuracy.number *= BOOST_TABLE[-boost_];
   }
@@ -922,7 +932,7 @@ inline bool try_spread_move_hit(Ctx& c, Ref target, Ref source) {
     if (boost_ > 0) accuracy.number *= BOOST_TABLE[boost_];
     else accuracy.number /= BOOST_TABLE[-boost_];
     const Relay seen = run_event(c, events::MODIFY_BOOST_OF, on(target), {}, {}, relay::boosts(sparse(b.at(target).boosts)));
-    boost_ = std::clamp(int(seen.kind == Relay::Kind::Boosts ? seen.boosts.value[6] : b.at(target).boosts.evasion), -6, 6);
+    boost_ = std::clamp(int(seen.kind == Relay::Kind::Boosts ? seen.stages.value[6] : b.at(target).boosts.evasion), -6, 6);
     if (boost_ > 0) accuracy.number /= BOOST_TABLE[boost_];
     else if (boost_ < 0) accuracy.number *= BOOST_TABLE[-boost_];
   }
